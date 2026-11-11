@@ -64,13 +64,14 @@ claude mcp add near-sentinel -e NEAR_SENTINEL_NETWORK=testnet -- node /abs/path/
       <Card title="On-chain — Sentinel Guard contract" icon="shieldCheck">
         <p className="mb-2 text-sm text-ink-2">
           Pay through the Guard contract and a blind retry can never double-pay: a repeated <code className="font-mono text-xs">intent_id</code> from the same payer is
-          rejected on-chain (<code className="font-mono text-xs">DUPLICATE_INTENT</code>) and NEAR refunds the deposit. Look up any intent on the Inspect page.
+          rejected on-chain (<code className="font-mono text-xs">DUPLICATE_INTENT</code>) and NEAR refunds the deposit. Live on testnet as{" "}
+          <a className={linkClass} href="https://testnet.nearblocks.io/address/guard.karios.testnet" target="_blank" rel="noreferrer">guard.karios.testnet</a>; look up any intent on the Inspect page.
         </p>
-        <Code title="shell">{`near call <guard>.testnet pay '{"intent_id":"order-42","receiver_id":"merchant.testnet"}' \\
+        <Code title="shell">{`near call guard.karios.testnet pay '{"intent_id":"order-42","receiver_id":"merchant.testnet"}' \\
   --deposit 1.005 --useAccount <agent>.testnet   # 1 NEAR to the merchant + 0.005 NEAR storage fee
 
-# Read-only lookup (no keys):
-curl -s '${origin}/api/v1/intents?contract=<guard>.testnet&payer=<agent>.testnet&intent=order-42'`}</Code>
+# Read-only lookup (no keys) — a real intent paid on testnet:
+curl -s '${origin}/api/v1/intents?contract=guard.karios.testnet&payer=karios.testnet&intent=tmwbtoqi6-a'`}</Code>
       </Card>
     </div>
   );

@@ -44,8 +44,8 @@ const STEPS: Step[] = [
     href: "#/inspect",
     time: "20 s",
     icon: "shieldCheck",
-    what: "Sentinel Guard is a Rust contract: pay(intent_id, receiver_id) pays at most once per payer and intent.",
-    expect: "The Guard panel on the Inspect page answers PAID / PENDING / NOT_RECORDED with evidence from every provider.",
+    what: "Sentinel Guard is a Rust contract, live on testnet as guard.karios.testnet: pay(intent_id, receiver_id) pays at most once per payer and intent.",
+    expect: "In the Guard panel on the Inspect page, click Paid intent: PAID, confirmed by every provider. Unused intent: NOT_RECORDED.",
     cta: "Open",
   },
   {
@@ -264,7 +264,7 @@ export function StartPage() {
               ["210 unit and integration tests", "SDK, MCP server (real stdio), API, demo"],
               ["7 live tests", "read-only, against public testnet RPCs"],
               ["31 browser tests", "flows, accessibility, phone/tablet/desktop, keyboard, this tour"],
-              ["14 + 12 contract checks", "Rust unit tests, then on-chain on a local NEAR node"],
+              ["14 + 12 + 11 contract checks", "Rust unit tests, a local NEAR node, then live on testnet"],
             ].map(([a, b]) => (
               <li key={a} className="flex gap-3">
                 <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-good/15 text-good">
@@ -293,7 +293,7 @@ pnpm test:contract   # Docker: 14 Rust tests + 12 on-chain checks`}</CodeBlock>
               ["bot", "MCP server", "Six read-only tools for AI agents: check_retry_safety, inspect_transaction, trace_receipts, diagnose_submission_error, provider_health, check_intent.", "#/integrate"],
               ["layers", "TypeScript SDK", "checkRetrySafety, inspectTransaction, checkIntent and more. Validates every RPC answer.", "#/integrate"],
               ["terminal", "REST API", "Fastify API with OpenAPI docs, rate limits, live updates over SSE.", "/docs"],
-              ["shieldCheck", "Sentinel Guard contract", "Rust, no owner, no admin. A repeated intent is rejected on-chain and refunded.", "#/integrate"],
+              ["shieldCheck", "Sentinel Guard contract", "Rust, no owner, no admin, live on testnet. A repeated intent is rejected on-chain and refunded.", "#/integrate"],
               ["activity", "This dashboard", "Provider health, incidents, benchmarks, receipt graphs. Works on phones.", "#/overview"],
               ["lock", "Safe by design", "Never signs, never holds keys. Testnet by default. Optional wallet check stores nothing.", "#/settings"],
             ] as Array<[IconName, string, string, string]>
