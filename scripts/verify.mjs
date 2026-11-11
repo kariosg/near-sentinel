@@ -58,7 +58,7 @@ step("Simulated demo: naive vs guarded agent", () => {
 if (quick) {
   for (const n of ["Live testnet (read-only)", "Browser end-to-end", "Contracts (Docker)", "NEAR AI agent (live)"]) rows.push({ name: n, status: "SKIPPED", detail: "--quick" });
 } else {
-  step("Live testnet (read-only, public RPCs)", () => {
+  step("Live testnet + mainnet (read-only, public RPCs)", () => {
     const r = run("pnpm", ["test:live"], 10 * 60_000);
     const c = vitestCounts(r.out);
     return { status: r.ok ? "PASS" : "FAIL", detail: r.ok ? `${c[0] ?? "?"} passed` : `${r.out.trim().split("\n").slice(-4).join(" | ")} (needs internet)` };

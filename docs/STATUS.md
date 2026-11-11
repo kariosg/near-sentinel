@@ -8,7 +8,7 @@ pnpm install
 pnpm build              # sdk → mcp → api → web → demo → guard scripts (tsc / vite)
 pnpm typecheck
 pnpm test               # secrets gate + sdk 160 + mcp 13 (stdio e2e) + api 52 + demo 7 assertions
-pnpm test:live          # 7 read-only tests against public NEAR testnet RPCs
+pnpm test:live          # 10 read-only tests against public NEAR RPCs (7 testnet + 3 mainnet)
 pnpm test:e2e           # 32 Playwright tests (functional + axe a11y + responsive + keyboard + optional sign-in + judge tour)
 pnpm test:contract      # guard 14 + vault 19 Rust unit tests + 27-check on-chain suite on a local neard sandbox (Docker)
 pnpm verify             # every check above in one summary table (`--quick`: no network/browser/Docker)
@@ -33,6 +33,7 @@ docker compose up -d --build
 | API | **52/52** (incl. vault allowance route, security headers, public simulated benchmark vs key-protected real one, NEP-413 forgery cases, intents, SSE per-IP cap, 413 body limit, rate limits) |
 | Demo `--assert` | **7/7** |
 | Live testnet | **7/7** (aging-proof: the old failed tx now only lives on the archival operator → honest WAIT) |
+| Live mainnet (read-only) | **3/3**: providers chain_id mainnet (≥ 2 operators), a real recent successful tx picked live → DO_NOT_RETRY, unknown hash → WAIT |
 | Dashboard E2E (installed Chrome, or bundled Chromium) | **33/33** (incl. the live Vault panel): 7 functional, 8 axe (WCAG 2.1 AA, 0 serious/critical), 3 viewports × 8 pages (no overflow, no console errors), keyboard, 4 optional-sign-in, guard panel (incl. the live testnet deployment), start-page tour, command palette, mobile drawer, one-click benchmark, modal focus trap, reduced motion |
 | Contract unit (Rust, Docker) | **33/33** (guard 14 + vault 19) |
 | On-chain sandbox suite (local neard 2.14.0, protocol 88) | **27/27** = vault 14 (a function-call key pays within the policy and is rejected for a direct transfer or any other method; limits, allowlist, duplicates, freeze, owner-only withdraw, failed transfer restored) + guard **13/13** (incl. a failed payment larger than the contract balance, refunded in full) + deploy code-hash match; true concurrent race credits the receiver exactly once |
@@ -108,16 +109,8 @@ docker compose up -d --build
 - `pnpm contract:deploy` runs `pnpm --filter … run deploy` (plain `deploy` would hit pnpm's built-in command). `-- --i-confirm` forwarding verified.
 
 ## Uncommitted work
-- **Local, not pushed (owner asked to push only at the very end, after asking):** safety fixes from an independent review on 2026-11-11.
-  - Default providers: `rpc.*.near.org` is a CNAME to FastNEAR, so it was not an independent operator. Replaced by Intear (`testnet-rpc.intea.rs`); Tatum was tried first and rejected (5 requests/minute without a key). Regression test added.
-  - Delayed re-lookup (`proofRecheckMs`, default 2.5 s) before a "nonce consumed + not found" answer counts as proof (load-balanced RPC pools). 2 new tests.
-  - Guard sandbox suite: 13/13 (a failed payment larger than the contract's balance is refunded in full).
-  - Reproducibility: e2e falls back to bundled Chromium without Chrome; the secrets gate works from a ZIP download (no .git); README says `npm install -g pnpm@8` (Node 26 has no corepack). Verified in a clean Linux container (Node 26, no git, no Chrome, no Docker) with `pnpm verify`: build, test 239, demo, live 7/7, e2e 33/33, contracts correctly SKIPPED (no Docker).
-  - The live site already runs this code (redeployed 2026-11-11; previous image kept on the server as `near-sentinel:previous`).
-- Sentinel Vault (2026-11-11): new contract `contracts/guard/vault` (19 unit + 14 sandbox checks), deployed and live-tested on testnet (10/10), SDK `checkSpendAllowance`, MCP `check_spend_allowance`, API `/api/v1/allowance`, dashboard "Agent allowance" panel, `pnpm vault:testnet`, `pnpm verify`, `JUDGING.md`. The live site already runs it (`VAULT_CONTRACT_ID=vault.karios.testnet` on the server).
-- Second independent review (2026-11-11) found 3 real issues, all fixed with regression tests: the re-check now keeps positive evidence (SDK), the vault's failed-transfer refund is limited to the window it was counted in, and the vault record fee is 0.006 NEAR (measured worst case). The live vault was upgraded in place and re-tested 10/10 (`pnpm vault:testnet -- --upgrade`, then runs with a fresh agent sub-account per run).
-- NEAR AI agent (`examples/near-ai-agent`, 7 offline tests) and README positioning ("Never pay twice after an RPC timeout", real-money proof first, "What NEAR makes possible"). Live NEAR AI run needs the owner's key in the git-ignored `examples/near-ai-agent/.env`. NEAR Connect owner actions in the Vault panel (fund / freeze / withdraw with a signing preview; lazy-loaded). Final checks 2026-11-12: `pnpm verify` all PASS locally (239 tests, e2e 33/33, contracts 14+19 unit, 27/27 sandbox, live 7/7; NEAR AI live SKIPPED without key); same in a clean Linux container (contracts SKIPPED: no Docker); live site redeployed, e2e 33/33 against it.
-- `packages/sdk/t.cjs` is a local scratch file and is deliberately left out of git.
+- None of substance: everything up to commit `aadae02` (2026-11-12) is pushed to `master` (public). `packages/sdk/t.cjs` is a local scratch file, deliberately untracked.
+- Remaining before the deadline (2026-11-14 23:59 UTC): optional live NEAR AI run (`pnpm demo:near-ai`, needs the owner's key), the owner's change request (add track `open`, optional rename, new description; text in the git-ignored submission draft), then tag the final commit `hackathon-submission`.
 
 ## Blocked on the owner
 - Nothing blocking. Submitted 2026-11-11 (X post https://x.com/kariosgx/status/2120484078420169114). Results by 2026-11-18 23:59 UTC.

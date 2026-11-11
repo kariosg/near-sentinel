@@ -40,7 +40,7 @@ It ships as a TypeScript SDK, an **MCP server for AI agents**, a REST API and a 
 
 - **Tracks:** **AI Security & Defense** (primary): an agent that hits an RPC timeout never pays twice; Sentinel proves whether a payment executed, can still land, or can never land. Also Sentinel Vault: an allowance an agent spends with a function-call key, not your keys. **Agent Economy**: a payment-safety layer agents call through MCP or from NEAR AI Cloud, plus on-chain pay-once enforcement.
 - **Baseline:** none. All code was written during the hackathon window (from 2026-11-09). It is not a port of an existing product on any chain. Libraries and AI assistance are listed under [Built with](#built-with-and-ai-disclosure).
-- **Network:** NEAR testnet only. No feature depends on mainnet.
+- **Network:** everything that moves funds ran on testnet only. Read-only checks also run live on **mainnet** (`pnpm test:live`): mainnet providers, a real recent mainnet transaction → `DO_NOT_RETRY`, an unknown hash → `WAIT_AND_RECHECK`.
 - **NEAR integrations used:** NEAR JSON-RPC across several independent providers (`EXPERIMENTAL_tx_status`, `view_access_key`, `block`, protocol config, `call_function` views); two Rust contracts on testnet built with near-sdk 5 (Sentinel Guard `guard.karios.testnet`, Sentinel Vault `vault.karios.testnet`); NEAR **function-call access keys** (the agent's key can only call `spend` on the vault); NEP-297 `EVENT_JSON` events; NEP-413 signed messages for the optional account check; an MCP server for AI agents; **NEAR AI Cloud** (OpenAI-compatible API, TEE-hosted model, response signatures and attestation) for the example agent; **NEAR Connect** (`@hot-labs/near-connect`, NEAR's recommended wallet connector) so a vault owner funds, freezes or withdraws from the dashboard with their own wallet.
 - **Live instance:** https://64-177-60-105.sslip.io (a 1 GB Vultr server behind Caddy HTTPS, deployed with [docs/deployment/VULTR.md](docs/deployment/VULTR.md)). Everything also runs locally. Demo video: [X post](https://x.com/kariosgx/status/2120484078420169114).
 
@@ -54,7 +54,7 @@ It ships as a TypeScript SDK, an **MCP server for AI agents**, a REST API and a 
 | `pnpm start`, then open http://127.0.0.1:8080 | Dashboard on live testnet. It opens on **Start here**: a 3-minute judge tour where every step is one click. Click **Skip** on the optional verify banner. Press **Ctrl K** to jump anywhere. |
 | Inspect page → paste a testnet tx hash | Verdict, per-provider evidence, receipt graph |
 | Benchmarks page → **Run simulated faults** (no key needed) | 12/12 fault scenarios classified correctly in a few seconds |
-| `pnpm test:live` | 7 read-only tests against public testnet RPCs |
+| `pnpm test:live` | 10 read-only tests against public RPCs: 7 on testnet, 3 on mainnet (a real recent mainnet transaction picked live) |
 | `pnpm test:contract` (Docker) | 33 Rust unit tests (Guard 14 + Vault 16) + 27 on-chain checks on a local NEAR sandbox, including a duplicate payment rejected with `DUPLICATE_INTENT` and an agent whose function-call key can only `spend` within its allowance |
 | `pnpm test:e2e` (starts the built API itself; uses Google Chrome if installed, otherwise run `pnpm --filter @near-sentinel/web exec playwright install chromium` once) | 33 browser tests: flows, accessibility, mobile, keyboard, judge tour, command palette, modal focus, reduced motion |
 | MCP: see [From an AI agent](#from-an-ai-agent-mcp) | `check_retry_safety`, `check_intent`, `check_spend_allowance` and 4 more read-only tools |
@@ -118,7 +118,7 @@ pnpm start          # API + dashboard on http://127.0.0.1:8080 (NEAR testnet, 4 
 
 - Open http://127.0.0.1:8080 for the dashboard (it opens on a **Start here** page with a guided judge tour), or http://127.0.0.1:8080/docs for interactive OpenAPI.
 - Other gates (all re-run on 2026-11-11, results in [docs/STATUS.md](docs/STATUS.md)):
-  - `pnpm test:live`: 7 tests against real testnet RPCs, read-only.
+  - `pnpm test:live`: 10 read-only tests against real RPCs (7 testnet, 3 mainnet).
   - `pnpm test:e2e`: 32 Playwright tests that drive the dashboard against the running API on testnet: functional flows, **axe accessibility (WCAG 2.1 AA, no serious/critical issues) on every page**, mobile/tablet/desktop layouts, keyboard navigation, the optional account verification (skip, cancel, forged callback), the judge tour, the Ctrl+K command palette, the mobile menu, the one-click benchmark and the live Guard and Vault panels.
   - `pnpm test:contract`: 33 Rust unit tests (Guard 14 + Vault 16) + a 27-check on-chain suite on a local NEAR sandbox (Docker). See [contracts/guard](contracts/guard/README.md).
   - `pnpm test:load`: load and soak test of the built server against local mock RPCs (public RPCs are never load-tested). Zero errors, p99 budgets, no memory growth after warm-up.

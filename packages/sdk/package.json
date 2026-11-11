@@ -22,8 +22,8 @@
   "sideEffects": false,
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "test": "vitest run --exclude test/live.test.ts",
-    "test:live": "vitest run test/live.test.ts",
+    "test": "vitest run --exclude test/live.test.ts --exclude test/live-mainnet.test.ts",
+    "test:live": "vitest run test/live.test.ts test/live-mainnet.test.ts",
     "typecheck": "tsc --noEmit",
     "prebuild": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\""
   },

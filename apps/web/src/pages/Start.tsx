@@ -108,6 +108,27 @@ export function StartPage() {
             When a NEAR transaction times out, AI agents often sign a <em>new</em> one. If the first had already landed, the money moves twice. NEAR Sentinel
             cross-checks independent RPC providers and tells the agent, with evidence, whether retrying is safe. Sentinel Guard enforces pay-once on-chain.
           </p>
+          <div className="mt-5 max-w-xl rounded-xl border border-line bg-surface-2/60 px-4 py-3 text-sm" aria-label="Proof on testnet with real money">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted">Proven on testnet with real money</p>
+            <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-ink-2">
+              <span>
+                Naive agent paid <strong className="text-critical">twice</strong>
+              </span>
+              <a className="font-mono text-xs text-link underline" href="https://testnet.nearblocks.io/txns/185YtdJZxUCMAaqjRtmSj4MTx51mdiMpjhAPmZ3rZaH" target="_blank" rel="noreferrer">
+                tx 1
+              </a>
+              <a className="font-mono text-xs text-link underline" href="https://testnet.nearblocks.io/txns/6h2hMxjpjdYwDF6zXJ5gTwD5MY47UT7thdRaxZM2Pc6h" target="_blank" rel="noreferrer">
+                tx 2
+              </a>
+              <span className="text-muted">·</span>
+              <span>
+                Sentinel-guarded agent paid <strong className="text-good">once</strong>
+              </span>
+              <a className="font-mono text-xs text-link underline" href="https://testnet.nearblocks.io/txns/C59gttNUHCaVTHVi2GKCw6zu5C7QcmwPbUuw9NeaXnzS" target="_blank" rel="noreferrer">
+                tx
+              </a>
+            </p>
+          </div>
           <div className="mt-7 flex flex-wrap gap-3">
             <button
               type="button"
@@ -262,7 +283,7 @@ export function StartPage() {
           <ul className="space-y-3 text-sm text-ink-2">
             {[
               ["239 unit and integration tests", "SDK, MCP server (real stdio), API, demo, NEAR AI agent"],
-              ["7 live tests", "read-only, against public testnet RPCs"],
+              ["10 live tests", "read-only, against public testnet and mainnet RPCs"],
               ["33 browser tests", "flows, accessibility, phone/tablet/desktop, keyboard, this tour"],
               ["33 + 27 + 21 contract checks", "Guard and Vault: Rust unit tests, a local NEAR node, then live on testnet"],
             ].map(([a, b]) => (

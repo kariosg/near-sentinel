@@ -59,5 +59,5 @@ Network failures are **not** thrown. They become observations and diagnostics (t
 
 ```bash
 pnpm test        # 160 unit tests (mock RPCs, real fixtures)
-pnpm test:live   # 7 read-only tests against public testnet RPCs
+pnpm test:live   # 10 read-only tests against public testnet and mainnet RPCs
 ```

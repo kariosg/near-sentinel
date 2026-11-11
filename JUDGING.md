@@ -64,6 +64,7 @@ Verified on 2026-11-11 on Windows (Node 22.16, Chrome) and in a clean Linux cont
 ### Safety and security of the service itself
 | Claim | Check |
 |---|---|
+| Works on mainnet too (read-only) | `pnpm test:live` → `packages/sdk/test/live-mainnet.test.ts`: mainnet providers answer with chain_id mainnet from ≥ 2 independent operators; a real recent successful mainnet transaction, picked live from a final block, is `DO_NOT_RETRY`; an unknown hash is `WAIT_AND_RECHECK`. Nothing is signed. |
 | Read-only: Sentinel never signs or submits | The SDK, MCP server and API contain no signing code. Only the demo agents (`examples/agent-demo`) and the guard's deploy/test scripts sign, with keys from git-ignored `.env` files. |
 | SSRF-guarded custom providers, rate limits, body limit, anti-framing headers | `packages/sdk/src/ssrf.ts`, `packages/sdk/test/ssrf.test.ts`, `apps/api/test/api.test.ts` |
 | No keys or seed phrases in the repo | `node scripts/check-secrets.mjs` (runs first in `pnpm test`) |
