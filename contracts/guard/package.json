@@ -1,0 +1,27 @@
+{
+  "name": "@near-sentinel/guard",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Sentinel Guard contract (Rust) + deploy and integration-test scripts",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "build:wasm": "node build-wasm.mjs",
+    "test:unit": "node build-wasm.mjs --test",
+    "test:sandbox": "pnpm build && node run-sandbox.mjs",
+    "test:testnet": "pnpm build && node dist/integration-testnet.js",
+    "create-account": "pnpm build && node dist/create-contract-account.js",
+    "deploy": "pnpm build && node dist/deploy.js"
+  },
+  "dependencies": {
+    "@near-sentinel/sdk": "workspace:*",
+    "@noble/hashes": "2.2.0",
+    "near-api-js": "7.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "5.9.3"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "name": "@near-sentinel/agent-demo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Naive vs Sentinel-guarded agent after an RPC timeout: simulated (no wallet) and real testnet modes",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "simulated": "pnpm build && node dist/simulated.js",
+    "testnet": "pnpm build && node dist/testnet.js",
+    "test": "pnpm build && node dist/simulated.js --assert",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@near-sentinel/sdk": "workspace:*",
+    "near-api-js": "7.4.0",
+    "@noble/hashes": "2.2.0"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "@types/node": "^22.10.0"
+  }
+}

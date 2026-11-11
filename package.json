@@ -1,0 +1,41 @@
+{
+  "name": "near-sentinel",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Transaction-safety guard and RPC evidence engine for AI agents and apps on NEAR",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22.16"
+  },
+  "packageManager": "pnpm@8.15.6",
+  "scripts": {
+    "build": "pnpm --filter @near-sentinel/sdk build && pnpm --filter @near-sentinel/mcp build && pnpm --filter @near-sentinel/api build && pnpm --filter @near-sentinel/web build && pnpm --filter @near-sentinel/agent-demo build && pnpm --filter @near-sentinel/guard build",
+    "typecheck": "pnpm -r typecheck",
+    "test": "node scripts/check-secrets.mjs && pnpm --filter @near-sentinel/sdk test && pnpm --filter @near-sentinel/mcp test && pnpm --filter @near-sentinel/api test && pnpm --filter @near-sentinel/agent-demo test",
+    "test:live": "pnpm --filter @near-sentinel/sdk test:live",
+    "test:e2e": "pnpm --filter @near-sentinel/web test:e2e",
+    "start": "pnpm --filter @near-sentinel/api start",
+    "dev:api": "pnpm --filter @near-sentinel/api dev",
+    "dev:web": "pnpm --filter @near-sentinel/web dev",
+    "demo": "pnpm --filter @near-sentinel/agent-demo simulated",
+    "demo:testnet": "pnpm --filter @near-sentinel/agent-demo testnet",
+    "mcp": "node packages/mcp/dist/server.js",
+    "check:secrets": "node scripts/check-secrets.mjs",
+    "test:contract": "pnpm --filter @near-sentinel/guard test:unit && pnpm --filter @near-sentinel/guard test:sandbox",
+    "test:load": "pnpm --filter @near-sentinel/api test:load",
+    "contract:build": "pnpm --filter @near-sentinel/guard build:wasm",
+    "contract:create-account": "pnpm --filter @near-sentinel/guard run create-account",
+    "contract:deploy": "pnpm --filter @near-sentinel/guard run deploy",
+    "contract:test:testnet": "pnpm --filter @near-sentinel/guard test:testnet"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "@types/node": "^22.10.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "hyperid>uuid": "11.1.1"
+    }
+  }
+}

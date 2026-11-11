@@ -1,0 +1,21 @@
+services:
+  sentinel:
+    build: .
+    image: near-sentinel:local
+    restart: unless-stopped
+    # Bound to localhost by default. Put a TLS reverse proxy in front before exposing publicly.
+    ports:
+      - "127.0.0.1:${SENTINEL_PORT:-8080}:8080"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      NEAR_NETWORK: ${NEAR_NETWORK:-testnet}
+      DATA_DIR: /data
+    volumes:
+      - sentinel-data:/data
+    stop_grace_period: 15s
+    # Prometheus metrics listen on 127.0.0.1:9464 INSIDE the container and are intentionally not published.
+
+volumes:
+  sentinel-data:

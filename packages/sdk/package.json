@@ -1,0 +1,45 @@
+{
+  "name": "@near-sentinel/sdk",
+  "version": "0.1.0",
+  "description": "Evidence-based transaction inspection, retry-safety and RPC provider intelligence for NEAR",
+  "license": "MIT",
+  "type": "module",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "default": "./dist/testing.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "vitest run --exclude test/live.test.ts",
+    "test:live": "vitest run test/live.test.ts",
+    "typecheck": "tsc --noEmit",
+    "prebuild": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "near-api-js": "7.4.0",
+    "@noble/hashes": "2.2.0",
+    "ipaddr.js": "2.5.0",
+    "undici": "7.30.2",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "vitest": "5.1.0",
+    "typescript": "5.9.3",
+    "@types/node": "^22.10.0"
+  },
+  "engines": {
+    "node": ">=20.19"
+  }
+}

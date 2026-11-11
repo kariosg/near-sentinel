@@ -1,0 +1,21 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+*.log
+coverage/
+reports/
+.claude/settings.local.json
+data/
+*.db
+*.db-*
+.e2e-data/
+test-results/
+playwright-report/
+
+# Private submission drafts (kept local)
+docs/SUBMISSION_DRAFT.md
+
+# Local demo recordings (large; posted to X by the owner, never committed)
+media/

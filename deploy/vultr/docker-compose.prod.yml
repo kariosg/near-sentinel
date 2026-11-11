@@ -1,0 +1,101 @@
+# NEAR Sentinel production stack for a single VPS: the app + Caddy 2 (automatic HTTPS).
+#
+# Run from the repository root (deploy/vultr/deploy.sh does this for you):
+#   docker compose -f deploy/vultr/docker-compose.prod.yml --env-file deploy/vultr/.env.production up -d --build
+#
+# Exposure:
+#   - Only Caddy publishes ports (80, 443/tcp, 443/udp for HTTP/3).
+#   - The app's port 8080 is reachable ONLY from Caddy on the private `edge` network (never published).
+#   - Prometheus metrics listen on 127.0.0.1:9464 INSIDE the app container and are never published.
+#
+# Note: Docker writes its own iptables rules for published ports, so UFW does not filter them. That is why
+# nothing except Caddy's 80/443 is published here.
+
+name: near-sentinel
+
+services:
+  sentinel:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    image: near-sentinel:prod
+    restart: unless-stopped
+    env_file:
+      - path: .env.production
+        required: true
+    # These override anything in .env.production: they are what makes the container work behind Caddy.
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: "8080"
+      DATA_DIR: /data
+      # Behind Caddy: use X-Forwarded-For (set by Caddy to the real client IP) for rate limits and SSE caps.
+      TRUST_PROXY: "1"
+      METRICS_HOST: 127.0.0.1
+    expose:
+      - "8080"
+    volumes:
+      - sentinel-data:/data
+    networks:
+      - edge
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8080/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+    stop_grace_period: 15s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  caddy:
+    image: caddy:2.11.9-alpine
+    restart: unless-stopped
+    depends_on:
+      sentinel:
+        condition: service_healthy
+    ports:
+      # HTTP_PORT / HTTPS_PORT default to 80 / 443. Only change them for local testing:
+      # Let's Encrypt needs the real 80/443 to issue a certificate.
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+      - "${HTTPS_PORT:-443}:443/udp"
+    environment:
+      SENTINEL_DOMAIN: ${SENTINEL_DOMAIN:?set SENTINEL_DOMAIN in deploy/vultr/.env.production (or :80 for the temporary HTTP fallback)}
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in deploy/vultr/.env.production}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Certificates and ACME account. Keep this volume: deleting it forces re-issuance (rate-limited).
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - edge
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  edge: {}
+
+volumes:
+  sentinel-data:
+  caddy-data:
+  caddy-config:

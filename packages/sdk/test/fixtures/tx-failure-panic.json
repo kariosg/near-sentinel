@@ -1,0 +1,266 @@
+{
+ "final_execution_status": "FINAL",
+ "receipts": [
+  {
+   "predecessor_id": "predit-fc-operator.testnet",
+   "priority": 0,
+   "receipt": {
+    "Action": {
+     "actions": [
+      {
+       "FunctionCall": {
+        "args": "eyJldmlkZW5jZSI6eyJoYXNoIjoibWFudWFsLWV2aWRlbmNlIiwidXJpIjoiaHR0cHM6Ly9leGFtcGxlLmNvbS9zb3VyY2UifSwibWFya2V0X2lkIjoiMzAiLCJyZXBvcnQiOnsibWFudWFsIjp7Im91dGNvbWUiOiJ5ZXMiLCJyZWFzb24iOiJSZXN1bHQgZnJvbSB0aGUgbGlzdGVkIHNvdXJjZSJ9fX0=",
+        "deposit": "0",
+        "gas": 100000000000000,
+        "method_name": "post_receipt"
+       }
+      }
+     ],
+     "gas_price": "1000000000",
+     "input_data_ids": [],
+     "is_promise_yield": false,
+     "output_data_receivers": [],
+     "signer_id": "predit-fc-operator.testnet",
+     "signer_public_key": "ed25519:FucPBzXuBJm8VSe7FgdacmhqPk1GiSuo4xmTjLPszLMk"
+    }
+   },
+   "receipt_id": "331N8nnPHfB5NZNDBLMoBNE5yiLsMH69zxHNBiQ3edSa",
+   "receiver_id": "predit-fc-market.testnet"
+  },
+  {
+   "predecessor_id": "system",
+   "priority": 0,
+   "receipt": {
+    "Action": {
+     "actions": [
+      {
+       "Transfer": {
+        "deposit": "100735115348672400000000"
+       }
+      }
+     ],
+     "gas_price": "0",
+     "input_data_ids": [],
+     "is_promise_yield": false,
+     "output_data_receivers": [],
+     "signer_id": "predit-fc-operator.testnet",
+     "signer_public_key": "ed25519:FucPBzXuBJm8VSe7FgdacmhqPk1GiSuo4xmTjLPszLMk"
+    }
+   },
+   "receipt_id": "H6uHsCVki6SwhSm2aniiowTj3wLq5471cShWBNiTFH7E",
+   "receiver_id": "predit-fc-operator.testnet"
+  }
+ ],
+ "receipts_outcome": [
+  {
+   "block_hash": "BaE6RyHC7WEmuu6aDuWVAaZcyRNzgASXStwSDv79oin6",
+   "id": "331N8nnPHfB5NZNDBLMoBNE5yiLsMH69zxHNBiQ3edSa",
+   "outcome": {
+    "executor_id": "predit-fc-market.testnet",
+    "gas_burnt": 1533510913156,
+    "logs": [],
+    "metadata": {
+     "contracts": [
+      {
+       "local": "Gx39cCv53dLSAAoBQADqc3r6PuMH3gjKcSaM2TKV9FFr"
+      }
+     ],
+     "gas_profile": [
+      {
+       "cost": "BASE",
+       "cost_category": "WASM_HOST_COST",
+       "gas_used": "3971521665"
+      },
+      {
+       "cost": "CONTRACT_LOADING_BASE",
+       "cost_category": "WASM_HOST_COST",
+       "gas_used": "35445963"
+      },
+      {
+       "cost": "CONTRACT_LOADING_BYTES",
+       "cost_category": "WASM_HOST_COST",
+       "gas_used": "370645695290"
+      },
+      {
+       "cost": "READ_MEMORY_BASE",
+       "cost_category": "WASM_HOST_COST",
+       "gas_used": "7829589600"
+      },
+      {
+       "cost": "READ_MEMORY_BYTE",
+       "cost_category": "WASM_HOST_COST",
+       "gas_used": "136847988"
+      },
+      {
+       "cost": "READ_REGISTER_BASE",
+       "cost_category": "WASM_HOST_COST",
+       "gas_used": "10068660744"
+      },
+      {
+       "cost": "READ_REGISTER_BYTE",
+       "cost_category": "WASM_HOST_COST",
+       "gas_used": "104968530"
+      },
+      {
+       "cost": "STORAGE_READ_BASE",
+       "cost_category": "WASM_HOST_COST",
+       "gas_used": "112713691498"
+      },
+      {
+       "cost": "STORAGE_READ_KEY_BYTE",
+       "cost_category": "WASM_HOST_COST",
+       "gas_used": "433335462"
+      },
+      {
+       "cost": "STORAGE_READ_VALUE_BYTE",
+       "cost_category": "WASM_HOST_COST",
+       "gas_used": "4875962476"
+      },
+      {
+       "cost": "UTF8_DECODING_BASE",
+       "cost_category": "WASM_HOST_COST",
+       "gas_used": "3111779061"
+      },
+      {
+       "cost": "UTF8_DECODING_BYTE",
+       "cost_category": "WASM_HOST_COST",
+       "gas_used": "6414770538"
+      },
+      {
+       "cost": "WASM_INSTRUCTION",
+       "cost_category": "WASM_HOST_COST",
+       "gas_used": "92874342792"
+      },
+      {
+       "cost": "WRITE_MEMORY_BASE",
+       "cost_category": "WASM_HOST_COST",
+       "gas_used": "14018974305"
+      },
+      {
+       "cost": "WRITE_MEMORY_BYTE",
+       "cost_category": "WASM_HOST_COST",
+       "gas_used": "2944397532"
+      },
+      {
+       "cost": "WRITE_REGISTER_BASE",
+       "cost_category": "WASM_HOST_COST",
+       "gas_used": "11462089944"
+      },
+      {
+       "cost": "WRITE_REGISTER_BYTE",
+       "cost_category": "WASM_HOST_COST",
+       "gas_used": "3402399780"
+      }
+     ],
+     "version": 4
+    },
+    "receipt_ids": [
+     "H6uHsCVki6SwhSm2aniiowTj3wLq5471cShWBNiTFH7E"
+    ],
+    "status": {
+     "Failure": {
+      "ActionError": {
+       "index": 0,
+       "kind": {
+        "FunctionCallError": {
+         "ExecutionError": "Smart contract panicked: Market has not expired"
+        }
+       }
+      }
+     }
+    },
+    "tokens_burnt": "153351091315600000000"
+   },
+   "proof": [
+    {
+     "direction": "Right",
+     "hash": "2v9xaiGZcc59PWJYcLUYuni7DsaRFgNgK2tHUUThwCSN"
+    }
+   ]
+  },
+  {
+   "block_hash": "DhGGZ539V77tfe8MbnJWjN5JjHAzrT2aNLDsGjvnsZkm",
+   "id": "H6uHsCVki6SwhSm2aniiowTj3wLq5471cShWBNiTFH7E",
+   "outcome": {
+    "executor_id": "predit-fc-operator.testnet",
+    "gas_burnt": 223182562500,
+    "logs": [],
+    "metadata": {
+     "contracts": [
+      null
+     ],
+     "gas_profile": [],
+     "version": 4
+    },
+    "receipt_ids": [],
+    "status": {
+     "SuccessValue": ""
+    },
+    "tokens_burnt": "0"
+   },
+   "proof": [
+    {
+     "direction": "Left",
+     "hash": "A7dEAhEBsWkqb6Apye1cQn4pGZQeRdCGv3Jyh6vJgLfn"
+    }
+   ]
+  }
+ ],
+ "status": {
+  "Failure": {
+   "ActionError": {
+    "index": 0,
+    "kind": {
+     "FunctionCallError": {
+      "ExecutionError": "Smart contract panicked: Market has not expired"
+     }
+    }
+   }
+  }
+ },
+ "transaction": {
+  "actions": [
+   {
+    "FunctionCall": {
+     "args": "eyJldmlkZW5jZSI6eyJoYXNoIjoibWFudWFsLWV2aWRlbmNlIiwidXJpIjoiaHR0cHM6Ly9leGFtcGxlLmNvbS9zb3VyY2UifSwibWFya2V0X2lkIjoiMzAiLCJyZXBvcnQiOnsibWFudWFsIjp7Im91dGNvbWUiOiJ5ZXMiLCJyZWFzb24iOiJSZXN1bHQgZnJvbSB0aGUgbGlzdGVkIHNvdXJjZSJ9fX0=",
+     "deposit": "0",
+     "gas": 100000000000000,
+     "method_name": "post_receipt"
+    }
+   }
+  ],
+  "hash": "8mSLr4P4p576mKVyLwMEKMmaqGLmW7NwLqDd28s5zeiK",
+  "nonce": 276889636000001,
+  "priority_fee": 0,
+  "public_key": "ed25519:FucPBzXuBJm8VSe7FgdacmhqPk1GiSuo4xmTjLPszLMk",
+  "receiver_id": "predit-fc-market.testnet",
+  "signature": "ed25519:nsGFb7uwByZUc5xL5WYJQkDRYEhttxHVXRgKPXF9HW77JfRWZZWv9mADhNJHKUonSz81JZYpLb1neqAsd4nALrf",
+  "signer_id": "predit-fc-operator.testnet"
+ },
+ "transaction_outcome": {
+  "block_hash": "ESvXz4so2KhYWUsHf656nUVJ8GRE2n14KnmGTfzJzD4T",
+  "id": "8mSLr4P4p576mKVyLwMEKMmaqGLmW7NwLqDd28s5zeiK",
+  "outcome": {
+   "executor_id": "predit-fc-operator.testnet",
+   "gas_burnt": 316737936130,
+   "logs": [],
+   "metadata": {
+    "gas_profile": null,
+    "version": 1
+   },
+   "receipt_ids": [
+    "331N8nnPHfB5NZNDBLMoBNE5yiLsMH69zxHNBiQ3edSa"
+   ],
+   "status": {
+    "SuccessReceiptId": "331N8nnPHfB5NZNDBLMoBNE5yiLsMH69zxHNBiQ3edSa"
+   },
+   "tokens_burnt": "31673793613000000000"
+  },
+  "proof": [
+   {
+    "direction": "Right",
+    "hash": "HidG4Dy3njGbC1EKhheHAGHhGDopHregseiC5vw1aGj4"
+   }
+  ]
+ }
+}

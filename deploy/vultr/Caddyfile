@@ -1,0 +1,50 @@
+# NEAR Sentinel: Caddy 2 reverse proxy with automatic HTTPS.
+#
+# Values come from deploy/vultr/.env.production (passed to the container by docker-compose.prod.yml):
+#   SENTINEL_DOMAIN  the public hostname, e.g. sentinel.example.com. Its DNS A record must point at this server.
+#   ACME_EMAIL       contact address for the certificate authority (expiry notices), e.g. you@example.com
+#
+# TEMPORARY "no domain yet" fallback: set SENTINEL_DOMAIN=:80 in .env.production.
+#   Caddy then serves plain HTTP on port 80 at http://<server-ip>/ with no certificate. Traffic is NOT encrypted.
+#   Use it only to check the deployment; switch to a real domain before sharing the URL.
+#   (The HSTS header below is ignored by browsers over plain HTTP, so it does no harm in that mode.)
+#
+# Client IPs: Caddy replaces any X-Forwarded-For sent by the client with the real peer address (no
+# trusted_proxies are configured), and the app runs with TRUST_PROXY=1, so rate limits see real client IPs.
+# If you later put a CDN in front of Caddy, configure `trusted_proxies` in the global block for that CDN.
+{
+	email {$ACME_EMAIL}
+}
+
+{$SENTINEL_DOMAIN} {
+	# Compress everything except the Server-Sent Events stream (compression would buffer it).
+	@compressible not path /api/v1/events
+	encode @compressible zstd gzip
+
+	# Security headers. `defer` applies them after the app responds, so they REPLACE (not duplicate) the
+	# nosniff / referrer-policy headers the app already sets. The app sets no Content-Security-Policy; the
+	# CSP here only forbids framing (clickjacking) and does not restrict scripts or styles, so the dashboard
+	# and the Swagger UI at /docs keep working.
+	header {
+		defer
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+		X-Frame-Options "DENY"
+		Content-Security-Policy "frame-ancestors 'none'"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+		-Server
+	}
+
+	reverse_proxy sentinel:8080 {
+		# Flush every write immediately: required for SSE (/api/v1/events) to stream instead of buffering.
+		flush_interval -1
+		# On a config reload, keep open event streams alive for a while instead of cutting them instantly.
+		stream_close_delay 5m
+	}
+
+	log {
+		output stdout
+		format json
+	}
+}
