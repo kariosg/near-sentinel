@@ -30,6 +30,8 @@ export interface PerProviderRetryEvidence {
   txBlockHeight?: number;
   /** Provider returned the tx's block_hash (so it holds the history window). null = unknown. */
   coversWindow: boolean | null;
+  /** Set when a delayed re-lookup did not confirm NOT_FOUND (then txLookup is ERROR and it is not proof). */
+  recheck?: "FOUND" | "ERROR";
 }
 
 export interface RetryEvidence {

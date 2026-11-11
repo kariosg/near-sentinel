@@ -10,9 +10,10 @@
   },
   "packageManager": "pnpm@8.15.6",
   "scripts": {
-    "build": "pnpm --filter @near-sentinel/sdk build && pnpm --filter @near-sentinel/mcp build && pnpm --filter @near-sentinel/api build && pnpm --filter @near-sentinel/web build && pnpm --filter @near-sentinel/agent-demo build && pnpm --filter @near-sentinel/guard build",
+    "build": "pnpm --filter @near-sentinel/sdk build && pnpm --filter @near-sentinel/mcp build && pnpm --filter @near-sentinel/api build && pnpm --filter @near-sentinel/web build && pnpm --filter @near-sentinel/agent-demo build && pnpm --filter @near-sentinel/near-ai-agent build && pnpm --filter @near-sentinel/guard build",
     "typecheck": "pnpm -r typecheck",
-    "test": "node scripts/check-secrets.mjs && pnpm --filter @near-sentinel/sdk test && pnpm --filter @near-sentinel/mcp test && pnpm --filter @near-sentinel/api test && pnpm --filter @near-sentinel/agent-demo test",
+    "verify": "node scripts/verify.mjs",
+    "test": "node scripts/check-secrets.mjs && pnpm --filter @near-sentinel/sdk test && pnpm --filter @near-sentinel/mcp test && pnpm --filter @near-sentinel/api test && pnpm --filter @near-sentinel/agent-demo test && pnpm --filter @near-sentinel/near-ai-agent test",
     "test:live": "pnpm --filter @near-sentinel/sdk test:live",
     "test:e2e": "pnpm --filter @near-sentinel/web test:e2e",
     "start": "pnpm --filter @near-sentinel/api start",
@@ -21,6 +22,7 @@
     "demo": "pnpm --filter @near-sentinel/agent-demo simulated",
     "demo:testnet": "pnpm --filter @near-sentinel/agent-demo testnet",
     "demo:critical": "pnpm --filter @near-sentinel/agent-demo critical",
+    "demo:near-ai": "pnpm --filter @near-sentinel/near-ai-agent start",
     "mcp": "node packages/mcp/dist/server.js",
     "check:secrets": "node scripts/check-secrets.mjs",
     "test:contract": "pnpm --filter @near-sentinel/guard test:unit && pnpm --filter @near-sentinel/guard test:sandbox",
@@ -28,7 +30,8 @@
     "contract:build": "pnpm --filter @near-sentinel/guard build:wasm",
     "contract:create-account": "pnpm --filter @near-sentinel/guard run create-account",
     "contract:deploy": "pnpm --filter @near-sentinel/guard run deploy",
-    "contract:test:testnet": "pnpm --filter @near-sentinel/guard test:testnet"
+    "contract:test:testnet": "pnpm --filter @near-sentinel/guard test:testnet",
+    "vault:testnet": "pnpm --filter @near-sentinel/guard vault:testnet"
   },
   "devDependencies": {
     "typescript": "5.9.3",

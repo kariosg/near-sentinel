@@ -54,7 +54,7 @@ const STEPS: Step[] = [
     href: "#/integrate",
     time: "1 min",
     icon: "bot",
-    what: "Six read-only MCP tools, including check_retry_safety and check_intent.",
+    what: "Seven read-only MCP tools, including check_retry_safety, check_intent and check_spend_allowance.",
     expect: "A copy-paste command for Claude Code or any MCP client.",
     cta: "Open",
   },
@@ -261,10 +261,10 @@ export function StartPage() {
           <SectionTitle id="verify-title" eyebrow="Reproduce it" title="Verify from your terminal" sub="Node ≥ 22.16 and pnpm 8. Docker only for the contract suite." />
           <ul className="space-y-3 text-sm text-ink-2">
             {[
-              ["211 unit and integration tests", "SDK, MCP server (real stdio), API, demo"],
+              ["239 unit and integration tests", "SDK, MCP server (real stdio), API, demo, NEAR AI agent"],
               ["7 live tests", "read-only, against public testnet RPCs"],
-              ["31 browser tests", "flows, accessibility, phone/tablet/desktop, keyboard, this tour"],
-              ["14 + 12 + 11 contract checks", "Rust unit tests, a local NEAR node, then live on testnet"],
+              ["33 browser tests", "flows, accessibility, phone/tablet/desktop, keyboard, this tour"],
+              ["33 + 27 + 21 contract checks", "Guard and Vault: Rust unit tests, a local NEAR node, then live on testnet"],
             ].map(([a, b]) => (
               <li key={a} className="flex gap-3">
                 <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-good/15 text-good">
@@ -278,22 +278,23 @@ export function StartPage() {
           </ul>
         </div>
         <CodeBlock title="bash">{`pnpm install && pnpm build
-pnpm test            # secrets check + 211 tests
+pnpm test            # secrets check + 239 tests
 pnpm demo            # naive agent pays 2 NEAR, guarded pays 1
 pnpm start           # this dashboard on http://127.0.0.1:8080
-pnpm test:contract   # Docker: 14 Rust tests + 12 on-chain checks`}</CodeBlock>
+pnpm test:contract   # Docker: 33 Rust tests + 27 on-chain checks`}</CodeBlock>
       </section>
 
       {/* ------------------------------------------------------------ inside */}
       <section aria-labelledby="inside-title">
-        <SectionTitle id="inside-title" eyebrow="What ships" title="One safety layer, five ways to use it" />
+        <SectionTitle id="inside-title" eyebrow="What ships" title="One safety layer, six ways to use it" />
         <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {(
             [
-              ["bot", "MCP server", "Six read-only tools for AI agents: check_retry_safety, inspect_transaction, trace_receipts, diagnose_submission_error, provider_health, check_intent.", "#/integrate"],
-              ["layers", "TypeScript SDK", "checkRetrySafety, inspectTransaction, checkIntent and more. Validates every RPC answer.", "#/integrate"],
+              ["bot", "MCP server", "Seven read-only tools for AI agents: check_retry_safety, inspect_transaction, trace_receipts, diagnose_submission_error, provider_health, check_intent, check_spend_allowance.", "#/integrate"],
+              ["layers", "TypeScript SDK", "checkRetrySafety, inspectTransaction, checkIntent, checkSpendAllowance and more. Validates every RPC answer.", "#/integrate"],
               ["terminal", "REST API", "Fastify API with OpenAPI docs, rate limits, live updates over SSE.", "/docs"],
               ["shieldCheck", "Sentinel Guard contract", "Rust, no owner, no admin, live on testnet. A repeated intent is rejected on-chain and refunded.", "#/integrate"],
+              ["wallet", "Sentinel Vault contract", "Give an agent money, not keys: per-payment and daily limits, receiver allowlist, freeze. The agent spends with a function-call key. Live on testnet.", "#/integrate"],
               ["activity", "This dashboard", "Provider health, incidents, benchmarks, receipt graphs. Works on phones.", "#/overview"],
               ["lock", "Safe by design", "Never signs, never holds keys. Testnet by default. Optional wallet check stores nothing.", "#/settings"],
             ] as Array<[IconName, string, string, string]>
@@ -368,7 +369,7 @@ function FlowDiagram({ providers }: { providers?: Array<{ name: string; up: bool
     { name: "fastnear", up: true },
     { name: "fastnear-archival", up: true },
     { name: "drpc", up: true },
-    { name: "near-org", up: true },
+    { name: "intear", up: true },
   ]).slice(0, 4);
   const ys = [52, 112, 172, 232];
   return (

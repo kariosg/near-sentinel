@@ -15,6 +15,7 @@ claude mcp add near-sentinel -e NEAR_SENTINEL_NETWORK=testnet -- node /abs/path/
 | `diagnose_submission_error` | `error` (raw JSON or message) | classification; no network |
 | `provider_health` | — | per-provider liveness, lag, tested capabilities |
 | `check_intent` | `contractId`, `payerId`, `intentId` | `PAID` / `PENDING` / `NOT_RECORDED` / `CONFLICTING` / `UNKNOWN` for a Sentinel Guard intent, with per-provider evidence |
+| `check_spend_allowance` | `contractId`, `ownerId`, `agentId` | `ACTIVE` / `EXHAUSTED` / `FROZEN` / `NO_POLICY` / `UNKNOWN` for a Sentinel Vault allowance, the limits, and `availableNow` (the smallest any provider reports), with per-provider evidence |
 
 ## Environment
 
@@ -26,4 +27,4 @@ claude mcp add near-sentinel -e NEAR_SENTINEL_NETWORK=testnet -- node /abs/path/
 | `NEAR_SENTINEL_TIMEOUT_MS` | `10000` | per request |
 | `NEAR_SENTINEL_ALLOW_PRIVATE` | — | `1` allows localhost RPCs (local demos only) |
 
-`pnpm test` builds the server and drives it over stdio with the official MCP client (11 tests).
+`pnpm test` builds the server and drives it over stdio with the official MCP client (13 tests, 7 tools).

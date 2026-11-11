@@ -72,7 +72,7 @@ afterEach(async () => {
 
 const success = fixture("tx-success.json");
 const found = (r = success): MockAnswer => ({ result: r });
-const S = (providers: ProviderConfig[], extra = {}) => new NearSentinel({ rpcProviders: providers, timeoutMs: 1500, ...extra });
+const S = (providers: ProviderConfig[], extra = {}) => new NearSentinel({ rpcProviders: providers, timeoutMs: 1500, proofRecheckMs: 0, ...extra });
 
 /* --------------------------------- tests --------------------------------- */
 
@@ -174,6 +174,49 @@ describe("inspectTransaction across providers", () => {
 });
 
 describe("retry safety with a signed transaction", () => {
+  it("load-balanced provider: nonce consumed + not found, but the re-check FINDS the tx → never SAFE", async () => {
+    const st = makeSignedTx({ nonce: 100n });
+    // Each provider answers "unknown" to the first two lookups (a lagging backend) and FOUND on the re-check.
+    const lagging = () => {
+      let n = 0;
+      return () => (++n <= 2 ? UNKNOWN_TX : found());
+    };
+    const s = S([
+      await chain("fast-a", { akNonce: 105n, knowsBlock: st.blockHash, tx: lagging() }),
+      await chain("drpc-b", { akNonce: 105n, knowsBlock: st.blockHash, tx: lagging() }),
+    ]);
+    const r = await s.inspectTransaction({ signedTransactionBase64: st.base64 });
+    expect(r.retryRecommendation.verdict).not.toBe("SAFE_TO_RETRY");
+    expect(r.retryRecommendation.verdict).toBe("WAIT_AND_RECHECK");
+  });
+
+  it("mixed re-check: one provider now FINDS the tx while two lagging ones still say not found → found evidence wins, never SAFE", async () => {
+    const st = makeSignedTx({ nonce: 100n });
+    const foundSame = (): MockAnswer => ({ result: { ...success, transaction: { ...success.transaction, hash: st.hash } } });
+    let n = 0;
+    const s = S(
+      [
+        await chain("fast-a", { akNonce: 105n, knowsBlock: st.blockHash, tx: () => (++n <= 2 ? UNKNOWN_TX : foundSame()) }),
+        await chain("drpc-b", { akNonce: 105n, knowsBlock: st.blockHash }),
+        await chain("intear-c", { akNonce: 105n, knowsBlock: st.blockHash }),
+      ],
+      { minIndependentOperators: 2 },
+    );
+    const r = await s.inspectTransaction({ signedTransactionBase64: st.base64 });
+    expect(r.retryRecommendation.verdict).not.toBe("SAFE_TO_RETRY");
+    expect(r.retryRecommendation.verdict).toBe("DO_NOT_RETRY");
+    expect(r.providers.find((p) => p.provider === "fast-a")?.outcome).toBe("FOUND");
+  });
+
+  it("re-check waits proofRecheckMs before confirming", async () => {
+    const st = makeSignedTx({ nonce: 100n });
+    const s = S([await chain("fast-a", { akNonce: 105n, knowsBlock: st.blockHash }), await chain("drpc-b", { akNonce: 105n, knowsBlock: st.blockHash })], { proofRecheckMs: 300 });
+    const t0 = Date.now();
+    const r = await s.inspectTransaction({ signedTransactionBase64: st.base64 });
+    expect(r.retryRecommendation.verdict).toBe("SAFE_TO_RETRY");
+    expect(Date.now() - t0).toBeGreaterThanOrEqual(300);
+  });
+
   it("nonce consumed by another tx, 2 operators cover the window, not found → SAFE + EXPIRED_OR_UNRESOLVED, correct ordering", async () => {
     const st = makeSignedTx({ nonce: 100n });
     const s = S([
@@ -190,7 +233,7 @@ describe("retry safety with a signed transaction", () => {
       const mine = log.filter((l) => l.provider === p);
       const ak = mine.find((l) => l.method === "query")!.seq;
       const txs = mine.filter((l) => l.method === "EXPERIMENTAL_tx_status").map((l) => l.seq);
-      expect(txs).toHaveLength(2);
+      expect(txs).toHaveLength(3); // initial lookup, lookup after the nonce read, and the confirming re-check
       expect(ak).toBeLessThan(txs[1]!);
       expect(ak).toBeGreaterThan(txs[0]!);
     }

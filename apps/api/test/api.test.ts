@@ -23,6 +23,15 @@ const intentView = (params: any): MockAnswer | undefined => {
       : null;
   return { result: { result: [...Buffer.from(JSON.stringify(value))], logs: [], block_height: 1000, block_hash: "x" } };
 };
+const policyView = (params: any): MockAnswer | undefined => {
+  if (params?.request_type !== "call_function" || params.method_name !== "get_policy") return undefined;
+  const args = JSON.parse(Buffer.from(params.args_base64, "base64").toString());
+  const value =
+    args.owner_id === "owner.testnet" && args.agent_id === "agent.testnet"
+      ? { owner_id: "owner.testnet", agent_id: "agent.testnet", balance: "2000000000000000000000000", per_payment_max: "1000000000000000000000000", daily_max: "1500000000000000000000000", spent_in_window: "500000000000000000000000", available_now: "1000000000000000000000000", window_resets_at_ms: 1800000000000, allowed_receivers: ["shop.testnet"], frozen: false }
+      : null;
+  return { result: { result: [...Buffer.from(JSON.stringify(value))], logs: [], block_height: 1000, block_hash: "x" } };
+};
 const keys: { full?: string; fc?: string } = {};
 const accessKeyView = (params: any): MockAnswer | undefined => {
   if (params?.request_type !== "view_access_key") return undefined;
@@ -42,13 +51,13 @@ const handler = (method: string, params: any): MockAnswer => {
   }
   if (method === "status") return { result: { chain_id: state.chain, protocol_version: 88, sync_info: { latest_block_height: 1000, earliest_block_height: 1, syncing: false } } };
   if (method === "block") return { error: { name: "HANDLER_ERROR", code: -32000, message: "x", cause: { name: "UNKNOWN_BLOCK" } } };
-  if (method === "query") return intentView(params) ?? accessKeyView(params) ?? UNKNOWN_TX;
+  if (method === "query") return (intentView(params) ?? policyView(params)) ?? accessKeyView(params) ?? UNKNOWN_TX;
   return UNKNOWN_TX;
 };
 const bHandler = (method: string, params: any): MockAnswer => {
   if (method === "status") return { result: { chain_id: "testnet", protocol_version: 88, sync_info: { latest_block_height: 1000, earliest_block_height: 1, syncing: false } } };
   if (method === "EXPERIMENTAL_tx_status") return params.tx_hash === success.transaction.hash ? { result: success } : UNKNOWN_TX;
-  if (method === "query") return intentView(params) ?? accessKeyView(params) ?? UNKNOWN_TX;
+  if (method === "query") return (intentView(params) ?? policyView(params)) ?? accessKeyView(params) ?? UNKNOWN_TX;
   return UNKNOWN_TX;
 };
 
@@ -379,6 +388,26 @@ describe("environment validation", () => {
     expect(() => loadEnv({ PORT: "99999" })).toThrow(/PORT/);
     expect(() => loadEnv({ API_KEYS_SHA256: "not-hex" })).toThrow(/API_KEYS_SHA256/);
     expect(() => loadEnv({ NEAR_NETWORK: "devnet" })).toThrow(/NEAR_NETWORK/);
+  });
+});
+
+describe("vault allowance (read-only)", () => {
+  const get = (url: string) => d.app.inject({ method: "GET", url });
+  it("ACTIVE with limits and the amount available now", async () => {
+    const r = await get("/api/v1/allowance?contract=vault.testnet&owner=owner.testnet&agent=agent.testnet");
+    expect(r.statusCode).toBe(200);
+    expect(r.json()).toMatchObject({ status: "ACTIVE", availableNow: "1000000000000000000000000", policy: { allowed_receivers: ["shop.testnet"] } });
+  });
+  it("NO_POLICY for an unknown agent", async () => {
+    const r = await get("/api/v1/allowance?contract=vault.testnet&owner=owner.testnet&agent=other.testnet");
+    expect(r.json()).toMatchObject({ status: "NO_POLICY", availableNow: "0" });
+  });
+  it.each([
+    ["missing contract with no VAULT_CONTRACT_ID", "/api/v1/allowance?owner=owner.testnet&agent=agent.testnet"],
+    ["bad account", "/api/v1/allowance?contract=vault.testnet&owner=NOPE&agent=agent.testnet"],
+    ["unknown query param", "/api/v1/allowance?contract=vault.testnet&owner=owner.testnet&agent=agent.testnet&evil=1"],
+  ])("400 on %s", async (_n, url) => {
+    expect((await get(url)).statusCode).toBe(400);
   });
 });
 

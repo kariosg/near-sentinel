@@ -1,23 +1,25 @@
 import type { ProviderConfig } from "./types.js";
 
 /**
- * Default free, key-less providers. Verified reachable on 2026-11-09.
- * Operators are labelled so FastNEAR's two hostnames are not counted as two witnesses.
- * rpc.*.near.org is deprecated and rate-limited (30 req/min); it is kept as an
- * independent witness but given a low weight.
+ * Default free, key-less providers. Verified reachable on 2026-11-11.
+ * Operators are labelled so one company's hostnames are never counted as two witnesses.
+ * Independence was checked by DNS on 2026-11-11: rpc.{testnet,mainnet}.near.org are CNAMEs to
+ * external-dns.fastnear.com (FastNEAR infrastructure), so they are NOT an independent operator and are
+ * not in the defaults. Intear runs its own nodes on separate infrastructure; without an API key it adds ~1 s
+ * per request but has no tight rate limit (Tatum's free gateway was rejected: 5 requests/minute per IP).
  */
 export const DEFAULT_PROVIDERS: Record<"mainnet" | "testnet", ProviderConfig[]> = {
   testnet: [
     { name: "fastnear", url: "https://test.rpc.fastnear.com", operator: "fastnear", weight: 3 },
     { name: "fastnear-archival", url: "https://archival-rpc.testnet.fastnear.com", operator: "fastnear", archival: true, weight: 1 },
     { name: "drpc", url: "https://near-testnet.drpc.org", operator: "drpc", weight: 2 },
-    { name: "near-org", url: "https://rpc.testnet.near.org", operator: "near.org", weight: 1 },
+    { name: "intear", url: "https://testnet-rpc.intea.rs", operator: "intear", weight: 1 },
   ],
   mainnet: [
     { name: "fastnear", url: "https://free.rpc.fastnear.com", operator: "fastnear", weight: 3 },
     { name: "fastnear-archival", url: "https://archival-rpc.mainnet.fastnear.com", operator: "fastnear", archival: true, weight: 1 },
     { name: "drpc", url: "https://near.drpc.org", operator: "drpc", weight: 2 },
-    { name: "near-org", url: "https://rpc.mainnet.near.org", operator: "near.org", weight: 1 },
+    { name: "intear", url: "https://rpc.intea.rs", operator: "intear", weight: 1 },
   ],
 };
 

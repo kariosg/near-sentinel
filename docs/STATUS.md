@@ -1,22 +1,24 @@
 # STATUS (resume point)
 
-_Last updated: 2026-11-11. Product, guard contract and all test gates are done and passing. Guard deployed to testnet as `guard.karios.testnet` (live suite 11/11). Code is pushed to GitHub (`kariosg/near-sentinel`, branch `master`). Remaining: make the repo public, submission, production server (optional). Hackathon deadline: **2026-11-14 23:59 UTC**._
+_Last updated: 2026-11-11. Product, guard contract and all test gates are done and passing. Guard deployed to testnet as `guard.karios.testnet` (live suite 11/11); Sentinel Vault deployed as `vault.karios.testnet` (live suite 10/10). Code is pushed to GitHub (`kariosg/near-sentinel`, branch `master`). Remaining: make the repo public, submission, production server (optional). Hackathon deadline: **2026-11-14 23:59 UTC**._
 
 ## How to resume
 ```bash
 pnpm install
 pnpm build              # sdk → mcp → api → web → demo → guard scripts (tsc / vite)
 pnpm typecheck
-pnpm test               # secrets gate + sdk 146 + mcp 11 (stdio e2e) + api 47 + demo 7 assertions
+pnpm test               # secrets gate + sdk 160 + mcp 13 (stdio e2e) + api 52 + demo 7 assertions
 pnpm test:live          # 7 read-only tests against public NEAR testnet RPCs
-pnpm test:e2e           # 31 Playwright tests (functional + axe a11y + responsive + keyboard + optional sign-in + judge tour)
-pnpm test:contract      # guard: 14 Rust unit tests + 12-check on-chain suite on a local neard sandbox (Docker)
+pnpm test:e2e           # 32 Playwright tests (functional + axe a11y + responsive + keyboard + optional sign-in + judge tour)
+pnpm test:contract      # guard 14 + vault 19 Rust unit tests + 27-check on-chain suite on a local neard sandbox (Docker)
+pnpm verify             # every check above in one summary table (`--quick`: no network/browser/Docker)
 pnpm test:load          # load + soak of the built server against local mock RPCs (17 gates)
 pnpm start              # http://127.0.0.1:8080 (dashboard), /docs (OpenAPI)
 pnpm demo               # simulated naive-vs-guarded demo (no wallet)
-pnpm contract:build     # guard wasm (Docker, Rust 1.86, --cfg near)
+pnpm contract:build     # guard + vault wasm (Docker, Rust 1.86, --cfg near)
 pnpm contract:create-account  # optional: contract sub-account with the payer's existing key (dry run; `-- --i-confirm`)
 pnpm contract:deploy    # testnet deploy: dry run; add `-- --i-confirm` to send (keys from contracts/guard/.env)
+pnpm vault:testnet      # vault on testnet: create vault.<payer> with the payer's key, deploy, live suite, demo policy (dry run; `-- --i-confirm`)
 docker compose up -d --build
 ```
 - Plan: `docs/IMPLEMENTATION_PLAN.md`. Analysis: `docs/VERDICT.md`. Evidence: `docs/COMPETITOR_RESEARCH.md`. Contract: `contracts/guard/README.md`.
@@ -26,15 +28,16 @@ docker compose up -d --build
 |---|---|
 | `pnpm build` / `pnpm typecheck` (6 packages) | pass / pass |
 | Secrets gate (`scripts/check-secrets.mjs`, all tracked files) | pass; self-tested with a planted fake key + seed line (caught) |
-| SDK unit | **146/146** (incl. retry-safety hardening + `checkIntent` + text helpers) |
-| MCP e2e (built server over stdio, official client) | **11/11** (6 tools) |
-| API | **47/47** (incl. security headers, public simulated benchmark vs key-protected real one, NEP-413 forgery cases, intents, SSE per-IP cap, 413 body limit, rate limits) |
+| SDK unit | **160/160** (incl. retry-safety hardening, load-balancer re-check, default-provider independence, `checkIntent`, `checkSpendAllowance`, text helpers) |
+| MCP e2e (built server over stdio, official client) | **13/13** (7 tools) |
+| API | **52/52** (incl. vault allowance route, security headers, public simulated benchmark vs key-protected real one, NEP-413 forgery cases, intents, SSE per-IP cap, 413 body limit, rate limits) |
 | Demo `--assert` | **7/7** |
 | Live testnet | **7/7** (aging-proof: the old failed tx now only lives on the archival operator → honest WAIT) |
-| Dashboard E2E (installed Chrome) | **31/31**: 7 functional, 8 axe (WCAG 2.1 AA, 0 serious/critical), 3 viewports × 8 pages (no overflow, no console errors), keyboard, 4 optional-sign-in, guard panel (incl. the live testnet deployment), start-page tour, command palette, mobile drawer, one-click benchmark, modal focus trap, reduced motion |
-| Guard contract unit (Rust, Docker) | **14/14** |
-| Guard on-chain suite (local neard 2.14.0, protocol 88) | **12/12** + deploy code-hash match; true concurrent race credits the receiver exactly once |
+| Dashboard E2E (installed Chrome, or bundled Chromium) | **33/33** (incl. the live Vault panel): 7 functional, 8 axe (WCAG 2.1 AA, 0 serious/critical), 3 viewports × 8 pages (no overflow, no console errors), keyboard, 4 optional-sign-in, guard panel (incl. the live testnet deployment), start-page tour, command palette, mobile drawer, one-click benchmark, modal focus trap, reduced motion |
+| Contract unit (Rust, Docker) | **33/33** (guard 14 + vault 19) |
+| On-chain sandbox suite (local neard 2.14.0, protocol 88) | **27/27** = vault 14 (a function-call key pays within the policy and is rejected for a direct transfer or any other method; limits, allowlist, duplicates, freeze, owner-only withdraw, failed transfer restored) + guard **13/13** (incl. a failed payment larger than the contract balance, refunded in full) + deploy code-hash match; true concurrent race credits the receiver exactly once |
 | Guard on TESTNET (`guard.karios.testnet`) | deployed (tx `Gmym6RR6cCkTYedYMD1KJQ7xiqkXDk3MBaC69LV7ZSbN`, code_hash matches local build); live suite **11/11**; Sentinel `checkIntent` PAID on all 4 providers for intent `tmwbtoqi6-a` |
+| Vault on TESTNET (`vault.karios.testnet`) | deployed (tx `5o2YyZWQwEWyJVimMGer3AXMVqydvWcNztkhDGWXf1ne`, code_hash `7u8KGfkdn4gJCuTBNeqwMfVB2pDR8w2PvXxthMvQuLp9` matches local build); live suite **10/10** (owner = agent = payer, full-access key); demo policy `karios.testnet` → `kariosr.testnet` (tx `2QrazB412E6jyU5RhiJEDUSZj4uNgZQRkuzT6bwa5z6y`), `checkSpendAllowance` ACTIVE on all 4 providers |
 | Real-testnet agent demo + critical verdicts (`karios.testnet` → `kariosr.testnet`) | naive **2×** / guarded **1×** with real transfers; `demo:critical` **5/5** (unsent → WAIT, nonce consumed → SAFE_TO_RETRY, landed → DO_NOT_RETRY, garbage → input error) |
 | Load + soak (built server, mock RPCs, 3 rounds, ~1.8 M requests) | **17/17**: 0 errors / 0 non-2xx; p99 ≤ 126 ms on retry-check; RSS flat after warm-up (+12 MB) |
 | Docker | image builds; health OK; all routes 200; runs as non-root `node` |
@@ -105,11 +108,21 @@ docker compose up -d --build
 - `pnpm contract:deploy` runs `pnpm --filter … run deploy` (plain `deploy` would hit pnpm's built-in command). `-- --i-confirm` forwarding verified.
 
 ## Uncommitted work
-- None. `master` is pushed to `git@github.com:kariosg/near-sentinel.git` (default branch `master`): the fresh root commit plus a dashboard sync commit. Local scratch `packages/sdk/t.cjs` is deliberately untracked.
-- Verified as a judge would (2026-11-11): fresh clone with no `.env` → install, build, test 210, demo, live 7/7, e2e 31/31, contract 14 + 12/12, Docker image builds and runs as non-root.
+- **Local, not pushed (owner asked to push only at the very end, after asking):** safety fixes from an independent review on 2026-11-11.
+  - Default providers: `rpc.*.near.org` is a CNAME to FastNEAR, so it was not an independent operator. Replaced by Intear (`testnet-rpc.intea.rs`); Tatum was tried first and rejected (5 requests/minute without a key). Regression test added.
+  - Delayed re-lookup (`proofRecheckMs`, default 2.5 s) before a "nonce consumed + not found" answer counts as proof (load-balanced RPC pools). 2 new tests.
+  - Guard sandbox suite: 13/13 (a failed payment larger than the contract's balance is refunded in full).
+  - Reproducibility: e2e falls back to bundled Chromium without Chrome; the secrets gate works from a ZIP download (no .git); README says `npm install -g pnpm@8` (Node 26 has no corepack). Verified in a clean Linux container (Node 26, no git, no Chrome, no Docker) with `pnpm verify`: build, test 239, demo, live 7/7, e2e 33/33, contracts correctly SKIPPED (no Docker).
+  - The live site already runs this code (redeployed 2026-11-11; previous image kept on the server as `near-sentinel:previous`).
+- Sentinel Vault (2026-11-11): new contract `contracts/guard/vault` (19 unit + 14 sandbox checks), deployed and live-tested on testnet (10/10), SDK `checkSpendAllowance`, MCP `check_spend_allowance`, API `/api/v1/allowance`, dashboard "Agent allowance" panel, `pnpm vault:testnet`, `pnpm verify`, `JUDGING.md`. The live site already runs it (`VAULT_CONTRACT_ID=vault.karios.testnet` on the server).
+- Second independent review (2026-11-11) found 3 real issues, all fixed with regression tests: the re-check now keeps positive evidence (SDK), the vault's failed-transfer refund is limited to the window it was counted in, and the vault record fee is 0.006 NEAR (measured worst case). The live vault was upgraded in place and re-tested 10/10 (`pnpm vault:testnet -- --upgrade`, then runs with a fresh agent sub-account per run).
+- NEAR AI agent (`examples/near-ai-agent`, 7 offline tests) and README positioning ("Never pay twice after an RPC timeout", real-money proof first, "What NEAR makes possible"). Live NEAR AI run needs the owner's key in the git-ignored `examples/near-ai-agent/.env`. NEAR Connect owner actions in the Vault panel (fund / freeze / withdraw with a signing preview; lazy-loaded). Final checks 2026-11-12: `pnpm verify` all PASS locally (239 tests, e2e 33/33, contracts 14+19 unit, 27/27 sandbox, live 7/7; NEAR AI live SKIPPED without key); same in a clean Linux container (contracts SKIPPED: no Docker); live site redeployed, e2e 33/33 against it.
+- `packages/sdk/t.cjs` is a local scratch file and is deliberately left out of git.
 
 ## Blocked on the owner
-- Making the repo public (it is pushed but still private).
+- Nothing blocking. Submitted 2026-11-11 (X post https://x.com/kariosgx/status/2120484078420169114). Results by 2026-11-18 23:59 UTC.
+- Before 2026-11-14 23:59 UTC: tag the final commit `hackathon-submission`. No code changes after the deadline.
+- After results: destroy the Vultr instance to stop billing.
 - The X post (with the demo video) and the submission form (mainnet payout account).
 
 ## Working agreements

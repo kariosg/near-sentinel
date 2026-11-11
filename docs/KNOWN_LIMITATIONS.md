@@ -8,15 +8,23 @@ Honest list. Nothing here is claimed as working elsewhere.
 - **"Pending in a mempool" vs "never received" is indistinguishable.** nearcore returns `UNKNOWN_TRANSACTION` for both (nearcore #15239 open; PR #15781 open and per-node only). Sentinel reports `UNKNOWN` and uses nonce and expiry to resolve it.
 - **Cross-shard receipt tracing** uses the receipts returned with the transaction. `EXPERIMENTAL_receipt` / `EXPERIMENTAL_receipt_to_tx` lookups for receipts outside the tx result are not used.
 - **Old transactions** need an archival provider. The default list includes FastNEAR archival (testnet). Without one, history beyond ~5 epochs is reported as not covered.
-- **Operator independence is based on labels.** `SAFE_TO_RETRY` counts distinct `operator` values. The defaults are labelled correctly (FastNEAR, dRPC, near.org), but a custom provider registered via `POST /api/v1/providers` (API key required) carries whatever label its registrant gives it, and an unlabelled one falls back to the host's last two DNS labels. Whether an aggregator such as dRPC routes to the same backend as another provider is not verified.
+- **Operator independence is based on labels.** `SAFE_TO_RETRY` counts distinct `operator` values. The defaults are FastNEAR, dRPC and Intear, checked by DNS on 2026-11-11. An earlier default, `rpc.testnet.near.org`, turned out to be a CNAME to FastNEAR's infrastructure and was removed, because it would have counted FastNEAR twice. But a custom provider registered via `POST /api/v1/providers` (API key required) carries whatever label its registrant gives it, and an unlabelled one falls back to the host's last two DNS labels. Whether an aggregator such as dRPC routes to the same backend as another provider is not verified.
 - **Mainnet defaults exist but were not exercised by the test suite.** All live tests ran on testnet. Mainnet use is supported by configuration only.
 
 ## Guard contract (`contracts/guard`)
-- **Not audited.** Tested with 14 unit tests, a 12-check on-chain suite on a local sandbox (neard 2.14.0, protocol 88), and 11/11 live checks on testnet. Deployed to testnet as `guard.karios.testnet`; intended for testnet only.
+- **Not audited.** Tested with 14 unit tests, a 13-check on-chain suite on a local sandbox (including a failed payment larger than the contract's own balance) (neard 2.14.0, protocol 88), and 11/11 live checks on testnet. Deployed to testnet as `guard.karios.testnet`; intended for testnet only.
 - **Not locked.** The contract has no owner or upgrade method, but the account still holds its FullAccess key, so the key holder could redeploy. A production deployment should delete the account's keys after deploying.
 - **Covers payments made through it.** A plain transfer an agent sends by another route is outside the guard; Sentinel's off-chain retry check covers those.
 - **Storage fee:** 0.005 NEAR per recorded intent stays in the contract; records are only deleted when a transfer fails and is refunded.
 - **Built with plain `cargo` + `--cfg near` in Docker (Rust 1.86)**, not `cargo near`, so building needs only Docker. The resulting wasm is verified on a real neard sandbox (code hash checked after deploy). It is not a reproducible (verifiable-source) build.
+
+## Vault contract (`contracts/guard/vault`)
+- **Not audited.** Tested with 19 Rust unit tests, a 14-check on-chain suite on the same local sandbox, and 10/10 live checks on testnet. Deployed to testnet as `vault.karios.testnet`; intended for testnet only.
+- **The function-call-key flow was proven on the sandbox, not on testnet.** On testnet the live suite uses the owner's full-access key as the agent, because no key is generated there; the restricted-key command is documented for owners to run themselves.
+- **Not locked.** Like the guard, the account keeps its FullAccess key, so the key holder could redeploy. A production deployment should delete the account's keys after deploying.
+- **Covers money spent through it.** The limits apply to `spend`; an agent that also holds a full-access key, or other funds, is outside the vault.
+- **Policy view is a snapshot.** `available_now` can be lower by the time `spend` lands (another spend, or a freeze); the contract re-checks every rule on-chain, so a stale view can only lead to a rejected spend, never an overspend.
+- **Record fee:** 0.006 NEAR per spend is kept from the vault balance for the record's storage.
 
 ## Optional account verification
 - **MyNearWallet only** (NEP-413 sign-message redirect). Other wallets (Meteor, HOT, Ledger) are not wired; no wallet library is bundled.

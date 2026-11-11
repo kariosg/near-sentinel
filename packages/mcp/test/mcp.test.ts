@@ -57,10 +57,10 @@ afterAll(async () => {
 const text = (r: any) => r.content.map((c: any) => c.text).join("\n");
 
 describe("near-sentinel MCP server (stdio, built)", () => {
-  it("lists exactly the 6 read-only tools", async () => {
+  it("lists exactly the 7 read-only tools", async () => {
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual(
-      ["check_intent", "check_retry_safety", "diagnose_submission_error", "inspect_transaction", "provider_health", "trace_receipts"].sort(),
+      ["check_intent", "check_retry_safety", "check_spend_allowance", "diagnose_submission_error", "inspect_transaction", "provider_health", "trace_receipts"].sort(),
     );
     for (const t of tools) expect(t.annotations?.readOnlyHint).toBe(true);
     const check = tools.find((t) => t.name === "check_retry_safety")!;
@@ -145,6 +145,18 @@ describe("near-sentinel MCP server (stdio, built)", () => {
     expect(["PAID", "PENDING", "NOT_RECORDED", "CONFLICTING", "UNKNOWN"]).toContain(r.structuredContent.status);
     expect(r.structuredContent.providers).toHaveLength(2);
     expect(text(r)).toMatch(/Intent order-1 for alice\.testnet/);
+  });
+
+  it("check_spend_allowance answers with a status and per-provider evidence (read-only view call)", async () => {
+    const r: any = await client.callTool({ name: "check_spend_allowance", arguments: { contractId: "vault.example.testnet", ownerId: "alice.testnet", agentId: "agent.alice.testnet" } });
+    expect(r.isError).toBeFalsy();
+    expect(["ACTIVE", "EXHAUSTED", "FROZEN", "NO_POLICY", "UNKNOWN"]).toContain(r.structuredContent.status);
+    expect(r.structuredContent.providers.length).toBeGreaterThan(0);
+  });
+
+  it("check_spend_allowance rejects an invalid account id as a tool error", async () => {
+    const r: any = await client.callTool({ name: "check_spend_allowance", arguments: { contractId: "vault.example.testnet", ownerId: "alice.testnet", agentId: "Not Valid" } });
+    expect(r.isError).toBe(true);
   });
 
   it("check_intent rejects a malformed intent id as a tool error", async () => {

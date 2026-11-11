@@ -60,6 +60,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@hot-labs/near-connect':
+        specifier: 0.12.0
+        version: 0.12.0
       '@tanstack/react-query':
         specifier: 5.107.1
         version: 5.107.1(@types/react@19.3.0)(react@19.3.1)
@@ -138,6 +141,22 @@ importers:
       typescript:
         specifier: 5.9.3
         version: 5.9.3
+
+  examples/near-ai-agent:
+    dependencies:
+      '@near-sentinel/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.20.5
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: 5.1.0
+        version: 5.1.0(@types/node@22.20.5)(vite@8.3.6)
 
   packages/mcp:
     dependencies:
@@ -316,6 +335,10 @@ packages:
       yaml: 2.9.1
     transitivePeerDependencies:
       - supports-color
+    dev: false
+
+  /@hot-labs/near-connect@0.12.0:
+    resolution: {integrity: sha512-aBb1UPGr43tHPsj/uk3fEwCn83Y7+cO6Ct8B6G/dm9EkTwXh9/xntXyWhQ6fA1eSt2WtYqSczOCENXlrBAXZqg==}
     dev: false
 
   /@isaacs/nonrecursive-glob-match@1.1.0:

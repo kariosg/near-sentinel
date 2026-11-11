@@ -2,7 +2,7 @@
 
 ```mermaid
 flowchart LR
-  agent["AI agent<br/>(Claude, any MCP client)"] -->|stdio| mcp["@near-sentinel/mcp<br/>6 read-only tools"]
+  agent["AI agent<br/>(Claude, any MCP client)"] -->|stdio| mcp["@near-sentinel/mcp<br/>7 read-only tools"]
   app["App / backend"] -->|import| sdk
   ui["Dashboard (React)"] -->|REST + SSE| api["@near-sentinel/api<br/>Fastify 5"]
   mcp --> sdk["@near-sentinel/sdk<br/>engine"]
@@ -13,9 +13,12 @@ flowchart LR
   sdk -->|JSON-RPC, parallel,<br/>one observation per call| p1["FastNEAR"]
   sdk --> p2["FastNEAR archival"]
   sdk --> p3["dRPC"]
-  sdk --> p4["near.org"]
+  sdk --> p4["Intear"]
   agent -->|"pay(intent_id, receiver_id)"| guard["Sentinel Guard<br/>NEAR contract (Rust)"]
   sdk -->|"view: get_intent"| guard
+  owner["Owner"] -->|"set_policy, deposit,<br/>freeze, withdraw"| vault["Sentinel Vault<br/>NEAR contract (Rust)"]
+  agent -->|"spend(...) with a function-call key"| vault
+  sdk -->|"view: get_policy"| vault
 ```
 
 ## Components
@@ -54,6 +57,12 @@ flowchart LR
 - If the transfer fails, the callback releases the intent and refunds, so the same intent can be retried.
 - Views: `get_intent`, `storage_fee`, `version`. No owner, admin or upgrade method.
 - The SDK's `checkIntent` and the MCP `check_intent` tool read it; Sentinel itself never calls `pay`.
+
+**`contracts/guard/vault`: Sentinel Vault (Rust, near-sdk 5).** An owner-funded allowance for an agent: "give AI money without giving it the keys".
+- The owner sets a per-payment limit, a rolling 24-hour limit and an optional receiver allowlist, and can top up, freeze or withdraw.
+- The agent calls `spend(owner_id, intent_id, receiver_id, amount)` with no deposit, so it can hold only a function-call key limited to `spend`. Each `(owner, agent, intent_id)` pays at most once; a failed transfer restores the balance and allowance.
+- Views: `get_policy` (with `available_now`), `get_spend`, `record_fee`, `version`. No admin or upgrade method.
+- The SDK's `checkSpendAllowance`, the MCP `check_spend_allowance` tool and `GET /api/v1/allowance` read it (the smallest `available_now` any provider reports wins).
 
 **`examples/agent-demo`.** Naive vs guarded agents.
 - The simulated chain enforces nonces and hash de-duplication.

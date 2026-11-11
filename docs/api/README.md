@@ -14,7 +14,7 @@ All responses carry `x-request-id`. You can supply one (`[A-Za-z0-9._-]{1,64}`);
 |---|---|---|---|
 | GET | `/health` | — | Liveness. Never rate-limited. |
 | GET | `/ready` | — | 200 only when the DB is writable **and** ≥ 1 provider was reachable in the last probe. Otherwise 503 with `reason`. |
-| GET | `/api/v1/providers` | — | Configured providers, operators, custom flag, `guardContractId` (from `GUARD_CONTRACT_ID`, or `null`). |
+| GET | `/api/v1/providers` | — | Configured providers, operators, custom flag, `guardContractId` (from `GUARD_CONTRACT_ID`, or `null`), `vaultContractId` (from `VAULT_CONTRACT_ID`, or `null`). |
 | GET | `/api/v1/providers/health` | — | Latest prober snapshot (tested capabilities, lag, latency). `?fresh=1` probes now (inspect rate limit applies). |
 | GET | `/api/v1/providers/metrics` | — | Rolling per-provider counters and p50/p95/p99 since start. |
 | GET | `/api/v1/providers/history?hours=6` | — | Persisted health samples (max 168 h). |
@@ -27,6 +27,7 @@ All responses carry `x-request-id`. You can supply one (`[A-Za-z0-9._-]{1,64}`);
 | GET | `/api/v1/transactions/:hash/diagnostics?sender=…` | — | Diagnostics + retry recommendation. |
 | POST | `/api/v1/diagnose/error` | — | `{error}` (string or object) → classification. No network calls. |
 | GET | `/api/v1/intents?contract=&payer=&intent=` | — | Read-only `get_intent` view call on a Sentinel Guard contract across all providers → `{status: PAID\|PENDING\|NOT_RECORDED\|CONFLICTING\|UNKNOWN, intent?, reason, providers[]}`. `contract` defaults to `GUARD_CONTRACT_ID`. Inspect rate limit applies. |
+| GET | `/api/v1/allowance?contract=&owner=&agent=` | — | Read-only `get_policy` view call on a Sentinel Vault across all providers → `{status: ACTIVE\|EXHAUSTED\|FROZEN\|NO_POLICY\|UNKNOWN, policy, availableNow, reason, providers[]}`. `availableNow` is the smallest amount any provider reports. `contract` defaults to `VAULT_CONTRACT_ID`. |
 | POST | `/api/v1/identity/challenge` | — | **Optional** account verification: returns a single-use 32-byte `nonce` (expires in 5 min), the `message` and `recipient` to sign (NEP-413). 20/min per IP. |
 | POST | `/api/v1/identity/verify` | — | **Optional.** `{accountId, publicKey, signature, nonce, callbackUrl?}`. The nonce is burned on the first attempt; the ed25519 signature must match the challenge; the key must be a **FullAccess** key of the account on-chain. Returns `{verified: true, …}`. No session or cookie is created. |
 | GET | `/api/v1/reports?limit&cursor` | — | Recent reports, newest first. |

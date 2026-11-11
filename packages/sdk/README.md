@@ -6,7 +6,7 @@ Evidence-based transaction inspection, retry safety and RPC provider intelligenc
 import { NearSentinel } from "@near-sentinel/sdk";
 
 const sentinel = new NearSentinel({
-  network: "testnet", // default providers: FastNEAR, FastNEAR archival, dRPC, near.org (3 operators)
+  network: "testnet", // default providers: FastNEAR, FastNEAR archival, dRPC, Intear (3 independent operators)
   // rpcProviders: [{ name: "mine", url: "https://…", operator: "me", archival: true }],
   // minIndependentOperators: 2, timeoutMs: 8000, maxResponseBytes: 8 MiB, fetch: createGuardedFetch()
 });
@@ -25,6 +25,8 @@ const sentinel = new NearSentinel({
 | `getProviderHealth({ capabilities? })` | Reachability, lag, latency, **tested** capabilities (archival, `tx`, `tx_status`, `EXPERIMENTAL_tx_status`, `EXPERIMENTAL_receipt`) |
 | `getProviderMetrics()` | Rolling counters and latency percentiles |
 | `subscribeToTransaction(input, { intervalMs, timeoutMs, signal })` | Async iterator; yields on state changes and stops when final |
+| `checkIntent({ contractId, payerId, intentId })` | What a Sentinel Guard recorded: `PAID / PENDING / NOT_RECORDED / CONFLICTING / UNKNOWN` |
+| `checkSpendAllowance({ contractId, ownerId, agentId })` | A Sentinel Vault allowance: `ACTIVE / EXHAUSTED / FROZEN / NO_POLICY / UNKNOWN`, the limits, and `availableNow` (the smallest any provider reports) |
 | `exportDiagnosticReport(inspection)` | JSON report, schema `near-sentinel/diagnostic-report@1` |
 | `read(method, params)` | Read with failover (transport and missing-history errors only) |
 
@@ -56,6 +58,6 @@ Network failures are **not** thrown. They become observations and diagnostics (t
 ## Tests
 
 ```bash
-pnpm test        # 146 unit tests (mock RPCs, real fixtures)
+pnpm test        # 160 unit tests (mock RPCs, real fixtures)
 pnpm test:live   # 7 read-only tests against public testnet RPCs
 ```

@@ -39,12 +39,12 @@ console.log(check.recommendation.reason, check.diagnostics);`}</Code>
       </Card>
 
       <div id="int-mcp" className="scroll-mt-24" />
-      <Card title="AI agents — MCP server (stdio)" icon="bot" subtitle="Six read-only tools. The agent asks before it ever re-signs.">
+      <Card title="AI agents — MCP server (stdio)" icon="bot" subtitle="Seven read-only tools. The agent asks before it ever re-signs or spends.">
         <Code title="shell">{`# Claude Code (after \`pnpm build\`; use the ABSOLUTE path to your clone)
 claude mcp add near-sentinel -e NEAR_SENTINEL_NETWORK=testnet -- node /abs/path/to/near-sentinel/packages/mcp/dist/server.js
 
 # Any MCP client: command = "node", args = ["/abs/path/to/near-sentinel/packages/mcp/dist/server.js"]
-# Tools: check_retry_safety · inspect_transaction · trace_receipts · diagnose_submission_error · provider_health · check_intent`}</Code>
+# Tools: check_retry_safety · inspect_transaction · trace_receipts · diagnose_submission_error · provider_health · check_intent · check_spend_allowance`}</Code>
       </Card>
 
       <div id="int-rest" className="scroll-mt-24" />
@@ -72,6 +72,28 @@ claude mcp add near-sentinel -e NEAR_SENTINEL_NETWORK=testnet -- node /abs/path/
 
 # Read-only lookup (no keys) — a real intent paid on testnet:
 curl -s '${origin}/api/v1/intents?contract=guard.karios.testnet&payer=karios.testnet&intent=tmwbtoqi6-a'`}</Code>
+      </Card>
+
+      <div id="int-vault" className="scroll-mt-24" />
+      <Card title="On-chain — Sentinel Vault: money for an agent, not keys" icon="wallet">
+        <p className="mb-2 text-sm text-ink-2">
+          The owner funds an allowance with a per-payment limit, a 24-hour limit and a receiver allowlist. The agent holds only a{" "}
+          <strong>function-call key</strong> that can call <code className="font-mono text-xs">spend</code> on the vault: it can pay within the policy, once per
+          intent, and cannot move its own NEAR or call anything else. Live on testnet as{" "}
+          <a className={linkClass} href="https://testnet.nearblocks.io/address/vault.karios.testnet" target="_blank" rel="noreferrer">vault.karios.testnet</a>.
+        </p>
+        <Code title="shell">{`# Owner: fund an allowance (1 NEAR per payment, 3 NEAR per day, only to the merchant)
+near call vault.karios.testnet set_policy '{"agent_id":"<agent>.testnet","allowed_receivers":["merchant.testnet"],
+    "per_payment_max":"1000000000000000000000000","daily_max":"3000000000000000000000000"}' \\
+  --deposit 5 --useAccount <owner>.testnet
+
+# Owner: give the agent a key that can ONLY call spend() on the vault (no deposit, gas allowance only)
+near account add-key <agent>.testnet grant-function-call-access --allowance '0.25 NEAR' \\
+  --contract-account-id vault.karios.testnet --function-names spend autogenerate-new-keypair save-to-legacy-keychain \\
+  network-config testnet sign-with-legacy-keychain send
+
+# Agent: before paying, ask how much it may spend now (read-only, every provider)
+curl -s '${origin}/api/v1/allowance?contract=vault.karios.testnet&owner=karios.testnet&agent=kariosr.testnet'`}</Code>
       </Card>
     </div>
   );

@@ -16,6 +16,8 @@ export interface SuiteEnv {
   missingReceiverId: string;
   /** Per-payment amount, yocto. */
   amount: bigint;
+  /** Optional: a payment LARGER than the guard's own free balance, sent to a missing account (refund must still reach the payer). */
+  largeFailAmount?: bigint;
   /** Unique run id so intent IDs never collide across runs. */
   runId: string;
   explorer?: (txHash: string) => string;
@@ -89,6 +91,22 @@ export async function runSuite(e: SuiteEnv): Promise<CheckResult[]> {
     `record ${rec === null ? "released" : "STILL PRESENT"}, payer spent ${toNear(payerBefore - payerAfter)} NEAR (gas only)`,
     [p3],
   );
+
+  // 3b. A failed transfer larger than the guard's own free balance must still be refunded in full.
+  if (e.largeFailAmount) {
+    const big = e.largeFailAmount + STORAGE_FEE;
+    const before = await balance(e.rpcUrl, e.payer.accountId);
+    const p3b = await pay(e.payer, id("big"), e.missingReceiverId, big);
+    await new Promise((r) => setTimeout(r, 3000)); // let any refund receipts settle
+    const after = await balance(e.rpcUrl, e.payer.accountId);
+    const recBig = await view(e.rpcUrl, e.contractId, "get_intent", { payer_id: e.payer.accountId, intent_id: id("big") });
+    check(
+      "a failed transfer larger than the guard's free balance is still refunded and released",
+      recBig === null && before - after < GAS_SLACK * 2n,
+      `record ${recBig === null ? "released" : `STUCK (${recBig.status})`}, payer net cost ${toNear(before - after)} NEAR`,
+      [p3b],
+    );
+  }
 
   // 4. The released intent can be paid again.
   rBefore = await balance(e.rpcUrl, e.receiverId);

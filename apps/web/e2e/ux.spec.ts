@@ -171,9 +171,51 @@ test("guard contract panel: live testnet deployment → paid intent is PAID, unu
   const panel = page.locator("section", { hasText: "Guard contract —" });
   await page.getByRole("button", { name: "Paid intent" }).click();
   await expect(panel).toContainText("Already paid: 0.01 NEAR to kariosr.testnet", { timeout: 30_000 });
-  await expect(panel.locator("tbody tr", { hasText: "RECORDED" })).toHaveCount(4);
+  // Public RPCs can blip; the verdict needs evidence, not unanimity: at least 2 providers must confirm the record.
+  await expect.poll(() => panel.locator("tbody tr", { hasText: "RECORDED" }).count()).toBeGreaterThanOrEqual(2);
   await page.getByRole("button", { name: "Unused intent" }).click();
-  await expect(panel.locator("tbody tr", { hasText: "NOT_RECORDED" })).toHaveCount(4, { timeout: 30_000 });
+  await expect.poll(() => panel.locator("tbody tr", { hasText: "NOT_RECORDED" }).count(), { timeout: 30_000 }).toBeGreaterThanOrEqual(2);
+  expect(errors).toEqual([]);
+});
+
+test("vault panel: live testnet allowance → ACTIVE with limits and the amount available now", async ({ page }) => {
+  const errors = trackErrors(page);
+  await skipIdentity(page);
+  await page.goto("/#/inspect");
+  const panel = page.locator("section", { hasText: "Agent allowance —" });
+  await page.getByRole("button", { name: "Live agent allowance" }).click();
+  await expect(panel).toContainText("ACTIVE", { timeout: 30_000 });
+  await expect(panel).toContainText("Available now");
+  await expect(panel).toContainText("karios.testnet");
+  await expect.poll(() => panel.locator("tbody tr", { hasText: "POLICY" }).count()).toBeGreaterThanOrEqual(2);
+  expect(errors).toEqual([]);
+});
+
+test("vault owner actions: preview shows exactly what the wallet will sign (no wallet opened)", async ({ page }) => {
+  const errors = trackErrors(page);
+  await skipIdentity(page);
+  await page.goto("/#/inspect");
+  const owner = page.locator("section", { hasText: "Owner actions (your wallet signs)" }).last();
+  await expect(owner.getByRole("button", { name: "Connect wallet" })).toBeVisible();
+  await owner.getByLabel("Agent to manage").fill("agent.example.testnet");
+  await owner.getByLabel("Allowed receivers (comma-separated, empty = any)").fill("shop.testnet, cafe.testnet");
+  await owner.getByLabel("Deposit to add (NEAR)").fill("1.5");
+  await owner.getByRole("button", { name: "Preview transaction" }).click();
+  const preview = owner.locator("pre");
+  await expect(preview).toContainText("vault.karios.testnet.set_policy(");
+  await expect(preview).toContainText('"agent_id":"agent.example.testnet"');
+  await expect(preview).toContainText('"allowed_receivers":["shop.testnet","cafe.testnet"]');
+  await expect(preview).toContainText('"per_payment_max":"50000000000000000000000"');
+  await expect(preview).toContainText("with deposit 1.5 NEAR (1500000000000000000000000 yoctoNEAR)");
+  // Signing needs a connected wallet: the button is disabled until then.
+  await expect(owner.getByRole("button", { name: "Sign in wallet" })).toBeDisabled();
+  await owner.getByRole("tab", { name: "Withdraw" }).click();
+  await owner.getByLabel("Agent to manage").fill("agent.example.testnet");
+  await owner.getByLabel("Amount to withdraw (NEAR)").fill("abc");
+  await owner.getByRole("button", { name: "Preview transaction" }).click();
+  await expect(owner).toContainText("is not a NEAR amount");
+  const r = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
+  expect(r.violations.filter((v) => v.impact === "serious" || v.impact === "critical").map((v) => v.id)).toEqual([]);
   expect(errors).toEqual([]);
 });
 

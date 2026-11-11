@@ -1,0 +1,22 @@
+{
+  "name": "@near-sentinel/near-ai-agent",
+  "version": "0.1.0",
+  "private": true,
+  "description": "An AI agent on NEAR AI Cloud (TEE-hosted model) that asks NEAR Sentinel before it pays again; Sentinel's verdict is binding",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "pnpm build && node dist/run.js",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@near-sentinel/sdk": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "@types/node": "^22.10.0",
+    "vitest": "5.1.0"
+  }
+}

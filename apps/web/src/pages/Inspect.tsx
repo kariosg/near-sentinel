@@ -2,6 +2,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useState, type FormEvent } from "react";
 import { api, type Diagnostic, type Inspection, type InspectInput } from "../api";
 import { GuardPanel } from "../components/GuardPanel";
+import { VaultPanel } from "../components/VaultPanel";
 import { Icon, type IconName } from "../components/icons";
 import { ReceiptTree } from "../components/ReceiptTree";
 import { Button, Card, download, Empty, ErrorBox, Field, fmtMs, linkClass, Loading, Mono, Pill, ProgressBar, stateTone, toneBg, toneText, VERDICTS, verdictTone } from "../components/ui";
@@ -117,6 +118,7 @@ export function InspectPage() {
       {!m.data && !m.isPending && !m.isError && <Empty icon="search">Enter a transaction or pick an example. Nothing is signed or sent.</Empty>}
 
       <GuardPanel />
+      <VaultPanel />
     </div>
   );
 }

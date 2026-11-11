@@ -13,6 +13,7 @@ import {
   type RawTxStatusResult,
 } from "./outcome.js";
 import { decideIntent, decodeViewResult, isGuardIntent, intentInputSchema, type IntentCheck, type IntentInput, type IntentProviderAnswer } from "./intent.js";
+import { decideAllowance, vaultAnswer, vaultInputSchema, type AllowanceCheck, type VaultInput } from "./vault.js";
 import { decideRetry, type PerProviderRetryEvidence } from "./retry.js";
 import { isMethodNotFound, isUnknownBlock, isUnknownTx, operatorOf, rpcCall, type FetchLike } from "./rpc.js";
 import { decodeSignedTx } from "./signedtx.js";
@@ -48,6 +49,12 @@ export interface NearSentinelOptions {
   metrics?: MetricsCollector;
   /** Called for every raw observation (for logging/streaming). Must not throw. */
   onObservation?: (o: RpcObservation) => void;
+  /**
+   * Before a "nonce consumed + not found" answer may count as proof, the tx is looked up again after this
+   * delay. Public RPC endpoints are load-balanced pools: the nonce read and the tx lookup can hit different
+   * backends, and a lagging one can miss a tx that already executed. Default 2500 ms; 0 re-checks immediately.
+   */
+  proofRecheckMs?: number;
 }
 
 export interface CallOptions {
@@ -109,6 +116,7 @@ export class NearSentinel {
   private readonly timeoutMs: number;
   private readonly maxResponseBytes: number;
   private readonly minOps: number;
+  private readonly proofRecheckMs: number;
   private readonly fetchImpl?: FetchLike;
   private readonly onObservation?: (o: RpcObservation) => void;
   private validityPeriod?: number;
@@ -134,6 +142,7 @@ export class NearSentinel {
     this.timeoutMs = opts.timeoutMs ?? 8000;
     this.maxResponseBytes = opts.maxResponseBytes ?? 8 * 1024 * 1024;
     this.minOps = Math.max(1, opts.minIndependentOperators ?? 2);
+    this.proofRecheckMs = Math.max(0, opts.proofRecheckMs ?? 2500);
     this.fetchImpl = opts.fetch;
     this.metrics = opts.metrics ?? new MetricsCollector();
     this.onObservation = opts.onObservation;
@@ -314,6 +323,27 @@ export class NearSentinel {
               : null,
         } satisfies PerProviderRetryEvidence;
       });
+
+      // Nonce-consumed proof needs a second, later "not found" from the same provider: a load-balanced pool can
+      // serve the nonce read from an up-to-date backend and the lookup from a lagging one. If the re-check finds
+      // the tx (or errors), that provider's answer no longer counts as proof — the verdict falls back to WAIT.
+      const nonce = r.nonce;
+      const candidates = perProvider.map((e) => e.txLookup === "NOT_FOUND" && e.accessKeyNonce !== undefined && e.accessKeyNonce >= nonce);
+      if (candidates.some(Boolean)) {
+        if (this.proofRecheckMs > 0) await new Promise((res) => setTimeout(res, this.proofRecheckMs));
+        const recheck = (await this.fanOut<RawTxStatusResult>("EXPERIMENTAL_tx_status", txParams, o)).map((x) => validateTxResult(x, r.txHash));
+        observations.push(...recheck);
+        perProvider = perProvider.map((e, i) =>
+          recheck[i]!.ok
+            ? { ...e, txLookup: "FOUND", recheck: "FOUND" }
+            : candidates[i] && !isUnknownTx(recheck[i]!)
+              ? { ...e, txLookup: "ERROR", recheck: "ERROR" }
+              : e,
+        );
+        // Positive evidence wins: any provider that now FINDS the tx feeds the found-path verdict
+        // (DO_NOT_RETRY / WAIT / MANUAL_REVIEW), never SAFE_TO_RETRY.
+        if (recheck.some((x) => x.ok)) txObs = second.map((x, i) => (recheck[i]!.ok ? recheck[i]! : x));
+      }
     }
 
     // Aggregate found results.
@@ -516,6 +546,24 @@ export class NearSentinel {
         : { ...base, answer: "ERROR", error: "unexpected get_intent answer (not a Sentinel Guard record for this intent)" };
     });
     return { ...decideIntent(v, answers), checkedAt: new Date().toISOString() };
+  }
+
+  /**
+   * How much may this agent spend right now from a Sentinel Vault allowance? Read-only `get_policy` view call
+   * on every provider; reports the smallest available amount any provider shows (never overstates it).
+   */
+  async checkSpendAllowance(input: VaultInput, o?: CallOptions): Promise<AllowanceCheck> {
+    const v = parseOrThrow(vaultInputSchema, input);
+    const args = Buffer.from(JSON.stringify({ owner_id: v.ownerId, agent_id: v.agentId })).toString("base64");
+    const obs = await this.fanOut<any>(
+      "query",
+      { request_type: "call_function", finality: "final", account_id: v.contractId, method_name: "get_policy", args_base64: args },
+      o,
+    );
+    const answers = this.providers.map((p, i) =>
+      vaultAnswer({ provider: p.name, operator: p.operator!, latencyMs: obs[i]!.latencyMs, blockHeight: obs[i]!.ok ? obs[i]!.result?.block_height : undefined }, obs[i]!, v),
+    );
+    return { ...decideAllowance(v, answers), checkedAt: new Date().toISOString() };
   }
 
   /** Receipt execution graph for a transaction (undefined when no provider has it). */

@@ -28,14 +28,14 @@ From an agent, re-calling `pay()` with the **same** `intent_id` is always safe. 
 Everything runs in Docker, so you need Docker and nothing else for the contract:
 
 ```bash
-pnpm contract:build        # wasm via Rust 1.86 in Docker → contracts/guard/target-docker/.../sentinel_guard.wasm
-pnpm test:contract         # 14 Rust unit tests + full on-chain suite on a throwaway local NEAR sandbox
+pnpm contract:build        # wasm via Rust 1.86 in Docker → contracts/guard/target-docker/.../sentinel_guard.wasm + sentinel_vault.wasm
+pnpm test:contract         # 33 Rust unit tests (guard 14 + vault 19) + full on-chain suite (27 checks) on a throwaway local NEAR sandbox
 ```
 
 - `--cfg near` is required when building with plain `cargo`. Without it, near-sdk 5.27 turns every panic into a bare wasm trap, and the readable `DUPLICATE_INTENT` message is lost. This was found by the sandbox suite.
 - The sandbox runs **neard 2.14.0, protocol 88**, the same as NEAR testnet in Nov 2026. Every account and key in it is created in memory for one run and discarded.
 
-The on-chain suite (`scripts/suite.ts`) runs the same 12 checks on the sandbox and on testnet:
+The guard's on-chain suite (`scripts/suite.ts`) runs these checks on the sandbox and on testnet (13 on the sandbox, which adds a failed payment larger than the contract's own balance; 11 on testnet, which has no second payer):
 
 1. The contract answers `version` and `storage_fee`.
 2. The first `pay()` forwards the exact amount; status becomes `Paid`.
@@ -65,9 +65,41 @@ The on-chain suite (`scripts/suite.ts`) runs the same 12 checks on the sandbox a
 
 The scripts refuse any network whose `chain_id` is not `testnet` (or `sandbox` for the local suite), and never print a key.
 
+## Sentinel Vault
+
+A second contract in this folder (`vault/`, crate `sentinel-vault`): **give an AI agent money without giving it the keys.**
+
+| Method | Who | What it does |
+|---|---|---|
+| `set_policy(agent_id, per_payment_max, daily_max, allowed_receivers)` | owner, payable | Creates or updates the policy for `(caller, agent_id)`. The deposit pays for storage; the rest becomes the balance. Empty allowlist = any receiver (max 20). |
+| `deposit(agent_id)` | owner, payable | Tops up the balance. |
+| `set_frozen(agent_id, frozen)` | owner | Stops or resumes all spending. |
+| `withdraw(agent_id, amount)` | owner | Takes back up to the whole balance (restored if the transfer fails). |
+| `spend(owner_id, intent_id, receiver_id, amount)` | agent, **no deposit** | Pays `amount` from the owner's allowance. A function-call key limited to `spend` can call it. |
+| `on_spend(...)` | private callback | Transfer OK → `Paid`. Failed → record removed, balance and daily allowance restored, intent freed. |
+| `get_policy(owner_id, agent_id)`, `get_spend(owner_id, agent_id, intent_id)`, `record_fee()`, `version()` | view | `get_policy` includes `available_now` = min(per-payment limit, daily headroom, balance − fee); 0 when frozen. |
+
+Rules enforced on-chain: each `(owner, agent, intent_id)` pays at most once (`DUPLICATE_INTENT`); `OVER_PER_PAYMENT_LIMIT`, `OVER_DAILY_LIMIT` (rolling 24 h), `NOT_ALLOWED_RECEIVER`, `FROZEN`, `NO_POLICY`, `INSUFFICIENT_VAULT_BALANCE`; 0.006 NEAR per spend is kept from the balance for the record's storage; policies are keyed by `(owner, agent)`, so nobody can claim someone else's agent. NEP-297 events with standard `sentinel_vault`. No admin or upgrade method in the contract.
+
+**The restricted key.** The owner gives the agent a key that can only call `spend` on the vault (run by the owner; the key never leaves their machine):
+
+```bash
+near account add-key <agent>.testnet grant-function-call-access --allowance '0.25 NEAR' \
+  --contract-account-id vault.example.testnet --function-names spend \
+  autogenerate-new-keypair save-to-legacy-keychain network-config testnet sign-with-legacy-keychain send
+```
+
+The sandbox suite (`scripts/vault-suite.ts`, 14 checks) proves it: with only that key the agent pays within the policy, and NEAR rejects it (`INVALID_TRANSACTION`) for a direct transfer of the agent's own NEAR or for any other vault method. It also checks duplicates, both limits, the allowlist, a failed transfer being restored, freeze, and that only the owner can withdraw.
+
+**Live on testnet:** `vault.karios.testnet`, deploy tx [`5o2YyZWQ…`](https://testnet.nearblocks.io/txns/5o2YyZWQwEWyJVimMGer3AXMVqydvWcNztkhDGWXf1ne), on-chain `code_hash` `7u8KGfkdn4gJCuTBNeqwMfVB2pDR8w2PvXxthMvQuLp9` (equal to the local Docker build). Live suite 10/10 on 2026-11-11 with owner = agent = the payer (a full-access key, because no key is generated on testnet). A demo policy (owner `karios.testnet` → agent `kariosr.testnet`, 0.05 NEAR per payment, 0.1 NEAR per day, only to `karios.testnet`; tx [`2QrazB41…`](https://testnet.nearblocks.io/txns/2QrazB412E6jyU5RhiJEDUSZj4uNgZQRkuzT6bwa5z6y)) backs the dashboard's "Live agent allowance" example.
+
+Deploy your own: fill the `GUARD_TEST_*` values in `.env`, then `pnpm vault:testnet` (dry run: creates `vault.<payer>` with the payer's **existing** key, deploys, runs the live suite, leaves a demo policy) and `pnpm vault:testnet -- --i-confirm`.
+
+Sentinel reads it without signing: SDK `checkSpendAllowance`, MCP `check_spend_allowance`, API `GET /api/v1/allowance` (the smallest `available_now` any provider reports wins).
+
 ## Limitations
 
-- Not audited. Testnet only.
-- The contract has no owner or upgrade method, but the **account** keeps its FullAccess key, so the key holder could redeploy the code. For a production deployment, delete the account's access keys after deploying to lock it.
+- Not audited (Guard and Vault). Testnet only.
+- Neither contract has an owner or upgrade method, but each **account** keeps its FullAccess key, so the key holder could redeploy the code. For a production deployment, delete the account's access keys after deploying to lock it.
 - The guard protects payments **made through it**. A payment the agent sends by another route (a plain transfer) is not covered. Sentinel's off-chain retry check covers those.
 - The 0.005 NEAR storage fee per intent stays in the contract (records are never deleted except on refund).

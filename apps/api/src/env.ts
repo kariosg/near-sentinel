@@ -31,6 +31,11 @@ export const envSchema = z.object({
     .regex(/^(?=.{2,64}$)(([a-z\d]+[-_])*[a-z\d]+\.)*([a-z\d]+[-_])*[a-z\d]+$/, "GUARD_CONTRACT_ID must be a NEAR account ID")
     .optional()
     .or(z.literal("").transform(() => undefined)),
+  VAULT_CONTRACT_ID: z
+    .string()
+    .regex(/^(?=.{2,64}$)(([a-z\d]+[-_])*[a-z\d]+\.)*([a-z\d]+[-_])*[a-z\d]+$/, "VAULT_CONTRACT_ID must be a NEAR account ID")
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
 
   DATA_DIR: z.string().default("./data"),
   /** Comma-separated SHA-256 hex digests of API keys. Empty = protected endpoints disabled. */

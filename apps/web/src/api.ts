@@ -1,6 +1,6 @@
-import type { Diagnostic, InspectionResult, IntentCheck, ProviderHealth, RetryRecommendation } from "@near-sentinel/sdk";
+import type { AllowanceCheck, Diagnostic, InspectionResult, IntentCheck, ProviderHealth, RetryRecommendation } from "@near-sentinel/sdk";
 
-export type { Diagnostic, InspectionResult, IntentCheck, ProviderHealth, RetryRecommendation };
+export type { AllowanceCheck, Diagnostic, InspectionResult, IntentCheck, ProviderHealth, RetryRecommendation };
 export type { ReceiptNode, TxState, RetryVerdict } from "@near-sentinel/sdk";
 
 export interface ApiErrorBody {
@@ -51,6 +51,7 @@ export interface ProvidersResponse {
   network: string;
   minIndependentOperators: number;
   guardContractId: string | null;
+  vaultContractId?: string | null;
   providers: Array<{ name: string; url: string; operator: string; archivalDeclared: boolean | null; custom: boolean }>;
 }
 export interface MetricsResponse {
@@ -141,6 +142,8 @@ export const api = {
   inspect: (input: InspectInput) => request<Inspection>("/api/v1/transactions/inspect", { method: "POST", body: JSON.stringify(input) }),
   intent: (q: { contract: string; payer: string; intent: string }) =>
     request<IntentCheck>(`/api/v1/intents?${new URLSearchParams(q).toString()}`),
+  allowance: (q: { contract: string; owner: string; agent: string }) =>
+    request<AllowanceCheck>(`/api/v1/allowance?${new URLSearchParams(q).toString()}`),
   identityChallenge: () => request<IdentityChallenge>("/api/v1/identity/challenge", { method: "POST", body: "{}" }),
   identityVerify: (b: { accountId: string; publicKey: string; signature: string; nonce: string; callbackUrl?: string }) =>
     request<IdentityResult>("/api/v1/identity/verify", { method: "POST", body: JSON.stringify(b) }),

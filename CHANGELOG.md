@@ -4,6 +4,27 @@
 
 First release, built for NEAR HACKATHON (Nov 2026).
 
+### Sentinel Vault (2026-11-11)
+- New contract `contracts/guard/vault` (crate `sentinel-vault`): an owner-funded allowance for an AI agent with a per-payment limit, a rolling 24-hour limit, a receiver allowlist, freeze and owner-only withdraw. The agent calls `spend` with no deposit, so it can hold only a function-call key limited to `spend`. Pay-once per (owner, agent, intent); a failed transfer restores the balance and allowance.
+- 19 Rust unit tests; 14 sandbox checks, including a function-call key that pays within the policy and is rejected by NEAR for a direct transfer or any other method (sandbox total 27/27 with the guard).
+- Live on testnet as `vault.karios.testnet` (code hash matches the build), live suite 10/10, and a demo allowance for the dashboard. `pnpm vault:testnet` reproduces it with the payer's existing key.
+- Read-only support everywhere: SDK `checkSpendAllowance`, MCP `check_spend_allowance` (7 tools), API `GET /api/v1/allowance`, dashboard "Agent allowance" panel; the smallest available amount any provider reports wins.
+- `pnpm verify` (one summary table of every check) and `JUDGING.md` (each claim with its proof).
+
+### NEAR AI agent and NEAR Connect (2026-11-12)
+- Dashboard: Vault owner actions through **NEAR Connect** (`@hot-labs/near-connect` 0.12.0, which replaced the deprecated Wallet Selector): fund/update a policy, freeze/unfreeze, withdraw, each with a preview of exactly what the wallet will sign. Loaded lazily; the server stays keyless.
+- `examples/near-ai-agent`: a payments agent on NEAR AI Cloud (OpenAI-compatible API, model NEAR AI hosts in a TEE) with NEAR Sentinel as its tools. Sentinel's verdict is binding: a deterministic guard overrules a model that proposes paying again after Sentinel said the payment executed, and escalates when no evidence was gathered. Live run `pnpm demo:near-ai` records each answer's NEAR AI response signature and the model's attestation report in `docs/near-ai-run.md`; 7 offline tests run against a mock of the API (no key needed). `pnpm verify` reports the live run as SKIPPED without a key.
+- README leads with the problem in one sentence and the real-money proof, and explains what NEAR makes possible (provable non-execution, receipts, function-call keys, named accounts, NEAR AI).
+
+### Safety fixes from an independent review (2026-11-11)
+- **Re-check keeps positive evidence:** if the delayed re-lookup finds the transaction at any provider while lagging ones still say "not found", the found evidence now drives the verdict (DO_NOT_RETRY / WAIT), never SAFE_TO_RETRY. Regression test proves the old code returned SAFE here.
+- **Vault, daily limit at the 24-hour boundary:** a failed transfer now gives allowance back only to the window it was counted in, so spends around the reset cannot exceed `daily_max`.
+- **Vault, storage fee:** the per-spend record fee is 0.006 NEAR, covering the measured worst case (591 bytes with 64-character accounts and intent id); previously 0.003 NEAR could fall short.
+- The live vault was upgraded in place (code only, state kept): tx `5o2YyZWQwEWyJVimMGer3AXMVqydvWcNztkhDGWXf1ne`, code hash `7u8KGfkdn4gJCuTBNeqwMfVB2pDR8w2PvXxthMvQuLp9`; live suite 10/10 again with a fresh agent account.
+- **Default providers:** `rpc.{testnet,mainnet}.near.org` turned out to be a CNAME to FastNEAR's infrastructure, so it was a second FastNEAR witness, not an independent operator. Replaced by Intear's RPC (its own nodes; ~1 s slower without an API key, but no tight rate limit; Tatum's free gateway was tried and rejected at 5 requests/minute). Defaults are now FastNEAR, dRPC and Intear: 3 truly independent operators. A regression test enforces that no FastNEAR alias is ever counted as another operator.
+- **Load-balanced endpoints:** a "nonce consumed + not found" answer now only counts as proof after a delayed re-lookup (default 2.5 s, `proofRecheckMs`) still finds nothing. A lagging backend in a provider pool can no longer turn an executed transaction into SAFE_TO_RETRY; it falls back to WAIT_AND_RECHECK.
+- **Guard contract:** new sandbox check (13/13) confirms a failed payment larger than the contract's own balance is still refunded in full and released.
+
 ### Sentinel Guard on testnet (2026-11-11)
 - Deployed as `guard.karios.testnet` (code hash matches the local build); live suite 11/11 on testnet.
 - `pnpm contract:create-account`: creates the contract sub-account with the payer's existing key (no key generation); `deploy` reuses it.

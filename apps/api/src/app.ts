@@ -232,6 +232,7 @@ export async function buildApp(env: Env, opts: { db?: Db } = {}): Promise<AppDep
       network: runtime.sentinel.network,
       minIndependentOperators: env.MIN_INDEPENDENT_OPERATORS,
       guardContractId: env.GUARD_CONTRACT_ID ?? null,
+      vaultContractId: env.VAULT_CONTRACT_ID ?? null,
       providers: runtime.sentinel.providers.map((p) => ({ name: p.name, url: p.url, operator: p.operator, archivalDeclared: p.archival ?? null, custom: custom.has(p.name) })),
     };
   });
@@ -357,6 +358,24 @@ export async function buildApp(env: Env, opts: { db?: Db } = {}): Promise<AppDep
       const contractId = q.contract ?? env.GUARD_CONTRACT_ID;
       if (!contractId) throw new SentinelInputError("contract is required (no GUARD_CONTRACT_ID configured)");
       return jsonSafe(await runtime.sentinel.checkIntent({ contractId, payerId: q.payer, intentId: q.intent }));
+    },
+  );
+
+  const AllowanceQuery = z
+    .object({
+      contract: z.string().optional(),
+      owner: z.string(),
+      agent: z.string(),
+    })
+    .strict();
+  app.get(
+    "/api/v1/allowance",
+    { ...inspectLimit, schema: { tags: ["vault"], summary: "How much an agent may spend now from a Sentinel Vault allowance (read-only get_policy on every provider; the smallest available amount wins). ?contract=&owner=&agent= (contract defaults to VAULT_CONTRACT_ID)" } },
+    async (req) => {
+      const q = parse(AllowanceQuery, req.query);
+      const contractId = q.contract ?? env.VAULT_CONTRACT_ID;
+      if (!contractId) throw new SentinelInputError("contract is required (no VAULT_CONTRACT_ID configured)");
+      return jsonSafe(await runtime.sentinel.checkSpendAllowance({ contractId, ownerId: q.owner, agentId: q.agent }));
     },
   );
 

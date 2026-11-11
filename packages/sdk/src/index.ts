@@ -12,3 +12,4 @@ export { isValidAccountId, isValidCryptoHash, inspectInputSchema, type InspectIn
 export { rpcCall, type FetchLike } from "./rpc.js";
 export { createGuardedFetch, assertPublicRpcUrl, type GuardOptions } from "./ssrf.js";
 export { decideIntent, decodeViewResult, intentInputSchema, INTENT_ID_RE, type IntentInput, type IntentCheck, type IntentStatus, type GuardIntent, type IntentProviderAnswer } from "./intent.js";
+export { decideAllowance, isVaultPolicy, vaultInputSchema, type AllowanceCheck, type AllowanceStatus, type VaultInput, type VaultPolicy, type VaultProviderAnswer } from "./vault.js";

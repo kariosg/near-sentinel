@@ -10,11 +10,13 @@ import { fileURLToPath } from "node:url";
 import { KeyPair } from "near-api-js";
 import { actions, codeHash, keyPairFrom, NEAR, readWasm, rpc, signAndSend, TGAS, wasmSha256Base58, type Signer } from "./near.js";
 import { near, runSuite, summarize } from "./suite.js";
+import { runVaultSuite } from "./vault-suite.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const url = process.env.SANDBOX_RPC_URL ?? "http://127.0.0.1:3031";
 const rootKey = process.env.SANDBOX_ROOT_KEY ?? "";
 const wasmPath = process.env.GUARD_WASM ?? join(here, "..", "target-docker", "wasm32-unknown-unknown", "release", "sentinel_guard.wasm");
+const vaultWasmPath = process.env.VAULT_WASM ?? join(here, "..", "target-docker", "wasm32-unknown-unknown", "release", "sentinel_vault.wasm");
 
 const status = await rpc(url, "status", []);
 if (status.result?.chain_id !== "sandbox") {
@@ -59,6 +61,34 @@ const results = await runSuite({
   receiverId: merchant.accountId,
   missingReceiverId: `nobody-${runId}.test.near`,
   amount: near(1),
+  largeFailAmount: near(15),
   runId,
 });
-process.exit(summarize(results) ? 0 : 1);
+
+// ── Sentinel Vault: an agent with a function-call key, spending within an owner's policy ──
+console.log(`
+━━ Sentinel Vault — same sandbox ━━`);
+const vault = await createAccount(`vault-${runId}`, 10n);
+const owner = await createAccount(`owner-${runId}`, 20n);
+const agent = await createAccount(`agent-${runId}`, 2n);
+const shop = await createAccount(`shop-${runId}`, 1n);
+const vwasm = readWasm(vaultWasmPath);
+const vd = await signAndSend(url, vault, vault.accountId, [actions.deployContract(vwasm), actions.functionCall("new", {}, 30n * TGAS, 0n)]);
+const vHash = await codeHash(url, vault.accountId);
+const deployOk = vd.ok && vHash === wasmSha256Base58(vwasm);
+console.log(`${deployOk ? "PASS" : "FAIL"}  vault: deploy + init — code_hash ${vHash} (${vwasm.length} bytes)`);
+const vaultResults = deployOk
+  ? await runVaultSuite({
+      rpcUrl: url,
+      vaultId: vault.accountId,
+      owner,
+      agentFull: agent,
+      shopId: shop.accountId,
+      missingId: `nobody-v-${runId}.test.near`,
+      outsiderId: payer2.accountId,
+      intruder: payer2,
+      runId,
+      unit: NEAR,
+    })
+  : [{ name: "vault: deploy", pass: false, detail: vd.failure }];
+process.exit(summarize([...results, ...vaultResults]) ? 0 : 1);

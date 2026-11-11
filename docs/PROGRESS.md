@@ -10,7 +10,7 @@ Mapped to the phases of the original brief. Detailed gate results: [STATUS.md](S
 | 3. Transaction and receipt engine | Done | `outcome.ts`; real-fixture tests |
 | 4. Diagnostics and retry safety | Done | `diagnostics.ts`, `retry.ts`; 19-case decision table; mutation check |
 | 5. TypeScript SDK | Done (not published to npm) | `packages/sdk`; built `dist` imported from outside the repo |
-| 6. Dashboard | Done | `apps/web`; 31/31 Playwright E2E; screenshots |
+| 6. Dashboard | Done | `apps/web`; 33/33 Playwright E2E; screenshots |
 | 7. Benchmark and fault simulation | Done | 12/12 simulated scenarios; real 30-sample benchmark |
 | 8. Security and testing | Done | [SECURITY.md](../SECURITY.md), [threat model](security/THREAT_MODEL.md); `pnpm audit` clean |
 | 9. Documentation and deployment | Done | README, docs/, Dockerfile, compose; SIGTERM, persistence and backup verified in Docker |

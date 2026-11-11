@@ -1,0 +1,114 @@
+/**
+ * Live run: an AI agent on NEAR AI Cloud decides four real testnet payment situations with NEAR Sentinel as its
+ * tools, then fetches NEAR AI's per-response signature and the model's TEE attestation report as proof.
+ *
+ *   pnpm demo:near-ai        (needs NEAR_AI_API_KEY in examples/near-ai-agent/.env; the key is never printed)
+ *
+ * Writes a transcript to docs/near-ai-run.md. Read-only: nothing is signed or sent on NEAR.
+ */
+import { randomBytes } from "node:crypto";
+import { existsSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { NearSentinel } from "@near-sentinel/sdk";
+import { runScenario, type AgentRun } from "./agent.js";
+import { NearAiClient } from "./nearai.js";
+import { sentinelTools } from "./tools.js";
+
+const here = dirname(fileURLToPath(import.meta.url));
+const envFile = join(here, "..", ".env");
+if (existsSync(envFile)) process.loadEnvFile(envFile);
+const key = process.env.NEAR_AI_API_KEY ?? "";
+if (!key) {
+  console.log("SKIPPED: set NEAR_AI_API_KEY in examples/near-ai-agent/.env (cloud.near.ai → API Keys) to run the live NEAR AI agent.");
+  process.exit(0);
+}
+
+const NEAR = 10n ** 24n;
+const SCENARIOS = [
+  {
+    id: "timeout-after-payment",
+    expect: "DO_NOT_PAY_AGAIN",
+    prompt:
+      "I sent a 0.01 NEAR payment to kariosr.testnet from karios.testnet. The RPC call timed out and I don't know if it went through. Transaction hash C59gttNUHCaVTHVi2GKCw6zu5C7QcmwPbUuw9NeaXnzS. Should I pay again?",
+  },
+  {
+    id: "unknown-transaction",
+    expect: "WAIT",
+    prompt: "My payment request timed out. Transaction hash 11111111111111111111111111111111 from alice.testnet. Should I sign a new payment?",
+  },
+  {
+    id: "partial-execution",
+    expect: "ESCALATE",
+    prompt: "A buyback transaction EtpgCjJPA1WN9MxG17C88GtEU5kf6mx77YxhrWdjMuBd from amstr-admin-zxlhcx.testnet came back with a success status but our token balance looks wrong. Should I just run it again?",
+  },
+  {
+    id: "allowance-check",
+    expect: "DO_NOT_PAY",
+    intended: { amountYocto: (3n * NEAR) / 100n, receiverId: "merchant.testnet" },
+    prompt:
+      "I am agent kariosr.testnet with an allowance from karios.testnet on the vault contract vault.karios.testnet. I want to pay 0.03 NEAR to merchant.testnet for an API call. Am I allowed to?",
+  },
+] as const;
+
+const client = new NearAiClient(key);
+const sentinel = new NearSentinel({ network: "testnet", timeoutMs: 15_000 });
+const model = await client.pickModel(process.env.NEAR_AI_MODEL || undefined);
+console.log(`━━ NEAR AI agent × NEAR Sentinel — model ${model} on NEAR AI Cloud ━━\n`);
+
+const runs: Array<AgentRun & { expect: string; signature?: { signing_address?: string; ok: boolean; error?: string } }> = [];
+for (const s of SCENARIOS) {
+  const intended = "intended" in s ? s.intended : undefined;
+  const r = await runScenario({ client, model, scenario: s.id, prompt: s.prompt, tools: sentinelTools(sentinel, intended) });
+  let signature: { signing_address?: string; ok: boolean; error?: string } = { ok: false };
+  const last = r.chatIds.at(-1);
+  if (last) {
+    try {
+      const sig = await client.signature(last, model);
+      signature = { ok: !!sig.signature, signing_address: sig.signing_address };
+    } catch (e) {
+      signature = { ok: false, error: String((e as Error).message).slice(0, 120) };
+    }
+  }
+  runs.push({ ...r, expect: s.expect, signature });
+  console.log(`▸ ${s.id}`);
+  for (const t of r.toolCalls) console.log(`    tool ${t.name}: ${t.summary}`);
+  console.log(`    model said: ${r.modelDecision ?? "(no valid decision)"} — ${r.modelReason ?? ""}`);
+  console.log(`    final: ${r.decision}${r.overruled ? " (model OVERRULED by Sentinel's verdict)" : ""}   expected ${s.expect} ${r.decision === s.expect ? "✓" : "✗"}`);
+  console.log(`    NEAR AI response signature: ${signature.ok ? `present (signer ${signature.signing_address})` : `not available${signature.error ? ` (${signature.error})` : ""}`}\n`);
+}
+
+// TEE attestation for the model, bound to a fresh nonce.
+const nonce = randomBytes(32).toString("hex");
+let attest = "not available";
+let attestedSigners: string[] = [];
+try {
+  const rep = await client.attestation(model, nonce);
+  const text = JSON.stringify(rep);
+  attestedSigners = [...new Set(runs.map((r) => r.signature?.signing_address).filter((a): a is string => !!a && text.toLowerCase().includes(a.toLowerCase())))];
+  attest = `report received (${Math.round(text.length / 1024)} KB, nonce bound)${attestedSigners.length ? `; it contains the response signing address ${attestedSigners.join(", ")}` : ""}`;
+} catch (e) {
+  attest = `not available (${String((e as Error).message).slice(0, 120)})`;
+}
+console.log(`TEE attestation: ${attest}`);
+
+const pass = runs.filter((r) => r.decision === r.expect).length;
+console.log(`\n${pass}/${runs.length} decisions as expected`);
+
+const md = [
+  "# NEAR AI agent run (live)",
+  "",
+  `Generated by \`pnpm demo:near-ai\` on ${new Date().toISOString()}. Model \`${model}\` on NEAR AI Cloud. The agent's tools are NEAR Sentinel (read-only, testnet); nothing was signed or sent on NEAR.`,
+  "",
+  "| Scenario | Sentinel evidence | Model decision | Final (Sentinel is binding) | Expected | NEAR AI signature |",
+  "|---|---|---|---|---|---|",
+  ...runs.map((r) => `| ${r.scenario} | ${r.toolCalls.map((t) => `${t.name}: ${t.summary}`).join("<br>") || "(no tool call)"} | ${r.modelDecision ?? "-"} | **${r.decision}**${r.overruled ? " (model overruled)" : ""} | ${r.expect} ${r.decision === r.expect ? "✓" : "✗"} | ${r.signature?.ok ? `signed by ${r.signature.signing_address}` : "n/a"} |`),
+  "",
+  `**TEE attestation:** ${attest}. Verify a response yourself at https://cloud.near.ai/verify.`,
+  "",
+  `**Result:** ${pass}/${runs.length} decisions as expected.`,
+  "",
+].join("\n");
+writeFileSync(join(here, "..", "..", "..", "docs", "near-ai-run.md"), md);
+console.log("transcript: docs/near-ai-run.md");
+process.exit(pass === runs.length ? 0 : 1);

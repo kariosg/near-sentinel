@@ -127,6 +127,37 @@ export function createSentinelMcpServer(sentinel: NearSentinel): McpServer {
   );
 
   server.registerTool(
+    "check_spend_allowance",
+    {
+      title: "How much may this agent spend right now from its Sentinel Vault allowance?",
+      description:
+        "For agents that pay through a Sentinel Vault (an owner-funded allowance with a per-payment limit, a 24-hour limit and an optional receiver allowlist, " +
+        "spent with a function-call key that can only call spend()). Returns ACTIVE, EXHAUSTED, FROZEN, NO_POLICY or UNKNOWN, the limits, and the amount " +
+        "available now (the smallest any provider reports, never overstated). Call it before spend() and never try to pay more, or to a receiver outside the allowlist. Read-only.",
+      inputSchema: z.object({
+        contractId: z.string().describe("Vault contract account, e.g. vault.example.testnet"),
+        ownerId: z.string().describe("Account that funded the allowance"),
+        agentId: z.string().describe("The agent account that calls spend()"),
+      }),
+      annotations: READ_ONLY,
+    },
+    async (args) => {
+      try {
+        const r = await sentinel.checkSpendAllowance(args);
+        const text = [
+          `Allowance for ${r.agentId} from ${r.ownerId} on ${r.contractId}: ${r.status}`,
+          r.reason,
+          `Providers: ${r.providers.map((p) => `${p.provider}=${p.answer}`).join(", ")}`,
+        ].join("\n");
+        return { content: [{ type: "text" as const, text }], structuredContent: r as unknown as Record<string, unknown> };
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        return { isError: true, content: [{ type: "text" as const, text: `NEAR Sentinel could not check the allowance: ${msg}. Treat it as nothing available; do not spend.` }] };
+      }
+    },
+  );
+
+  server.registerTool(
     "inspect_transaction",
     {
       title: "Inspect a NEAR transaction",
