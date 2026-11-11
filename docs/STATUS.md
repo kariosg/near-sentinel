@@ -1,13 +1,13 @@
 # STATUS (resume point)
 
-_Last updated: 2026-11-11. Product, guard contract and all test gates are done and passing. Guard deployed to testnet as `guard.karios.testnet` (live suite 11/11). Remaining: one fresh final commit, push, production server (optional), submission. Hackathon deadline: **2026-11-14 23:59 UTC**._
+_Last updated: 2026-11-11. Product, guard contract and all test gates are done and passing. Guard deployed to testnet as `guard.karios.testnet` (live suite 11/11). Code is pushed to GitHub (`kariosg/near-sentinel`, branch `master`). Remaining: make the repo public, submission, production server (optional). Hackathon deadline: **2026-11-14 23:59 UTC**._
 
 ## How to resume
 ```bash
 pnpm install
 pnpm build              # sdk → mcp → api → web → demo → guard scripts (tsc / vite)
 pnpm typecheck
-pnpm test               # secrets gate + sdk 146 + mcp 11 (stdio e2e) + api 46 + demo 7 assertions
+pnpm test               # secrets gate + sdk 146 + mcp 11 (stdio e2e) + api 47 + demo 7 assertions
 pnpm test:live          # 7 read-only tests against public NEAR testnet RPCs
 pnpm test:e2e           # 31 Playwright tests (functional + axe a11y + responsive + keyboard + optional sign-in + judge tour)
 pnpm test:contract      # guard: 14 Rust unit tests + 12-check on-chain suite on a local neard sandbox (Docker)
@@ -28,7 +28,7 @@ docker compose up -d --build
 | Secrets gate (`scripts/check-secrets.mjs`, all tracked files) | pass; self-tested with a planted fake key + seed line (caught) |
 | SDK unit | **146/146** (incl. retry-safety hardening + `checkIntent` + text helpers) |
 | MCP e2e (built server over stdio, official client) | **11/11** (6 tools) |
-| API | **46/46** (incl. public simulated benchmark vs key-protected real one, NEP-413 forgery cases, intents, SSE per-IP cap, 413 body limit, rate limits) |
+| API | **47/47** (incl. security headers, public simulated benchmark vs key-protected real one, NEP-413 forgery cases, intents, SSE per-IP cap, 413 body limit, rate limits) |
 | Demo `--assert` | **7/7** |
 | Live testnet | **7/7** (aging-proof: the old failed tx now only lives on the archival operator → honest WAIT) |
 | Dashboard E2E (installed Chrome) | **31/31**: 7 functional, 8 axe (WCAG 2.1 AA, 0 serious/critical), 3 viewports × 8 pages (no overflow, no console errors), keyboard, 4 optional-sign-in, guard panel (incl. the live testnet deployment), start-page tour, command palette, mobile drawer, one-click benchmark, modal focus trap, reduced motion |
@@ -92,7 +92,7 @@ docker compose up -d --build
   - Sandbox runner: Docker's port proxy accepts connections before neard listens; an unref'd abort timer let Node exit mid-poll.
 
 ## Next steps
-1. **Push** the initial commit to `origin` (owner sets up push auth, then approves the push). The owner then makes the repo public (required by 2026-11-14 23:59 UTC).
+1. ~~Push~~ done 2026-11-11 (`master`). The owner makes the repo **public** (required by 2026-11-14 23:59 UTC).
 2. ~~Deploy the guard to testnet~~ done 2026-11-11 (`guard.karios.testnet`, created with `pnpm contract:create-account` from the payer's existing key; no key generated).
 3. **Production server** (optional for judging): follow `docs/deployment/VULTR.md` on a fresh Ubuntu 24.04 server (2 GB RAM recommended).
 4. Optional real-testnet agent demo (`examples/agent-demo/.env`, `pnpm demo:testnet`).
@@ -104,13 +104,12 @@ docker compose up -d --build
 - `pnpm contract:deploy` runs `pnpm --filter … run deploy` (plain `deploy` would hit pnpm's built-in command). `-- --i-confirm` forwarding verified.
 
 ## Uncommitted work
-- Final version is finished and every gate re-run on 2026-11-11 (unit 146/11/46/7, e2e 31/31, live 7/7, contract 14 + sandbox 12/12 + testnet 11/11, audit clean, secrets and privacy scans clean). It is committed as **one fresh root commit** (author kariosg noreply, UTC dates); the working tree is clean. Push is pending the owner's GitHub auth for `kariosg/near-sentinel`.
-- `packages/sdk/t.cjs` is a local scratch file and is deliberately left out of git.
+- None. `master` is pushed to `git@github.com:kariosg/near-sentinel.git` (default branch `master`): the fresh root commit plus a dashboard sync commit. Local scratch `packages/sdk/t.cjs` is deliberately untracked.
+- Verified as a judge would (2026-11-11): fresh clone with no `.env` → install, build, test 210, demo, live 7/7, e2e 31/31, contract 14 + 12/12, Docker image builds and runs as non-root.
 
 ## Blocked on the owner
-- Push auth for `kariosg/near-sentinel`, then an explicit OK to push; making the repo public.
-- Guard deploy: payer and receiver accounts are set and the payer is funded and its key verified; the **contract account** (and its key) is still missing in `contracts/guard/.env`. Then an explicit OK to deploy.
-- A server IP or domain for the Vultr deployment.
+- Making the repo public (it is pushed but still private).
+- A server IP or domain for the Vultr deployment (optional).
 - The X post (with the demo video) and the submission form (mainnet payout account).
 
 ## Working agreements

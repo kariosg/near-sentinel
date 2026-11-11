@@ -139,6 +139,9 @@ export async function buildApp(env: Env, opts: { db?: Db } = {}): Promise<AppDep
     reply.header("x-request-id", req.id);
     reply.header("x-content-type-options", "nosniff");
     reply.header("referrer-policy", "no-referrer");
+    // Anti-clickjacking for direct deployments (no reverse proxy). Restricts framing only, not scripts or styles.
+    reply.header("x-frame-options", "DENY");
+    reply.header("content-security-policy", "frame-ancestors 'none'");
     if (req.url.startsWith("/api/")) reply.header("cache-control", "no-store");
   });
 

@@ -261,7 +261,7 @@ export function StartPage() {
           <SectionTitle id="verify-title" eyebrow="Reproduce it" title="Verify from your terminal" sub="Node ≥ 22.16 and pnpm 8. Docker only for the contract suite." />
           <ul className="space-y-3 text-sm text-ink-2">
             {[
-              ["210 unit and integration tests", "SDK, MCP server (real stdio), API, demo"],
+              ["211 unit and integration tests", "SDK, MCP server (real stdio), API, demo"],
               ["7 live tests", "read-only, against public testnet RPCs"],
               ["31 browser tests", "flows, accessibility, phone/tablet/desktop, keyboard, this tour"],
               ["14 + 12 + 11 contract checks", "Rust unit tests, a local NEAR node, then live on testnet"],
@@ -278,7 +278,7 @@ export function StartPage() {
           </ul>
         </div>
         <CodeBlock title="bash">{`pnpm install && pnpm build
-pnpm test            # secrets check + 210 tests
+pnpm test            # secrets check + 211 tests
 pnpm demo            # naive agent pays 2 NEAR, guarded pays 1
 pnpm start           # this dashboard on http://127.0.0.1:8080
 pnpm test:contract   # Docker: 14 Rust tests + 12 on-chain checks`}</CodeBlock>

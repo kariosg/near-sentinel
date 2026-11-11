@@ -41,7 +41,7 @@ It ships as a TypeScript SDK, an **MCP server for AI agents**, a REST API and a 
 
 | Do | See |
 |---|---|
-| `pnpm install && pnpm build && pnpm test` | Secrets check, then 210 tests pass (sdk 146, mcp 11, api 46, demo 7) |
+| `pnpm install && pnpm build && pnpm test` | Secrets check, then 211 tests pass (sdk 146, mcp 11, api 47, demo 7) |
 | `pnpm demo` | Naive agent: merchant receives 2 NEAR. Sentinel-guarded agent: 1 NEAR. |
 | `pnpm start`, then open http://127.0.0.1:8080 | Dashboard on live testnet. It opens on **Start here**: a 3-minute judge tour where every step is one click. Click **Skip** on the optional verify banner. Press **Ctrl K** to jump anywhere. |
 | Inspect page → paste a testnet tx hash | Verdict, per-provider evidence, receipt graph |
@@ -96,7 +96,7 @@ git clone https://github.com/kariosg/near-sentinel.git
 cd near-sentinel
 pnpm install
 pnpm build          # sdk, mcp, api, web, demo
-pnpm test           # secrets gate + sdk (146) + mcp e2e (11) + api (46) + simulated demo assertions (7)
+pnpm test           # secrets gate + sdk (146) + mcp e2e (11) + api (47) + simulated demo assertions (7)
 pnpm start          # API + dashboard on http://127.0.0.1:8080 (NEAR testnet, 4 public providers)
 ```
 

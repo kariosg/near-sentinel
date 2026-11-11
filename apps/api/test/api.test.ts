@@ -96,6 +96,16 @@ describe("system", () => {
     expect(r3.headers["x-request-id"]).not.toContain("<");
   });
 
+  it("security headers: nosniff, no-referrer and anti-framing on every response", async () => {
+    for (const url of ["/health", "/api/v1/providers", "/does-not-exist"]) {
+      const r = await d.app.inject({ method: "GET", url });
+      expect(r.headers["x-content-type-options"]).toBe("nosniff");
+      expect(r.headers["referrer-policy"]).toBe("no-referrer");
+      expect(r.headers["x-frame-options"]).toBe("DENY");
+      expect(r.headers["content-security-policy"]).toBe("frame-ancestors 'none'");
+    }
+  });
+
   it("cold start: concurrent health requests share the first probe and always get providers (regression)", async () => {
     const d5 = await buildApp(env(), { db: openDb(":memory:") });
     const [r1, r2, r3] = await Promise.all([
