@@ -2,6 +2,7 @@
  * Minimal transfer building/signing/sending for the demo AGENTS.
  * (The Sentinel product itself never signs or sends — only these demo agents do.)
  */
+import { existsSync, readFileSync } from "node:fs";
 import { sha256 } from "@noble/hashes/sha2.js";
 import {
   actions,
@@ -90,3 +91,22 @@ export async function balanceYocto(url: string, accountId: string): Promise<bigi
 }
 
 export const toNear = (y: bigint) => (Number(y / 10n ** 18n) / 1e6).toFixed(6);
+
+/**
+ * The sender's private key: DEMO_SENDER_PRIVATE_KEY, or — when that is empty and the sender is the Guard test
+ * payer — GUARD_TEST_PAYER_PRIVATE_KEY from contracts/guard/.env, so the owner never copies keys between files.
+ * Read from git-ignored .env files only; never printed.
+ */
+export function resolveSenderKey(sender: string, demoKey: string, guardEnvFile: string): { secret: string; source: string } {
+  if (demoKey) return { secret: demoKey, source: "examples/agent-demo/.env" };
+  if (!existsSync(guardEnvFile)) return { secret: "", source: "" };
+  const env = Object.fromEntries(
+    readFileSync(guardEnvFile, "utf8")
+      .split(/\r?\n/)
+      .filter((l) => l.includes("=") && !l.trimStart().startsWith("#"))
+      .map((l) => [l.slice(0, l.indexOf("=")).trim(), l.slice(l.indexOf("=") + 1).trim()]),
+  );
+  return env.GUARD_TEST_PAYER_ACCOUNT_ID === sender && env.GUARD_TEST_PAYER_PRIVATE_KEY
+    ? { secret: env.GUARD_TEST_PAYER_PRIVATE_KEY, source: "contracts/guard/.env (same payer account)" }
+    : { secret: "", source: "" };
+}

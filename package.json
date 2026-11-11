@@ -20,6 +20,7 @@
     "dev:web": "pnpm --filter @near-sentinel/web dev",
     "demo": "pnpm --filter @near-sentinel/agent-demo simulated",
     "demo:testnet": "pnpm --filter @near-sentinel/agent-demo testnet",
+    "demo:critical": "pnpm --filter @near-sentinel/agent-demo critical",
     "mcp": "node packages/mcp/dist/server.js",
     "check:secrets": "node scripts/check-secrets.mjs",
     "test:contract": "pnpm --filter @near-sentinel/guard test:unit && pnpm --filter @near-sentinel/guard test:sandbox",

@@ -35,6 +35,7 @@ docker compose up -d --build
 | Guard contract unit (Rust, Docker) | **14/14** |
 | Guard on-chain suite (local neard 2.14.0, protocol 88) | **12/12** + deploy code-hash match; true concurrent race credits the receiver exactly once |
 | Guard on TESTNET (`guard.karios.testnet`) | deployed (tx `Gmym6RR6cCkTYedYMD1KJQ7xiqkXDk3MBaC69LV7ZSbN`, code_hash matches local build); live suite **11/11**; Sentinel `checkIntent` PAID on all 4 providers for intent `tmwbtoqi6-a` |
+| Real-testnet agent demo + critical verdicts (`karios.testnet` → `kariosr.testnet`) | naive **2×** / guarded **1×** with real transfers; `demo:critical` **5/5** (unsent → WAIT, nonce consumed → SAFE_TO_RETRY, landed → DO_NOT_RETRY, garbage → input error) |
 | Load + soak (built server, mock RPCs, 3 rounds, ~1.8 M requests) | **17/17**: 0 errors / 0 non-2xx; p99 ≤ 126 ms on retry-check; RSS flat after warm-up (+12 MB) |
 | Docker | image builds; health OK; all routes 200; runs as non-root `node` |
 | `pnpm audit` (all / prod) | No known vulnerabilities (dev-only `uuid` via autocannon pinned to 11.1.1) |
@@ -57,7 +58,7 @@ docker compose up -d --build
 | Security tests pass | ✅ |
 | Documentation matches implementation | ✅ |
 | Production deployment configuration | ✅ Dockerfile + compose + DEPLOY.md; Vultr setup in `deploy/vultr` + VULTR.md |
-| Demo reproducible by another developer | ✅ simulated (no wallet); real-testnet mode needs the operator's own testnet accounts |
+| Demo reproducible by another developer | ✅ simulated (no wallet); real testnet run 2026-11-11: naive 2× / guarded 1×; critical verdicts 5/5 (`pnpm demo:critical`) |
 
 ## Bugs found by verification (all fixed, most with regression tests)
 - Missing access key = successful result with `result.error` (was treated as unknown) → MANUAL. Verified live.
@@ -95,7 +96,7 @@ docker compose up -d --build
 1. ~~Push~~ done 2026-11-11 (`master`). The owner makes the repo **public** (required by 2026-11-14 23:59 UTC).
 2. ~~Deploy the guard to testnet~~ done 2026-11-11 (`guard.karios.testnet`, created with `pnpm contract:create-account` from the payer's existing key; no key generated).
 3. **Production server** (optional for judging): follow `docs/deployment/VULTR.md` on a fresh Ubuntu 24.04 server (2 GB RAM recommended).
-4. Optional real-testnet agent demo (`examples/agent-demo/.env`, `pnpm demo:testnet`).
+4. ~~Real-testnet agent demo~~ done 2026-11-11: naive 2× / guarded 1×; `pnpm demo:critical` 5/5.
 5. Hackathon submission (owner): video post on X and the form. Rules were checked on 2026-11-11: public repo with a LICENSE (MIT, present), a README "NEAR HACKATHON submission" section (present), and a demo video because the demo runs locally.
 
 ## Git setup

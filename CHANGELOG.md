@@ -8,6 +8,7 @@ First release, built for NEAR HACKATHON (Nov 2026).
 - Deployed as `guard.karios.testnet` (code hash matches the local build); live suite 11/11 on testnet.
 - `pnpm contract:create-account`: creates the contract sub-account with the payer's existing key (no key generation); `deploy` reuses it.
 - Dashboard Guard panel: one-click live examples (paid and unused intent) against the testnet deployment.
+- `pnpm demo:critical`: real-testnet check of the critical verdicts with freshly signed transactions (5/5); the real-testnet demo ran (naive 2×, guarded 1×). Both reuse the Guard payer key from `contracts/guard/.env` when the demo key is empty.
 - API sends anti-framing headers (`X-Frame-Options: DENY`, `frame-ancestors 'none'`) itself, so direct deployments without a reverse proxy are protected from clickjacking.
 
 ### SDK (`@near-sentinel/sdk`)

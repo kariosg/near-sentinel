@@ -9,6 +9,7 @@
     "build": "tsc -p tsconfig.json",
     "simulated": "pnpm build && node dist/simulated.js",
     "testnet": "pnpm build && node dist/testnet.js",
+    "critical": "pnpm build && node dist/critical.js",
     "test": "pnpm build && node dist/simulated.js --assert",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },

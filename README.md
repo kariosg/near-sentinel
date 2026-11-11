@@ -72,7 +72,7 @@ Run `pnpm demo` (no wallet needed). It uses a local simulated chain plus a fault
   ⇒ GUARDED: 1 transfer executed; merchant received 1 NEAR (intended: 1)
 ```
 
-A **real-testnet** version of the same demo exists (`examples/agent-demo/src/testnet.ts`). It needs your own testnet accounts; see [Demo](#demo).
+The same story **with real money on testnet** (2026-11-11, `pnpm demo:testnet`): the transfer was delivered but the reply was cut off. The naive agent re-signed and the receiver got **0.02 NEAR (2×)**; the Sentinel-guarded agent got DO_NOT_RETRY from all 4 providers and the receiver got **0.01 NEAR (1×)**. Transactions: naive [`185YtdJZ…`](https://testnet.nearblocks.io/txns/185YtdJZxUCMAaqjRtmSj4MTx51mdiMpjhAPmZ3rZaH) + [`6h2hMxjp…`](https://testnet.nearblocks.io/txns/6h2hMxjpjdYwDF6zXJ5gTwD5MY47UT7thdRaxZM2Pc6h), guarded [`C59gttNU…`](https://testnet.nearblocks.io/txns/C59gttNUHCaVTHVi2GKCw6zu5C7QcmwPbUuw9NeaXnzS). See [Demo](#demo).
 
 ## Why this is needed (verified on testnet, 2026-11-09)
 
@@ -213,8 +213,11 @@ Full table: [docs/architecture/STATE_MAPPING.md](docs/architecture/STATE_MAPPING
 | `pnpm --filter @near-sentinel/agent-demo test` | nothing | Same, with 7 pass/fail assertions. |
 | `pnpm demo:testnet` | `examples/agent-demo/.env` with **your** testnet sender (+ key) and receiver | Dry run: validates the config and prints the exact plan. |
 | `pnpm demo:testnet -- --i-confirm` | same | Real testnet transfers (≤ 0.1 NEAR each, at most 4 signed; normally 3 execute) with NearBlocks links. |
+| `pnpm demo:critical` / `-- --i-confirm` | same | The critical verdicts with freshly signed transactions (one 0.0011 NEAR transfer): signed-but-unsent → WAIT (never SAFE); its nonce used by another tx → SAFE_TO_RETRY; landed → DO_NOT_RETRY; garbage bytes → invalid input. |
 
-The testnet demo refuses to run unless the RPC reports `chain_id=testnet`. It never prints the key.
+Both testnet scripts refuse to run unless the RPC reports `chain_id=testnet`, and never print the key. If `DEMO_SENDER_PRIVATE_KEY` is empty and the sender is the Guard test payer, they reuse `GUARD_TEST_PAYER_PRIVATE_KEY` from `contracts/guard/.env`.
+
+**Results on testnet (2026-11-11):** `demo:testnet` naive 2× / guarded 1× (links above). `demo:critical` **5/5**: unsent `5JCwZbZ4…` → WAIT_AND_RECHECK; after [`H2kx7pKp…`](https://testnet.nearblocks.io/txns/H2kx7pKpVnbuKe5dz7GNX2hrSk2cBa8kwMQ6ycYUSAdv) used its nonce → SAFE_TO_RETRY (nonce consumed, proven per operator); `H2kx7pKp…` → DO_NOT_RETRY; garbage → `SentinelInputError`.
 
 ## Project layout
 

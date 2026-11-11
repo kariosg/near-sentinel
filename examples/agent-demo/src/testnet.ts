@@ -16,7 +16,7 @@ import { fileURLToPath } from "node:url";
 import { NearSentinel } from "@near-sentinel/sdk";
 import { startFaultProxy } from "@near-sentinel/sdk/testing";
 import { guardedAgent, naiveAgent, type AgentEnv } from "./agents.js";
-import { balanceYocto, keyPairFrom, rpc, toNear } from "./tx.js";
+import { balanceYocto, keyPairFrom, resolveSenderKey, rpc, toNear } from "./tx.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const envFile = join(here, "..", ".env");
@@ -26,7 +26,7 @@ const CONFIRM = process.argv.includes("--i-confirm");
 const RPC = process.env.DEMO_RPC_URL ?? "https://test.rpc.fastnear.com";
 const sender = process.env.DEMO_SENDER_ACCOUNT_ID ?? "";
 const receiver = process.env.DEMO_RECEIVER_ACCOUNT_ID ?? "";
-const secret = process.env.DEMO_SENDER_PRIVATE_KEY ?? "";
+const { secret, source: keySource } = resolveSenderKey(sender, process.env.DEMO_SENDER_PRIVATE_KEY ?? "", join(here, "..", "..", "..", "contracts", "guard", ".env"));
 const amountNear = Number(process.env.DEMO_AMOUNT_NEAR ?? "0.01");
 
 function fail(msg: string): never {
@@ -57,7 +57,7 @@ if (senderBefore < maxSpend + reserve) fail(`Sender balance ${toNear(senderBefor
 
 console.log("━━ NEAR Sentinel — REAL TESTNET demo ━━");
 console.log(`network        : testnet (verified via ${RPC} status.chain_id)`);
-console.log(`sender         : ${sender}  (key ${pk.slice(0, 16)}…, FullAccess)  balance ${toNear(senderBefore)} NEAR`);
+console.log(`sender         : ${sender}  (key ${pk.slice(0, 16)}… from ${keySource}, FullAccess)  balance ${toNear(senderBefore)} NEAR`);
 console.log(`receiver       : ${receiver}  balance ${toNear(receiverBefore)} NEAR`);
 console.log(`amount per tx  : ${amountNear} NEAR`);
 console.log("plan           : naive agent sends 1 intended payment (expected to execute TWICE),");

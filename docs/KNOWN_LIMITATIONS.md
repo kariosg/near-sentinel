@@ -37,4 +37,4 @@ Honest list. Nothing here is claimed as working elsewhere.
 
 ## Not yet done (as of 2026-11-11)
 - The Vultr deployment (`deploy/vultr`) is validated locally but not yet run on a real server.
-- The real-testnet demo run (`pnpm demo:testnet -- --i-confirm`) needs your own testnet sender and receiver accounts. Its safety gates (testnet only, amount cap, explicit confirmation) are covered by tests; the simulated demo (`pnpm demo`) needs no wallet.
+- (Done 2026-11-11: `pnpm demo:testnet` and `pnpm demo:critical` ran on real testnet; see the README Demo section.) Re-running them needs your own testnet sender and receiver accounts. Its safety gates (testnet only, amount cap, explicit confirmation) are covered by tests; the simulated demo (`pnpm demo`) needs no wallet.
