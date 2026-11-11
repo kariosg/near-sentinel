@@ -2,7 +2,9 @@
 #
 # Values come from deploy/vultr/.env.production (passed to the container by docker-compose.prod.yml):
 #   SENTINEL_DOMAIN  the public hostname, e.g. sentinel.example.com. Its DNS A record must point at this server.
-#   ACME_EMAIL       contact address for the certificate authority (expiry notices), e.g. you@example.com
+#
+# No ACME account email is configured: Let's Encrypt does not require one, Caddy renews certificates
+# automatically, and no personal address leaves the server. (Add a global `{ email you@example.com }` block if you want one.)
 #
 # TEMPORARY "no domain yet" fallback: set SENTINEL_DOMAIN=:80 in .env.production.
 #   Caddy then serves plain HTTP on port 80 at http://<server-ip>/ with no certificate. Traffic is NOT encrypted.
@@ -12,10 +14,6 @@
 # Client IPs: Caddy replaces any X-Forwarded-For sent by the client with the real peer address (no
 # trusted_proxies are configured), and the app runs with TRUST_PROXY=1, so rate limits see real client IPs.
 # If you later put a CDN in front of Caddy, configure `trusted_proxies` in the global block for that CDN.
-{
-	email {$ACME_EMAIL}
-}
-
 {$SENTINEL_DOMAIN} {
 	# Compress everything except the Server-Sent Events stream (compression would buffer it).
 	@compressible not path /api/v1/events

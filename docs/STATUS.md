@@ -57,7 +57,7 @@ docker compose up -d --build
 | Fault simulations produce expected results | ✅ 12/12 + demo 7/7 |
 | Security tests pass | ✅ |
 | Documentation matches implementation | ✅ |
-| Production deployment configuration | ✅ Dockerfile + compose + DEPLOY.md; Vultr setup in `deploy/vultr` + VULTR.md |
+| Production deployment configuration | ✅ Dockerfile + compose + DEPLOY.md; Vultr setup in `deploy/vultr` + VULTR.md; **live at https://64-177-60-105.sslip.io** (1 vCPU / 1 GB, Caddy + Let's Encrypt, image built locally and loaded with `docker save`) |
 | Demo reproducible by another developer | ✅ simulated (no wallet); real testnet run 2026-11-11: naive 2× / guarded 1×; critical verdicts 5/5 (`pnpm demo:critical`) |
 
 ## Bugs found by verification (all fixed, most with regression tests)
@@ -95,7 +95,7 @@ docker compose up -d --build
 ## Next steps
 1. ~~Push~~ done 2026-11-11 (`master`). The owner makes the repo **public** (required by 2026-11-14 23:59 UTC).
 2. ~~Deploy the guard to testnet~~ done 2026-11-11 (`guard.karios.testnet`, created with `pnpm contract:create-account` from the payer's existing key; no key generated).
-3. **Production server** (optional for judging): follow `docs/deployment/VULTR.md` on a fresh Ubuntu 24.04 server (2 GB RAM recommended).
+3. ~~Production server~~ live 2026-11-11 at https://64-177-60-105.sslip.io (Vultr 1 GB, deploy user `sentinel`, SSH key-only). Update: rebuild locally, `docker save | ssh … docker load`, `up -d --no-build` (VULTR.md §6). Destroy the instance after judging to stop billing.
 4. ~~Real-testnet agent demo~~ done 2026-11-11: naive 2× / guarded 1×; `pnpm demo:critical` 5/5.
 5. Hackathon submission (owner): video post on X and the form. Rules were checked on 2026-11-11: public repo with a LICENSE (MIT, present), a README "NEAR HACKATHON submission" section (present), and a demo video because the demo runs locally.
 
@@ -110,7 +110,6 @@ docker compose up -d --build
 
 ## Blocked on the owner
 - Making the repo public (it is pushed but still private).
-- A server IP or domain for the Vultr deployment (optional).
 - The X post (with the demo video) and the submission form (mainnet payout account).
 
 ## Working agreements

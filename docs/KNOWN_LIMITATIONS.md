@@ -36,5 +36,5 @@ Honest list. Nothing here is claimed as working elsewhere.
 - **`node:sqlite` prints an "experimental" warning on Node 22.** It is suppressed with `--no-warnings=ExperimentalWarning` in the start scripts.
 
 ## Not yet done (as of 2026-11-11)
-- The Vultr deployment (`deploy/vultr`) is validated locally but not yet run on a real server.
+- (Done 2026-11-11: the Vultr deployment runs live at https://64-177-60-105.sslip.io on a 1 GB server.) It is a single small instance: no redundancy, and probe history lives on that one server.
 - (Done 2026-11-11: `pnpm demo:testnet` and `pnpm demo:critical` ran on real testnet; see the README Demo section.) Re-running them needs your own testnet sender and receiver accounts. Its safety gates (testnet only, amount cap, explicit confirmation) are covered by tests; the simulated demo (`pnpm demo`) needs no wallet.

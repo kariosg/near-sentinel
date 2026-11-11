@@ -72,7 +72,6 @@ services:
       - "${HTTPS_PORT:-443}:443/udp"
     environment:
       SENTINEL_DOMAIN: ${SENTINEL_DOMAIN:?set SENTINEL_DOMAIN in deploy/vultr/.env.production (or :80 for the temporary HTTP fallback)}
-      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in deploy/vultr/.env.production}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       # Certificates and ACME account. Keep this volume: deleting it forces re-issuance (rate-limited).

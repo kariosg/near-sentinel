@@ -58,8 +58,8 @@ ensure_env() {
     die "Missing $APP_DIR/$ENV_FILE.
        cp deploy/vultr/env.production.example $ENV_FILE && nano $ENV_FILE"
   fi
-  if grep -qE '^(SENTINEL_DOMAIN=sentinel\.example\.com|ACME_EMAIL=you@example\.com)' "$ENV_FILE"; then
-    die "$ENV_FILE still has the example SENTINEL_DOMAIN / ACME_EMAIL. Set your own values."
+  if grep -qE '^SENTINEL_DOMAIN=sentinel\.example\.com' "$ENV_FILE"; then
+    die "$ENV_FILE still has the example SENTINEL_DOMAIN. Set your own hostname."
   fi
   if grep -qiE '(ed25519|secp256k1):[1-9A-HJ-NP-Za-km-z]{80,}' "$ENV_FILE"; then
     die "$ENV_FILE appears to contain a private key. Remove it: no keys ever go on this server."

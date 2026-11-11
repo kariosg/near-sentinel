@@ -58,7 +58,8 @@ The server also runs UFW. A Vultr firewall group blocks traffic before it even r
 At your DNS provider, create an **A record**: `<your-domain>` → `<server-ip>`. Wait until `nslookup <your-domain>` returns `<server-ip>`.
 
 - If there is an **AAAA** record for the same name, it must point at this server's IPv6, or be removed. Otherwise certificate issuance can fail.
-- No domain yet? You can still deploy over plain HTTP using the IP. See step 7.
+- **No domain? Use a free `sslip.io` name.** `<ip-with-dashes>.sslip.io` (for example `65-20-1-2.sslip.io`) already resolves to that IP, so Caddy gets a real Let's Encrypt certificate with nothing to buy or configure. The public demo uses this.
+- Plain HTTP on the IP is also possible for a quick check. See step 7.
 
 ## 5. Run the server setup script (as root, once)
 
@@ -91,6 +92,20 @@ cd near-sentinel
 
 If the repository is private, add a read-only **deploy key** for the server in the repository settings, or clone over HTTPS with a read-only token.
 
+**Low-cost alternative for 1 GB plans: build on your computer, copy only the image.** The server then never builds or needs the source code or GitHub access:
+
+```bash
+# on your computer, in the repo
+docker build -t near-sentinel:prod .
+docker save near-sentinel:prod | gzip -1 | ssh sentinel@<server-ip> 'gunzip | docker load'
+ssh sentinel@<server-ip> 'mkdir -p ~/near-sentinel/deploy/vultr'
+scp deploy/vultr/docker-compose.prod.yml deploy/vultr/Caddyfile sentinel@<server-ip>:near-sentinel/deploy/vultr/
+# then create ~/near-sentinel/deploy/vultr/.env.production on the server (step 7) and start it:
+ssh sentinel@<server-ip> 'cd ~/near-sentinel && docker compose -f deploy/vultr/docker-compose.prod.yml --env-file deploy/vultr/.env.production up -d --no-build'
+```
+
+To update, repeat the build, `docker save` and `up -d --no-build` lines. This is how the public demo was deployed (1 vCPU / 1 GB, about $5/month).
+
 ## 7. Fill in `.env.production`
 
 ```bash
@@ -103,7 +118,6 @@ Set at least these:
 | Variable | Value |
 |---|---|
 | `SENTINEL_DOMAIN` | `<your-domain>`, or `:80` for the **temporary** no-domain fallback |
-| `ACME_EMAIL` | an address you read, e.g. `you@example.com`. Used for certificate expiry notices |
 | `NEAR_NETWORK` | `testnet` (default) |
 | `GUARD_CONTRACT_ID` | optional, a public account ID such as `guard.<your-account>.testnet` |
 | `API_KEYS_SHA256` | optional. Only the **SHA-256 digest** of a key, never the key. Leave it empty to keep protected endpoints disabled |

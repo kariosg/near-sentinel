@@ -108,7 +108,7 @@ test.describe("optional account verification", () => {
     expect(errors).toEqual([]);
   });
 
-  test("Verify sends the user to MyNearWallet with a server nonce, the message and our callback", async ({ page }) => {
+  test("Verify sends the user to MyNearWallet with a server nonce, the message and our callback", async ({ page, baseURL }) => {
     let walletUrl = "";
     await page.route("https://testnet.mynearwallet.com/**", (route) => {
       walletUrl = route.request().url();
@@ -121,7 +121,8 @@ test.describe("optional account verification", () => {
     expect(Buffer.from(q.get("nonce")!, "base64")).toHaveLength(32);
     expect(q.get("recipient")).toBe("near-sentinel");
     expect(q.get("message")).toMatch(/cannot move funds/);
-    expect(q.get("callbackUrl")).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/$/);
+    // The wallet must send the user back to this same site (local or deployed).
+    expect(q.get("callbackUrl")).toBe(`${new URL(baseURL!).origin}/`);
   });
 
   test("a cancelled wallet flow shows a calm message and the app keeps working", async ({ page }) => {

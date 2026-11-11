@@ -2,6 +2,8 @@
 
 **Know whether your NEAR transaction ran before you sign another one.**
 
+**Live demo:** https://64-177-60-105.sslip.io (testnet, read-only, no wallet needed) · API docs: https://64-177-60-105.sslip.io/docs
+
 When an AI agent or app sends a NEAR transaction and the RPC call times out, it can't tell whether the transfer landed. The usual reaction is to sign a *new* transaction. If the first one did land, the funds move twice.
 
 NEAR Sentinel checks several independent RPC providers and answers with evidence:
@@ -35,12 +37,13 @@ It ships as a TypeScript SDK, an **MCP server for AI agents**, a REST API and a 
 - **Tracks:** **AI Security & Defense** (primary): agents can move money without double-paying after a timeout. **Agent Economy**: a payment rail agents call safely through MCP, plus an on-chain pay-once guard.
 - **Baseline:** none. All code was written during the hackathon window (from 2026-11-09). It is not a port of an existing product on any chain. Libraries and AI assistance are listed under [Built with](#built-with-and-ai-disclosure).
 - **Network:** NEAR testnet only. No feature depends on mainnet.
-- **The demo runs locally** (no hosted instance). The demo video is in the X post.
+- **Live instance:** https://64-177-60-105.sslip.io (a 1 GB Vultr server behind Caddy HTTPS, deployed with [docs/deployment/VULTR.md](docs/deployment/VULTR.md)). Everything also runs locally, and the demo video is in the X post.
 
 **For judges: verify in about 10 minutes** (Node ≥ 22.16, pnpm 8; Docker only for the contract and container steps)
 
 | Do | See |
 |---|---|
+| Open https://64-177-60-105.sslip.io (nothing to install) | The live dashboard on testnet: same tour, examples and benchmark as below |
 | `pnpm install && pnpm build && pnpm test` | Secrets check, then 211 tests pass (sdk 146, mcp 11, api 47, demo 7) |
 | `pnpm demo` | Naive agent: merchant receives 2 NEAR. Sentinel-guarded agent: 1 NEAR. |
 | `pnpm start`, then open http://127.0.0.1:8080 | Dashboard on live testnet. It opens on **Start here**: a 3-minute judge tour where every step is one click. Click **Skip** on the optional verify banner. Press **Ctrl K** to jump anywhere. |
