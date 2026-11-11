@@ -5,6 +5,9 @@
   "description": "Naive vs Sentinel-guarded agent after an RPC timeout: simulated (no wallet) and real testnet modes",
   "license": "MIT",
   "type": "module",
+  "exports": {
+    ".": "./dist/run-simulated.js"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "simulated": "pnpm build && node dist/simulated.js",

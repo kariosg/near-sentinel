@@ -219,6 +219,16 @@ test("vault owner actions: preview shows exactly what the wallet will sign (no w
   expect(errors).toEqual([]);
 });
 
+test("start page: 'Run it live' shows the naive agent paying twice and the guarded agent once", async ({ page }) => {
+  const errors = trackErrors(page);
+  await skipIdentity(page);
+  await page.goto("/#/start");
+  await page.getByRole("button", { name: /Run it live/ }).click();
+  await expect(page.getByText(/2 transfers · merchant got 2 NEAR/)).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByText(/1 transfer · merchant got 1 NEAR/)).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
 test.describe("redesign: judge-first navigation", () => {
   test("start page: hero, tour progress, verdict guide; tour step runs the real example", async ({ page }) => {
     const errors = trackErrors(page);

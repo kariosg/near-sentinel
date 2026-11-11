@@ -12,6 +12,8 @@ First release, built for NEAR HACKATHON (Nov 2026).
 - `pnpm verify` (one summary table of every check) and `JUDGING.md` (each claim with its proof).
 
 ### NEAR AI agent and NEAR Connect (2026-11-12)
+- Start page **Run it live**: `POST /api/v1/demo/run` replays the naive-vs-guarded agents on a local simulated chain (no network, no funds) and shows naive 2 transfers vs guarded 1; the demo logic is shared with `pnpm demo` (`examples/agent-demo/src/run-simulated.ts`).
+- Start page shows the real-money proof on the first screen; `scripts/record-wow.mjs` records a short clip; read-only mainnet live checks (10 live tests).
 - Read-only **mainnet** checks in `pnpm test:live` (3 tests): mainnet providers, a real recent mainnet transaction picked live → DO_NOT_RETRY, an unknown hash → WAIT_AND_RECHECK. Live suite now 10 (7 testnet + 3 mainnet).
 - Dashboard: Vault owner actions through **NEAR Connect** (`@hot-labs/near-connect` 0.12.0, which replaced the deprecated Wallet Selector): fund/update a policy, freeze/unfreeze, withdraw, each with a preview of exactly what the wallet will sign. Loaded lazily; the server stays keyless.
 - `examples/near-ai-agent`: a payments agent on NEAR AI Cloud (OpenAI-compatible API, model NEAR AI hosts in a TEE) with NEAR Sentinel as its tools. Sentinel's verdict is binding: a deterministic guard overrules a model that proposes paying again after Sentinel said the payment executed, and escalates when no evidence was gathered. Live run `pnpm demo:near-ai` records each answer's NEAR AI response signature and the model's attestation report in `docs/near-ai-run.md`; 7 offline tests run against a mock of the API (no key needed). `pnpm verify` reports the live run as SKIPPED without a key.

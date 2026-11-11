@@ -1,6 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { api } from "../api";
+import { api, type DemoRun } from "../api";
 import { Icon, type IconName } from "../components/icons";
 import { CodeBlock, CountUp, LiveDot, Pill, toneText, VERDICTS, verdictTone } from "../components/ui";
 
@@ -191,6 +191,7 @@ export function StartPage() {
             steps={["Signs and sends 1 NEAR", "RPC times out after 1.5 s", "Asks Sentinel → DO_NOT_RETRY (executed, 2 providers agree)", "Merchant receives 1 NEAR"]}
           />
         </div>
+        <LiveDemo />
       </section>
 
       {/* ------------------------------------------------------------ tour */}
@@ -282,9 +283,9 @@ export function StartPage() {
           <SectionTitle id="verify-title" eyebrow="Reproduce it" title="Verify from your terminal" sub="Node ≥ 22.16 and pnpm 8. Docker only for the contract suite." />
           <ul className="space-y-3 text-sm text-ink-2">
             {[
-              ["239 unit and integration tests", "SDK, MCP server (real stdio), API, demo, NEAR AI agent"],
+              ["240 unit and integration tests", "SDK, MCP server (real stdio), API, demo, NEAR AI agent"],
               ["10 live tests", "read-only, against public testnet and mainnet RPCs"],
-              ["33 browser tests", "flows, accessibility, phone/tablet/desktop, keyboard, this tour"],
+              ["34 browser tests", "flows, accessibility, phone/tablet/desktop, keyboard, this tour"],
               ["33 + 27 + 21 contract checks", "Guard and Vault: Rust unit tests, a local NEAR node, then live on testnet"],
             ].map(([a, b]) => (
               <li key={a} className="flex gap-3">
@@ -299,7 +300,7 @@ export function StartPage() {
           </ul>
         </div>
         <CodeBlock title="bash">{`pnpm install && pnpm build
-pnpm test            # secrets check + 239 tests
+pnpm test            # secrets check + 240 tests
 pnpm demo            # naive agent pays 2 NEAR, guarded pays 1
 pnpm start           # this dashboard on http://127.0.0.1:8080
 pnpm test:contract   # Docker: 33 Rust tests + 27 on-chain checks`}</CodeBlock>
@@ -478,6 +479,50 @@ function FlowDiagram({ providers }: { providers?: Array<{ name: string; up: bool
       <p className="mt-2 flex items-center justify-center gap-2 text-xs text-muted">
         <Icon name="lock" size={13} className="text-mint" /> Read-only: Sentinel never signs, submits or holds keys.
       </p>
+    </div>
+  );
+}
+
+/** Runs the naive-vs-guarded demo on the server's local simulated chain and shows what each agent paid. */
+function LiveDemo() {
+  const m = useMutation({ mutationFn: api.demoRun });
+  const delivered = m.data?.runs.filter((r) => r.scenario.includes("WAS delivered")) ?? [];
+  const row = (r: DemoRun["runs"][number]) => (
+    <div key={r.agent} className="rounded-xl border border-line bg-surface-2/60 p-4">
+      <p className="text-sm font-semibold text-ink">{r.agent === "naive" ? "Naive agent" : "Agent guarded by Sentinel"}</p>
+      <p className={`mt-1 text-2xl font-semibold ${r.transfers > 1 ? "text-critical" : "text-good"}`}>
+        {r.transfers} {r.transfers === 1 ? "transfer" : "transfers"} · merchant got {r.receivedNear} NEAR
+      </p>
+      <details className="mt-2 text-xs text-muted">
+        <summary className="cursor-pointer">What the agent did</summary>
+        <pre className="mt-2 whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-ink-2">{r.log.join("\n")}</pre>
+      </details>
+    </div>
+  );
+  return (
+    <div className="mt-5 rounded-2xl border border-line bg-surface/70 p-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="max-w-xl text-sm text-ink-2">
+          Don&apos;t take the cards above on trust: run the same agents now. The server uses a local simulated chain and a proxy that delivers the payment but
+          drops the reply. No real network, no funds, no wallet.
+        </p>
+        <button
+          type="button"
+          onClick={() => m.mutate()}
+          disabled={m.isPending}
+          className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-b from-accent to-accent-2 px-5 py-3 text-sm font-semibold text-white transition hover:brightness-110 disabled:opacity-60"
+        >
+          <Icon name="play" size={15} />
+          {m.isPending ? "Running both agents…" : "Run it live (about 15 s)"}
+        </button>
+      </div>
+      {m.isError && <p className="mt-3 text-sm text-warning">The demo could not run right now ({String((m.error as Error)?.message ?? m.error)}). Try again in a minute.</p>}
+      {delivered.length > 0 && (
+        <div className="mt-4 animate-fade-up" aria-live="polite">
+          <div className="grid gap-4 md:grid-cols-2">{delivered.map(row)}</div>
+          <p className="mt-2 text-xs text-muted">Ran in {(m.data!.durationMs / 1000).toFixed(1)} s. {m.data!.note}</p>
+        </div>
+      )}
     </div>
   );
 }

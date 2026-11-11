@@ -9,7 +9,7 @@ For human judges and AI reviewers. Each claim below links to the command, transa
 | Time | Do | Expect |
 |---|---|---|
 | 1 min | Open **https://64-177-60-105.sslip.io** | The live dashboard on NEAR testnet. Start page → "Start the 3-minute tour". |
-| 10 min | `npm install -g pnpm@8` (if needed), `pnpm install`, then **`pnpm verify`** | One summary table: build, 239 tests, demo, live testnet, 33 browser tests, contracts (if Docker). Exit code 0. |
+| 10 min | `npm install -g pnpm@8` (if needed), `pnpm install`, then **`pnpm verify`** | One summary table: build, 240 tests, demo, live testnet, 34 browser tests, contracts (if Docker). Exit code 0. |
 | 3 min | `pnpm install && pnpm verify --quick` | Same, without network, browser or Docker. |
 
 Verified on 2026-11-11 on Windows (Node 22.16, Chrome) and in a clean Linux container (`mcr.microsoft.com/playwright:v1.65.0-noble`: Node 26, no git checkout, no Chrome; the browser tests used Playwright's bundled Chromium).
@@ -34,6 +34,7 @@ Verified on 2026-11-11 on Windows (Node 22.16, Chrome) and in a clean Linux cont
 ### Proven on testnet with real money (2026-11-11)
 | Claim | Check |
 |---|---|
+| Anyone can re-run the naive-vs-guarded story in the browser, no wallet | Live site → Start → **Run it live**: the server replays both agents on a local simulated chain (`POST /api/v1/demo/run`, `examples/agent-demo/src/run-simulated.ts`); naive 2 transfers, guarded 1. API test + browser test cover it |
 | Naive agent pays twice, Sentinel-guarded agent pays once | `pnpm demo:testnet` (`examples/agent-demo/src/testnet.ts`). Naive: [`185YtdJZ…`](https://testnet.nearblocks.io/txns/185YtdJZxUCMAaqjRtmSj4MTx51mdiMpjhAPmZ3rZaH) + [`6h2hMxjp…`](https://testnet.nearblocks.io/txns/6h2hMxjpjdYwDF6zXJ5gTwD5MY47UT7thdRaxZM2Pc6h); guarded: [`C59gttNU…`](https://testnet.nearblocks.io/txns/C59gttNUHCaVTHVi2GKCw6zu5C7QcmwPbUuw9NeaXnzS) |
 | Critical verdicts on freshly signed transactions: unsent → WAIT; nonce used by another tx → SAFE; landed → DO_NOT_RETRY; garbage → input error | `pnpm demo:critical` (`examples/agent-demo/src/critical.ts`), 5/5. Latest run after the safety fixes: [`6jM2toRM…`](https://testnet.nearblocks.io/txns/6jM2toRMAb9KDNTSNHrCVSGEY5ttJenXnAiirBPE7wnj) |
 

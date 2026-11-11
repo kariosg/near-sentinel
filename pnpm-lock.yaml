@@ -35,6 +35,9 @@ importers:
       '@fastify/swagger-ui':
         specifier: 6.1.3
         version: 6.1.3
+      '@near-sentinel/agent-demo':
+        specifier: workspace:*
+        version: link:../../examples/agent-demo
       '@near-sentinel/sdk':
         specifier: workspace:*
         version: link:../../packages/sdk

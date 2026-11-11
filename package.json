@@ -10,7 +10,7 @@
   },
   "packageManager": "pnpm@8.15.6",
   "scripts": {
-    "build": "pnpm --filter @near-sentinel/sdk build && pnpm --filter @near-sentinel/mcp build && pnpm --filter @near-sentinel/api build && pnpm --filter @near-sentinel/web build && pnpm --filter @near-sentinel/agent-demo build && pnpm --filter @near-sentinel/near-ai-agent build && pnpm --filter @near-sentinel/guard build",
+    "build": "pnpm --filter @near-sentinel/sdk build && pnpm --filter @near-sentinel/agent-demo build && pnpm --filter @near-sentinel/mcp build && pnpm --filter @near-sentinel/api build && pnpm --filter @near-sentinel/web build && pnpm --filter @near-sentinel/near-ai-agent build && pnpm --filter @near-sentinel/guard build",
     "typecheck": "pnpm -r typecheck",
     "verify": "node scripts/verify.mjs",
     "test": "node scripts/check-secrets.mjs && pnpm --filter @near-sentinel/sdk test && pnpm --filter @near-sentinel/mcp test && pnpm --filter @near-sentinel/api test && pnpm --filter @near-sentinel/agent-demo test && pnpm --filter @near-sentinel/near-ai-agent test",

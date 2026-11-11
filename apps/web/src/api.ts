@@ -129,7 +129,15 @@ export interface IdentityResult {
   verifiedAt: string;
 }
 
+export interface DemoRun {
+  simulated: true;
+  note: string;
+  durationMs: number;
+  runs: Array<{ scenario: string; agent: "naive" | "guarded"; transfers: number; receivedNear: number; intendedNear: number; log: string[] }>;
+}
+
 export const api = {
+  demoRun: () => request<DemoRun>("/api/v1/demo/run", { method: "POST", body: "{}" }),
   health: () => request<{ status: string; version: string; sdk: string }>("/health"),
   ready: () => request<{ ready: boolean; reachableProviders: number; lastProbeAt: string | null }>("/ready"),
   providers: () => request<ProvidersResponse>("/api/v1/providers"),

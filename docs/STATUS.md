@@ -7,7 +7,7 @@ _Last updated: 2026-11-11. Product, guard contract and all test gates are done a
 pnpm install
 pnpm build              # sdk → mcp → api → web → demo → guard scripts (tsc / vite)
 pnpm typecheck
-pnpm test               # secrets gate + sdk 160 + mcp 13 (stdio e2e) + api 52 + demo 7 assertions
+pnpm test               # secrets gate + sdk 160 + mcp 13 (stdio e2e) + api 53 + demo 7 assertions
 pnpm test:live          # 10 read-only tests against public NEAR RPCs (7 testnet + 3 mainnet)
 pnpm test:e2e           # 32 Playwright tests (functional + axe a11y + responsive + keyboard + optional sign-in + judge tour)
 pnpm test:contract      # guard 14 + vault 19 Rust unit tests + 27-check on-chain suite on a local neard sandbox (Docker)
@@ -30,12 +30,12 @@ docker compose up -d --build
 | Secrets gate (`scripts/check-secrets.mjs`, all tracked files) | pass; self-tested with a planted fake key + seed line (caught) |
 | SDK unit | **160/160** (incl. retry-safety hardening, load-balancer re-check, default-provider independence, `checkIntent`, `checkSpendAllowance`, text helpers) |
 | MCP e2e (built server over stdio, official client) | **13/13** (7 tools) |
-| API | **52/52** (incl. vault allowance route, security headers, public simulated benchmark vs key-protected real one, NEP-413 forgery cases, intents, SSE per-IP cap, 413 body limit, rate limits) |
+| API | **53/53** (incl. vault allowance route, security headers, public simulated benchmark vs key-protected real one, NEP-413 forgery cases, intents, SSE per-IP cap, 413 body limit, rate limits) |
 | Demo `--assert` | **7/7** |
 | Live testnet | **7/7** (aging-proof: the old failed tx now only lives on the archival operator → honest WAIT) |
 | Live mainnet (read-only) | **3/3**: providers chain_id mainnet (≥ 2 operators), a real recent successful tx picked live → DO_NOT_RETRY, unknown hash → WAIT |
-| Dashboard E2E (installed Chrome, or bundled Chromium) | **33/33** (incl. the live Vault panel): 7 functional, 8 axe (WCAG 2.1 AA, 0 serious/critical), 3 viewports × 8 pages (no overflow, no console errors), keyboard, 4 optional-sign-in, guard panel (incl. the live testnet deployment), start-page tour, command palette, mobile drawer, one-click benchmark, modal focus trap, reduced motion |
-| Contract unit (Rust, Docker) | **33/33** (guard 14 + vault 19) |
+| Dashboard E2E (installed Chrome, or bundled Chromium) | **34/34** (incl. the live Vault panel): 7 functional, 8 axe (WCAG 2.1 AA, 0 serious/critical), 3 viewports × 8 pages (no overflow, no console errors), keyboard, 4 optional-sign-in, guard panel (incl. the live testnet deployment), start-page tour, command palette, mobile drawer, one-click benchmark, modal focus trap, reduced motion |
+| Contract unit (Rust, Docker) | **34/34** (guard 14 + vault 19) |
 | On-chain sandbox suite (local neard 2.14.0, protocol 88) | **27/27** = vault 14 (a function-call key pays within the policy and is rejected for a direct transfer or any other method; limits, allowlist, duplicates, freeze, owner-only withdraw, failed transfer restored) + guard **13/13** (incl. a failed payment larger than the contract balance, refunded in full) + deploy code-hash match; true concurrent race credits the receiver exactly once |
 | Guard on TESTNET (`guard.karios.testnet`) | deployed (tx `Gmym6RR6cCkTYedYMD1KJQ7xiqkXDk3MBaC69LV7ZSbN`, code_hash matches local build); live suite **11/11**; Sentinel `checkIntent` PAID on all 4 providers for intent `tmwbtoqi6-a` |
 | Vault on TESTNET (`vault.karios.testnet`) | deployed (tx `5o2YyZWQwEWyJVimMGer3AXMVqydvWcNztkhDGWXf1ne`, code_hash `7u8KGfkdn4gJCuTBNeqwMfVB2pDR8w2PvXxthMvQuLp9` matches local build); live suite **10/10** (owner = agent = payer, full-access key); demo policy `karios.testnet` → `kariosr.testnet` (tx `2QrazB412E6jyU5RhiJEDUSZj4uNgZQRkuzT6bwa5z6y`), `checkSpendAllowance` ACTIVE on all 4 providers |

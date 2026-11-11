@@ -391,6 +391,19 @@ describe("environment validation", () => {
   });
 });
 
+describe("live naive-vs-guarded demo (simulated chain)", () => {
+  it("is public and shows the naive agent paying twice and the guarded agent once", async () => {
+    const r = await d.app.inject({ method: "POST", url: "/api/v1/demo/run" });
+    expect(r.statusCode).toBe(200);
+    const b = r.json();
+    expect(b.simulated).toBe(true);
+    const delivered = b.runs.filter((x: any) => x.scenario.includes("WAS delivered"));
+    expect(delivered.find((x: any) => x.agent === "naive")).toMatchObject({ transfers: 2, receivedNear: 2 });
+    expect(delivered.find((x: any) => x.agent === "guarded")).toMatchObject({ transfers: 1, receivedNear: 1 });
+    expect(b.runs.every((x: any) => Array.isArray(x.log) && x.log.length > 0)).toBe(true);
+  }, 60_000);
+});
+
 describe("vault allowance (read-only)", () => {
   const get = (url: string) => d.app.inject({ method: "GET", url });
   it("ACTIVE with limits and the amount available now", async () => {

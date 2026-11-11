@@ -482,6 +482,36 @@ export async function buildApp(env: Env, opts: { db?: Db } = {}): Promise<AppDep
   // The simulated benchmark only talks to local in-process mock RPCs (no outbound traffic), so anyone
   // may run it (one run at a time server-wide, rate-limited). The real benchmark calls public RPC
   // providers and stays behind an API key.
+  /* ------------- the naive-vs-guarded demo, live (local simulated chain only) ------------- */
+  // Public: it only talks to an in-process mock chain on 127.0.0.1 with a throwaway in-memory key; no real
+  // network, no funds. Concurrent callers share one run.
+  type DemoRow = { name: string; which: "naive" | "guarded"; transfers: number; received: bigint; lines: string[] };
+  let demoRun: Promise<DemoRow[]> | undefined;
+  app.post(
+    "/api/v1/demo/run",
+    {
+      config: { rateLimit: { max: 6, timeWindow: "1 minute" } },
+      schema: { tags: ["demo"], summary: "Run the naive-vs-guarded agent demo on a local simulated chain (no real network, no funds) and return what each agent paid." },
+    },
+    async () => {
+      const t0 = Date.now();
+      demoRun ??= (async () => {
+        const modId = "@near-sentinel/agent-demo"; // untyped workspace example package
+        const mod = (await import(modId)) as { runSimulatedDemo: () => Promise<DemoRow[]> };
+        return mod.runSimulatedDemo();
+      })().finally(() => {
+        demoRun = undefined;
+      });
+      const rows = await demoRun;
+      return {
+        simulated: true,
+        note: "SIMULATED: local mock chain and a fault-injection proxy that delivers the payment but drops the reply. No real network, no real funds.",
+        durationMs: Date.now() - t0,
+        runs: rows.map((r) => ({ scenario: r.name, agent: r.which, transfers: r.transfers, receivedNear: Number(r.received / 10n ** 21n) / 1000, intendedNear: 1, log: r.lines })),
+      };
+    },
+  );
+
   const benchKeyCheck = requireApiKey(env.API_KEYS_SHA256, db, "benchmark.run");
   app.post(
     "/api/v1/benchmarks/run",

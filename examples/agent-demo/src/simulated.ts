@@ -5,65 +5,19 @@
  *
  * The signing key is generated in memory for this run and only ever touches the local mock chain.
  */
-import { NearSentinel } from "@near-sentinel/sdk";
-import { startFaultProxy, type Fault } from "@near-sentinel/sdk/testing";
-import { KeyPair } from "near-api-js";
-import { guardedAgent, naiveAgent, type AgentEnv, type AgentRun } from "./agents.js";
-import { MockChain } from "./mockchain.js";
+import { runSimulatedDemo, SCENARIOS } from "./run-simulated.js";
 
 const ASSERT = process.argv.includes("--assert");
-const SENDER = "agent.sim";
-const RECEIVER = "merchant.sim";
-const AMOUNT = 10n ** 24n; // 1 NEAR (simulated)
-
-async function scenario(name: string, fault: Fault, which: "naive" | "guarded") {
-  const kp = KeyPair.fromRandom("ed25519"); // in-memory, local mock only
-  const chain = new MockChain(SENDER, RECEIVER, kp.getPublicKey().toString());
-  const [a, b] = await chain.serve();
-  const proxy = await startFaultProxy(a.url);
-  proxy.setFault("send_tx", fault);
-  const lines: string[] = [];
-  const env: AgentEnv = {
-    sendUrl: proxy.url,
-    directUrl: a.url,
-    signerId: SENDER,
-    receiverId: RECEIVER,
-    keyPair: kp,
-    amountYocto: AMOUNT,
-    timeoutMs: 1500,
-    log: (l) => lines.push(l),
-  };
-  const sentinel = new NearSentinel({
-    rpcProviders: [
-      { name: "sim-provider-a", url: a.url, operator: "sim-a" },
-      { name: "sim-provider-b", url: b.url, operator: "sim-b" },
-    ],
-    timeoutMs: 2000,
-  });
-  let run: AgentRun;
-  try {
-    run = which === "naive" ? await naiveAgent(env) : await guardedAgent(env, sentinel);
-    // let any forwarded-but-unanswered submission settle on the chain
-    await new Promise((r) => setTimeout(r, 300));
-  } finally {
-    await proxy.close();
-    await a.close();
-    await b.close();
-  }
-  return { name, which, lines, run, transfers: chain.executedTransfers, received: chain.balances.get(RECEIVER)! };
-}
-
-const results: Array<Awaited<ReturnType<typeof scenario>>> = [];
-for (const [name, fault] of [
-  ["Timeout, but the transfer WAS delivered", { type: "forward-then-hang" }],
-  ["Timeout, and the transfer was dropped", { type: "hang" }],
-] as Array<[string, Fault]>) {
-  console.log(`\n━━ ${name} ━━`);
-  for (const which of ["naive", "guarded"] as const) {
-    const r = await scenario(name, fault, which);
-    results.push(r);
+const results = await runSimulatedDemo();
+let i = 0;
+for (const [name] of SCENARIOS) {
+  console.log(`
+━━ ${name} ━━`);
+  for (let k = 0; k < 2; k++) {
+    const r = results[i++]!;
     for (const l of r.lines) console.log("  " + l);
-    console.log(`  ⇒ ${which.toUpperCase()}: ${r.transfers} ${r.transfers === 1 ? "transfer" : "transfers"} executed; merchant received ${Number(r.received / 10n ** 21n) / 1000} NEAR (intended: 1)\n`);
+    console.log(`  ⇒ ${r.which.toUpperCase()}: ${r.transfers} ${r.transfers === 1 ? "transfer" : "transfers"} executed; merchant received ${Number(r.received / 10n ** 21n) / 1000} NEAR (intended: 1)
+`);
   }
 }
 

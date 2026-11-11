@@ -14,6 +14,7 @@ COPY contracts/guard/package.json contracts/guard/
 RUN pnpm install --frozen-lockfile
 COPY . .
 RUN pnpm --filter @near-sentinel/sdk build \
+ && pnpm --filter @near-sentinel/agent-demo build \
  && pnpm --filter @near-sentinel/api build \
  && pnpm --filter @near-sentinel/web build \
  && pnpm --filter @near-sentinel/api deploy --prod /out \
