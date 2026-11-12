@@ -13,7 +13,19 @@ import {
   type RawTxStatusResult,
 } from "./outcome.js";
 import { decideIntent, decodeViewResult, isGuardIntent, intentInputSchema, type IntentCheck, type IntentInput, type IntentProviderAnswer } from "./intent.js";
-import { decideAllowance, vaultAnswer, vaultInputSchema, type AllowanceCheck, type VaultInput } from "./vault.js";
+import {
+  assessAllowanceSafety,
+  decideAllowance,
+  decideSpendPreflight,
+  preflightInputSchema,
+  vaultAnswer,
+  vaultInputSchema,
+  type AllowanceCheck,
+  type PreflightInput,
+  type SpendPreflight,
+  type VaultInput,
+} from "./vault.js";
+import { decideKeyAudit, keyAuditInputSchema, keyListAnswer, type KeyAudit, type KeyAuditInput } from "./keys.js";
 import { decideRetry, type PerProviderRetryEvidence } from "./retry.js";
 import { isMethodNotFound, isUnknownBlock, isUnknownTx, operatorOf, rpcCall, type FetchLike } from "./rpc.js";
 import { decodeSignedTx } from "./signedtx.js";
@@ -563,7 +575,59 @@ export class NearSentinel {
     const answers = this.providers.map((p, i) =>
       vaultAnswer({ provider: p.name, operator: p.operator!, latencyMs: obs[i]!.latencyMs, blockHeight: obs[i]!.ok ? obs[i]!.result?.block_height : undefined }, obs[i]!, v),
     );
-    return { ...decideAllowance(v, answers), checkedAt: new Date().toISOString() };
+    const decided = decideAllowance(v, answers);
+    return { ...decided, checkedAt: new Date().toISOString(), ...(decided.policy ? { safety: assessAllowanceSafety(decided.policy) } : {}) };
+  }
+
+  /**
+   * Can this agent's keys drain its account? Read-only `view_access_key_list` on every provider; grades each key
+   * (full access = critical) and returns near-cli-rs setup commands with placeholders for a least-privilege key.
+   */
+  async auditAgentKeys(input: KeyAuditInput, o?: CallOptions): Promise<KeyAudit> {
+    const v = parseOrThrow(keyAuditInputSchema, input);
+    // view_account runs alongside: nearcore lists `keys: []` for a missing account, so it tells NO_KEYS from ACCOUNT_NOT_FOUND.
+    const [obs, acct] = await Promise.all([
+      this.fanOut<any>("query", { request_type: "view_access_key_list", finality: "final", account_id: v.accountId }, o),
+      this.fanOut<any>("query", { request_type: "view_account", finality: "final", account_id: v.accountId }, o),
+    ]);
+    const answers = this.providers.map((p, i) => keyListAnswer({ provider: p.name, operator: p.operator!, latencyMs: obs[i]!.latencyMs }, obs[i]!, acct[i]!));
+    return { ...decideKeyAudit({ ...v, network: this.network }, answers), checkedAt: new Date().toISOString() };
+  }
+
+  /**
+   * Would the Vault accept this spend right now? Reads the allowance (get_policy) and, with an intentId,
+   * `get_spend` on every provider, then mirrors the contract's checks in order. Advisory: the contract is the
+   * final judge. Never signs or submits anything.
+   */
+  async preflightSpend(input: PreflightInput, o?: CallOptions): Promise<SpendPreflight> {
+    const v = parseOrThrow(preflightInputSchema, input);
+    const vault = { contractId: v.contractId, ownerId: v.ownerId, agentId: v.agentId };
+    const spendObs = v.intentId
+      ? this.fanOut<any>(
+          "query",
+          {
+            request_type: "call_function",
+            finality: "final",
+            account_id: v.contractId,
+            method_name: "get_spend",
+            args_base64: Buffer.from(JSON.stringify({ owner_id: v.ownerId, agent_id: v.agentId, intent_id: v.intentId })).toString("base64"),
+          },
+          o,
+        )
+      : Promise.resolve(undefined);
+    const [allowance, spends] = await Promise.all([this.checkSpendAllowance(vault, o), spendObs]);
+    let duplicate: boolean | undefined;
+    if (spends) {
+      const decoded = spends.map((x) => decodeViewResult(x));
+      const answered = decoded.filter((d) => d.kind === "value");
+      if (answered.some((d) => d.value !== null)) duplicate = true;
+      // "Not used" needs more than one possibly stale answer: every provider, or at least two, must say so.
+      else if (answered.length >= 2 || (answered.length > 0 && answered.length === decoded.length)) duplicate = false;
+    }
+    return {
+      ...decideSpendPreflight(allowance, { receiverId: v.receiverId, amount: v.amountYocto, intentId: v.intentId, duplicate }),
+      checkedAt: new Date().toISOString(),
+    };
   }
 
   /** Receipt execution graph for a transaction (undefined when no provider has it). */

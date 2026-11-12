@@ -3,6 +3,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { api, type Diagnostic, type Inspection, type InspectInput } from "../api";
 import { GuardPanel } from "../components/GuardPanel";
 import { VaultPanel } from "../components/VaultPanel";
+import { KeyAuditPanel } from "../components/KeyAuditPanel";
 import { Icon } from "../components/icons";
 import { DEMO_TXS, explorerTx, type DemoTx } from "../demoData";
 import { ReceiptTree } from "../components/ReceiptTree";
@@ -66,7 +67,7 @@ export function InspectPage() {
   return (
     <div className="space-y-6">
       <nav aria-label="Tools on this page" className="rounded-xl border border-line bg-surface-2/50 px-4 py-3 text-sm text-ink-2">
-        <span className="mr-1 font-medium text-ink">This page has 3 read-only tools:</span>
+        <span className="mr-1 font-medium text-ink">This page has 4 read-only tools:</span>
         <a className={linkClass} href="#/inspect" onClick={(e) => jump(e, "tool-check")}>
           ① Did my transaction land?
         </a>
@@ -77,6 +78,10 @@ export function InspectPage() {
         <span className="mx-1.5 text-muted">·</span>
         <a className={linkClass} href="#/inspect" onClick={(e) => jump(e, "tool-vault")}>
           ③ Vault: how much may this agent spend?
+        </a>
+        <span className="mx-1.5 text-muted">·</span>
+        <a className={linkClass} href="#/inspect" onClick={(e) => jump(e, "tool-keys")}>
+          ④ Agent keys: can this agent drain its account?
         </a>
       </nav>
       <div id="tool-check" className="scroll-mt-24">
@@ -159,6 +164,9 @@ export function InspectPage() {
       </div>
       <div id="tool-vault" className="scroll-mt-24">
         <VaultPanel />
+      </div>
+      <div id="tool-keys" className="scroll-mt-24">
+        <KeyAuditPanel />
       </div>
     </div>
   );

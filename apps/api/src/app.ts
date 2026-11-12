@@ -22,7 +22,7 @@ import { z } from "zod";
 import { requireApiKey } from "./auth.js";
 import { IDENTITY_MESSAGE, IDENTITY_RECIPIENT, NonceStore, verifyNep413 } from "./identity.js";
 import { BenchmarkRunner } from "./benchmarks.js";
-import { audit, openDb, type Db } from "./db.js";
+import { audit, openDb, prune, setAuditSalt, type Db } from "./db.js";
 import type { Env } from "./env.js";
 import { Prober } from "./prober.js";
 import { Runtime } from "./runtime.js";
@@ -110,7 +110,14 @@ function jsonSafe<T>(v: T): T {
 /* ----------------------------------- app ----------------------------------- */
 
 export async function buildApp(env: Env, opts: { db?: Db } = {}): Promise<AppDeps> {
+  setAuditSalt(env.AUDIT_IP_SALT); // before openDb: its one-time pass hashes any raw audit-log IPs with this salt
   const db = opts.db ?? openDb(join(env.DATA_DIR, "sentinel.db"));
+  // Apply retention once at start, so it also runs when the prober is disabled. Never blocks boot.
+  try {
+    prune(db);
+  } catch {
+    /* retention is best-effort */
+  }
   const runtime = new Runtime(env, db);
   const prober = new Prober(runtime);
   const benchmarks = new BenchmarkRunner(runtime);
@@ -122,6 +129,8 @@ export async function buildApp(env: Env, opts: { db?: Db } = {}): Promise<AppDep
         : {
             level: env.LOG_LEVEL,
             redact: { paths: ["req.headers.authorization", 'req.headers["x-api-key"]', "req.headers.cookie"], censor: "[redacted]" },
+            // Privacy: request logs carry method and URL only, never the client IP or port.
+            serializers: { req: (req: { method?: string; url?: string; id?: unknown }) => ({ id: req.id, method: req.method, url: req.url }) },
           },
     trustProxy: env.TRUST_PROXY,
     bodyLimit: 2_500_000,
@@ -379,6 +388,45 @@ export async function buildApp(env: Env, opts: { db?: Db } = {}): Promise<AppDep
     },
   );
 
+  const AgentKeysQuery = z
+    .object({
+      account: z.string(),
+      vault: z.string().optional(),
+    })
+    .strict();
+  app.get(
+    "/api/v1/agent-keys",
+    { ...inspectLimit, schema: { tags: ["vault"], summary: "Can this agent's keys drain its account? Read-only view_access_key_list on every provider; grades each key. ?account=&vault= (without a vault, function-call keys are graded 'review': least privilege needs the vault to check against)" } },
+    async (req) => {
+      const q = parse(AgentKeysQuery, req.query);
+      const vaultContractId = q.vault; // no silent default: grading against someone else's vault would mislead
+      return jsonSafe(await runtime.sentinel.auditAgentKeys({ accountId: q.account, ...(vaultContractId ? { vaultContractId } : {}) }));
+    },
+  );
+
+  const PreflightQuery = z
+    .object({
+      contract: z.string().optional(),
+      owner: z.string(),
+      agent: z.string(),
+      receiver: z.string(),
+      amount: z.string(),
+      intent: z.string().optional(),
+    })
+    .strict();
+  app.get(
+    "/api/v1/spend-preflight",
+    { ...inspectLimit, schema: { tags: ["vault"], summary: "Would the Vault accept this spend now? Mirrors spend() checks in contract order (advisory; the contract is the final judge). ?contract=&owner=&agent=&receiver=&amount=<yoctoNEAR>&intent= (contract defaults to VAULT_CONTRACT_ID)" } },
+    async (req) => {
+      const q = parse(PreflightQuery, req.query);
+      const contractId = q.contract ?? env.VAULT_CONTRACT_ID;
+      if (!contractId) throw new SentinelInputError("contract is required (no VAULT_CONTRACT_ID configured)");
+      return jsonSafe(
+        await runtime.sentinel.preflightSpend({ contractId, ownerId: q.owner, agentId: q.agent, receiverId: q.receiver, amountYocto: q.amount, ...(q.intent !== undefined ? { intentId: q.intent } : {}) }),
+      );
+    },
+  );
+
   /* ------------------- optional account verification (NEP-413) ------------------- */
   // A label only: no session, no cookie, nothing stored except short-lived single-use nonces.
   const nonces = new NonceStore();
@@ -570,7 +618,18 @@ export async function buildApp(env: Env, opts: { db?: Db } = {}): Promise<AppDep
     });
   });
 
+  // Retention also runs hourly on its own timer, so it holds even with DISABLE_PROBER and a long-running process.
+  const retention = setInterval(() => {
+    try {
+      prune(db);
+    } catch {
+      /* best-effort */
+    }
+  }, 60 * 60_000);
+  retention.unref();
+
   app.addHook("onClose", async () => {
+    clearInterval(retention);
     prober.stop();
     benchmarks.stopAll();
     for (const r of sseClients) r.end();

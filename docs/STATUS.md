@@ -29,7 +29,7 @@ docker compose up -d --build
 | `pnpm build` / `pnpm typecheck` (7 packages) | pass / pass |
 | Secrets gate (`scripts/check-secrets.mjs`, all tracked files) | pass; self-tested with a planted fake key + seed line (caught) |
 | SDK unit | **160/160** (incl. retry-safety hardening, load-balancer re-check, default-provider independence, `checkIntent`, `checkSpendAllowance`, text helpers) |
-| MCP e2e (built server over stdio, official client) | **13/13** (7 tools) |
+| MCP e2e (built server over stdio, official client) | **16/16** (9 tools) |
 | API | **53/53** (incl. vault allowance route, security headers, public simulated benchmark vs key-protected real one, NEP-413 forgery cases, intents, SSE per-IP cap, 413 body limit, rate limits) |
 | Demo `--assert` | **7/7** |
 | Live testnet | **7/7** (aging-proof: the old failed tx now only lives on the archival operator → honest WAIT) |
@@ -109,6 +109,16 @@ docker compose up -d --build
 - `pnpm contract:deploy` runs `pnpm --filter … run deploy` (plain `deploy` would hit pnpm's built-in command). `-- --i-confirm` forwarding verified.
 
 ## Uncommitted work
+- **Branch `feature/agent-security`** (from `58bcec4`, not committed yet, 2026-11-12): agent key check, payment preflight, allowance safety score, private payment ids, server privacy (hashed audit IPs, 30-day retention, no IPs in API/Caddy logs), and the security docs and UI.
+  - `pnpm verify` all PASS: 310 unit/integration (sdk 207, mcp 16, api 73), live 10, browser e2e 50/50, contracts; `pnpm audit` clean.
+  - Deep re-check (2026-11-12):
+    - 36/36 HTTP edge cases against real testnet, also inside the production Docker image (healthy, non-root, no client IPs in logs);
+    - MCP tools live over stdio 7/7;
+    - 50,000 randomized cases with no false ALLOWED or BLOCKED against a model of the contract;
+    - DB upgrade from the old schema hashes raw IPs, loses no rows, and reopening it changes nothing;
+    - e2e 50/50 against the container.
+  - The key check shows the Guard and Vault contract accounts still hold a full-access key (not locked on testnet; already in KNOWN_LIMITATIONS, SECURITY.md wording made honest).
+  - Next: owner approves the commit, then merge into `master`, push and redeploy. Deploy also needs the updated `deploy/vultr/Caddyfile` copied to the server and Caddy reloaded (validated with `caddy:2.11.9-alpine`).
 - None. `master` = `3b1cda0` (2026-11-12: brand, TESTING guide, business model, review/audit fixes, phone polish; 46 e2e) is pushed and deployed to https://64-177-60-105.sslip.io: live e2e 46/46, walkthrough 20/20, health OK; rollback image `near-sentinel:previous` (= `59d5d6b`).
 - `packages/sdk/t.cjs` is a local scratch file, deliberately untracked. `media/` (local clips, logo options page) is git-ignored.
 - The tag `hackathon-submission` still points to `cc2aa40`; moving it needs a force tag push, which only the owner approves.

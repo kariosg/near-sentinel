@@ -1,6 +1,7 @@
-import type { AllowanceCheck, Diagnostic, InspectionResult, IntentCheck, ProviderHealth, RetryRecommendation } from "@near-sentinel/sdk";
+import type { AllowanceCheck, Diagnostic, InspectionResult, IntentCheck, KeyAudit, ProviderHealth, RetryRecommendation, SpendPreflight } from "@near-sentinel/sdk";
 
-export type { AllowanceCheck, Diagnostic, InspectionResult, IntentCheck, ProviderHealth, RetryRecommendation };
+export type { AllowanceCheck, Diagnostic, InspectionResult, IntentCheck, KeyAudit, ProviderHealth, RetryRecommendation, SpendPreflight };
+export type { AllowanceSafety, KeyFinding } from "@near-sentinel/sdk";
 export type { ReceiptNode, TxState, RetryVerdict } from "@near-sentinel/sdk";
 
 export interface ApiErrorBody {
@@ -152,6 +153,10 @@ export const api = {
     request<IntentCheck>(`/api/v1/intents?${new URLSearchParams(q).toString()}`),
   allowance: (q: { contract: string; owner: string; agent: string }) =>
     request<AllowanceCheck>(`/api/v1/allowance?${new URLSearchParams(q).toString()}`),
+  agentKeys: (q: { account: string; vault?: string }) =>
+    request<KeyAudit>(`/api/v1/agent-keys?${new URLSearchParams(Object.entries(q).filter(([, v]) => v) as [string, string][]).toString()}`),
+  spendPreflight: (q: { contract: string; owner: string; agent: string; receiver: string; amount: string; intent?: string }) =>
+    request<SpendPreflight>(`/api/v1/spend-preflight?${new URLSearchParams(Object.entries(q).filter(([, v]) => v) as [string, string][]).toString()}`),
   identityChallenge: () => request<IdentityChallenge>("/api/v1/identity/challenge", { method: "POST", body: "{}" }),
   identityVerify: (b: { accountId: string; publicKey: string; signature: string; nonce: string; callbackUrl?: string }) =>
     request<IdentityResult>("/api/v1/identity/verify", { method: "POST", body: JSON.stringify(b) }),

@@ -147,12 +147,77 @@ export function createSentinelMcpServer(sentinel: NearSentinel): McpServer {
         const text = [
           `Allowance for ${r.agentId} from ${r.ownerId} on ${r.contractId}: ${r.status}`,
           r.reason,
+          ...(r.safety ? [`Safety: ${r.safety.grade} (${r.safety.score}/100)${r.safety.findings.length ? ` - ${r.safety.findings.map((f) => `[${f.severity}] ${f.title}`).join(" ")}` : ""}`] : []),
           `Providers: ${r.providers.map((p) => `${p.provider}=${p.answer}`).join(", ")}`,
         ].join("\n");
         return { content: [{ type: "text" as const, text }], structuredContent: r as unknown as Record<string, unknown> };
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         return { isError: true, content: [{ type: "text" as const, text: `NEAR Sentinel could not check the allowance: ${msg}. Treat it as nothing available; do not spend.` }] };
+      }
+    },
+  );
+
+  server.registerTool(
+    "preflight_spend",
+    {
+      title: "Would the Sentinel Vault accept this payment right now?",
+      description:
+        "Call before every Vault spend(): checks the payment against the owner's policy in the contract's own order (amount, receiver is not the vault, " +
+        "intent already used, policy exists, frozen, receiver allowlist, per-payment limit, 24-hour limit, balance incl. the 0.006 NEAR record fee) on every provider. " +
+        "Returns ALLOWED, BLOCKED with a code and reason, or UNKNOWN. Do not call spend() unless it says ALLOWED. Advisory; the contract is the final judge. Read-only.",
+      inputSchema: z.object({
+        contractId: z.string().describe("Vault contract account, e.g. vault.example.testnet"),
+        ownerId: z.string().describe("Account that funded the allowance"),
+        agentId: z.string().describe("The agent account that calls spend()"),
+        receiverId: z.string().describe("Who would be paid"),
+        amountYocto: z.string().describe("Amount in yoctoNEAR, digits only (1 NEAR = 10^24)"),
+        intentId: z.string().optional().describe("The intent_id you will pass to spend(); checked for prior use. 1-64 chars of A-Z a-z 0-9 . _ : -"),
+      }),
+      annotations: READ_ONLY,
+    },
+    async (args) => {
+      try {
+        const r = await sentinel.preflightSpend(args);
+        const text = [
+          `Preflight ${r.amount} yoctoNEAR to ${r.receiverId} from ${r.allowance.contractId}: ${r.decision}${r.code ? ` (${r.code})` : ""}`,
+          r.reason,
+          r.advisory,
+        ].join("\n");
+        return { content: [{ type: "text" as const, text }], structuredContent: r as unknown as Record<string, unknown> };
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        return { isError: true, content: [{ type: "text" as const, text: `NEAR Sentinel could not preflight the spend: ${msg}. Treat it as UNKNOWN; do not spend.` }] };
+      }
+    },
+  );
+
+  server.registerTool(
+    "audit_agent_keys",
+    {
+      title: "Can this agent's keys drain its account?",
+      description:
+        "Lists the agent account's access keys on every provider and grades each: a full-access key is critical (it can move all NEAR, add keys, deploy code); " +
+        "a function-call key limited to 'spend' on the vault is least privilege. Returns FULL_ACCESS_PRESENT, REVIEW_NEEDED (function-call keys not proven least privilege), LEAST_PRIVILEGE, NO_KEYS, ACCOUNT_NOT_FOUND or UNKNOWN; providers that disagree are graded by the riskiest answer. " +
+        "plus near-cli-rs setup commands with placeholders. Call it when setting up or reviewing an agent. Read-only; never asks for a private key.",
+      inputSchema: z.object({
+        accountId: z.string().describe("The agent account to audit"),
+        vaultContractId: z.string().optional().describe("The Sentinel Vault the agent should be limited to, e.g. vault.example.testnet"),
+      }),
+      annotations: READ_ONLY,
+    },
+    async (args) => {
+      try {
+        const r = await sentinel.auditAgentKeys(args);
+        const text = [
+          `Keys of ${r.accountId}: ${r.status} (${r.counts.fullAccess} full access, ${r.counts.functionCall} function call)`,
+          r.reason,
+          `Providers: ${r.providers.map((p) => `${p.provider}=${p.answer}`).join(", ")}`,
+        ].join("\n");
+        return { content: [{ type: "text" as const, text }], structuredContent: r as unknown as Record<string, unknown> };
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        return { isError: true, content: [{ type: "text" as const, text: `NEAR Sentinel could not audit the keys: ${msg}. Treat it as UNKNOWN.` }] };
       }
     },
   );

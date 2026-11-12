@@ -27,6 +27,9 @@ const sentinel = new NearSentinel({
 | `subscribeToTransaction(input, { intervalMs, timeoutMs, signal })` | Async iterator; yields on state changes and stops when final |
 | `checkIntent({ contractId, payerId, intentId })` | What a Sentinel Guard recorded: `PAID / PENDING / NOT_RECORDED / CONFLICTING / UNKNOWN` |
 | `checkSpendAllowance({ contractId, ownerId, agentId })` | A Sentinel Vault allowance: `ACTIVE / EXHAUSTED / FROZEN / NO_POLICY / UNKNOWN`, the limits, and `availableNow` (the smallest any provider reports) |
+| `preflightSpend({ contractId, ownerId, agentId, receiverId, amountYocto, intentId? })` | Would the Vault accept this payment now? `ALLOWED / BLOCKED (code) / UNKNOWN`, checked in the contract's order on every provider; never ALLOWED above the smallest `availableNow`. Advisory |
+| `auditAgentKeys({ accountId, vaultContractId? })` | Can the agent's keys drain its account? `FULL_ACCESS_PRESENT / REVIEW_NEEDED / LEAST_PRIVILEGE / NO_KEYS / ACCOUNT_NOT_FOUND / UNKNOWN`, each key graded (riskiest answer wins when providers disagree) |
+| `privateIntentId(secret, reference)` / `intentIdPrivacyWarning(id)` | A stable, non-reversible intent id (HMAC) so no order number or email goes on-chain; a warning when an id looks like personal data |
 | `exportDiagnosticReport(inspection)` | JSON report, schema `near-sentinel/diagnostic-report@1` |
 | `read(method, params)` | Read with failover (transport and missing-history errors only) |
 

@@ -15,6 +15,8 @@ claude mcp add near-sentinel -e NEAR_SENTINEL_NETWORK=testnet -- node /abs/path/
 | `diagnose_submission_error` | `error` (raw JSON or message) | classification; no network |
 | `provider_health` | — | per-provider liveness, lag, tested capabilities |
 | `check_intent` | `contractId`, `payerId`, `intentId` | `PAID` / `PENDING` / `NOT_RECORDED` / `CONFLICTING` / `UNKNOWN` for a Sentinel Guard intent, with per-provider evidence |
+| `preflight_spend` | `contractId`, `ownerId`, `agentId`, `receiverId`, `amountYocto`, `intentId?` | `ALLOWED` / `BLOCKED` (code: `NOT_ALLOWED_RECEIVER`, `OVER_PER_PAYMENT_LIMIT`, `OVER_DAILY_LIMIT`, `INSUFFICIENT_VAULT_BALANCE`, `DUPLICATE_INTENT`, `FROZEN`, `NO_POLICY`, …) / `UNKNOWN`: the Vault's own checks before signing (advisory) |
+| `audit_agent_keys` | `accountId`, `vaultContractId?` | `FULL_ACCESS_PRESENT` / `REVIEW_NEEDED` / `LEAST_PRIVILEGE` / `NO_KEYS` / `ACCOUNT_NOT_FOUND` / `UNKNOWN`, each key graded, near-cli-rs setup commands |
 | `check_spend_allowance` | `contractId`, `ownerId`, `agentId` | `ACTIVE` / `EXHAUSTED` / `FROZEN` / `NO_POLICY` / `UNKNOWN` for a Sentinel Vault allowance, the limits, and `availableNow` (the smallest any provider reports), with per-provider evidence |
 
 ## Environment
@@ -27,4 +29,4 @@ claude mcp add near-sentinel -e NEAR_SENTINEL_NETWORK=testnet -- node /abs/path/
 | `NEAR_SENTINEL_TIMEOUT_MS` | `10000` | per request |
 | `NEAR_SENTINEL_ALLOW_PRIVATE` | — | `1` allows localhost RPCs (local demos only) |
 
-`pnpm test` builds the server and drives it over stdio with the official MCP client (13 tests, 7 tools).
+`pnpm test` builds the server and drives it over stdio with the official MCP client (16 tests, 9 tools).

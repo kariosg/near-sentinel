@@ -486,3 +486,71 @@ test("integrate page: how to use it in your project, open source, and the revenu
   await expect(card).toContainText("Open source (MIT)");
   await expect(card.getByRole("link", { name: "Details" })).toHaveAttribute("href", /#integration-sustainability-and-business-model$/);
 });
+
+test.describe("agent security and privacy", () => {
+  test("agent key check: the live demo agent has a full-access key, with the safe setup commands", async ({ page }) => {
+    const errors = trackErrors(page);
+    await skipIdentity(page);
+    await page.goto("/#/inspect");
+    const nav = page.getByRole("navigation", { name: "Tools on this page" });
+    await nav.getByRole("link", { name: /Agent keys: can this agent drain/ }).click();
+    await expect(page.locator("#tool-keys")).toBeInViewport();
+    const panel = page.locator("section", { hasText: "Agent keys —" });
+    await page.getByRole("button", { name: "Live demo agent keys" }).click();
+    await expect(panel).toContainText("FULL_ACCESS_PRESENT", { timeout: 30_000 });
+    await expect(panel.getByRole("list", { name: "Access keys" })).toContainText("Full-access key");
+    await expect(panel).toContainText("grant-function-call-access");
+    await expect(panel).toContainText("--function-names 'spend'");
+    await expect.poll(() => panel.locator("tbody tr", { hasText: "KEYS" }).count()).toBeGreaterThanOrEqual(2);
+    expect(errors).toEqual([]);
+  });
+
+  test("vault: safety check and 'would this payment be allowed?' (allowed, then blocked over the limit)", async ({ page }) => {
+    const errors = trackErrors(page);
+    await skipIdentity(page);
+    await page.goto("/#/inspect");
+    const panel = page.locator("section", { hasText: "Agent allowance —" });
+    await page.getByRole("button", { name: "Live agent allowance" }).click();
+    await expect(panel).toContainText("ACTIVE", { timeout: 30_000 });
+    await expect(panel.getByRole("region", { name: "Safety check" }).or(panel.locator("section[aria-label='Safety check']"))).toContainText("/100");
+    const pre = panel.locator("section", { hasText: "Would this payment be allowed?" });
+    await pre.getByLabel("Receiver").fill("karios.testnet");
+    await pre.getByLabel("Amount (NEAR)").fill("0.001");
+    await pre.getByRole("button", { name: "Check payment" }).click();
+    await expect(pre).toContainText("ALLOWED", { timeout: 30_000 });
+    await expect(pre).toContainText("final judge");
+    await pre.getByLabel("Amount (NEAR)").fill("5");
+    await pre.getByRole("button", { name: "Check payment" }).click();
+    await expect(pre).toContainText("BLOCKED", { timeout: 30_000 });
+    await expect(pre).toContainText("OVER_PER_PAYMENT_LIMIT");
+    await pre.getByLabel("Receiver").fill("stranger.testnet");
+    await pre.getByLabel("Amount (NEAR)").fill("0.001");
+    await pre.getByRole("button", { name: "Check payment" }).click();
+    await expect(pre).toContainText("NOT_ALLOWED_RECEIVER", { timeout: 30_000 });
+    expect(errors).toEqual([]);
+  });
+
+  test("payment ids that look like personal data get a privacy warning", async ({ page }) => {
+    await skipIdentity(page);
+    await page.goto("/#/inspect");
+    await page.getByLabel("Intent ID").fill("alice@example.com");
+    await expect(page.getByRole("note").filter({ hasText: "public on-chain forever" })).toBeVisible();
+    await page.getByLabel("Intent ID").fill("order-7f3a");
+    await expect(page.getByRole("note").filter({ hasText: "public on-chain forever" })).toHaveCount(0);
+    const { intentIdPrivacyWarning } = await import("../src/vaultInfo");
+    expect(intentIdPrivacyWarning("+14155550123")).toContain("phone");
+    expect(intentIdPrivacyWarning("order-123456789012")).toContain("long number");
+    expect(intentIdPrivacyWarning("p:3f2a9c")).toBeNull();
+  });
+
+  test("integrate page: security and privacy card with the OWASP agentic mapping", async ({ page }) => {
+    await skipIdentity(page);
+    await page.goto("/#/integrate");
+    const card = page.locator("section", { hasText: "Security & privacy for AI agents" });
+    await expect(card).toContainText("Six safety layers");
+    for (const id of ["ASI01", "ASI03", "ASI10"]) await expect(card).toContainText(id);
+    await expect(card).toContainText("Not covered");
+    await expect(card).toContainText("What Sentinel stores");
+    await expect(card.getByRole("link", { name: "Privacy" })).toHaveAttribute("href", /docs\/PRIVACY\.md$/);
+  });
+});

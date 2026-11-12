@@ -14,6 +14,24 @@
 # Client IPs: Caddy replaces any X-Forwarded-For sent by the client with the real peer address (no
 # trusted_proxies are configured), and the app runs with TRUST_PROXY=1, so rate limits see real client IPs.
 # If you later put a CDN in front of Caddy, configure `trusted_proxies` in the global block for that CDN.
+# Privacy: Caddy's own (error) log drops the client IP from request details too.
+{
+	log default {
+		output stdout
+		format filter {
+			wrap json
+			fields {
+				request>remote_ip delete
+				request>remote_port delete
+				request>client_ip delete
+				request>headers>X-Forwarded-For delete
+				request>headers>Cookie delete
+				request>headers>Authorization delete
+			}
+		}
+	}
+}
+
 {$SENTINEL_DOMAIN} {
 	# Compress everything except the Server-Sent Events stream (compression would buffer it).
 	@compressible not path /api/v1/events
@@ -41,8 +59,19 @@
 		stream_close_delay 5m
 	}
 
+	# Privacy: access logs keep method, path, status and timing, never the client IP.
 	log {
 		output stdout
-		format json
+		format filter {
+			wrap json
+			fields {
+				request>remote_ip delete
+				request>remote_port delete
+				request>client_ip delete
+				request>headers>X-Forwarded-For delete
+				request>headers>Cookie delete
+				request>headers>Authorization delete
+			}
+		}
 	}
 }

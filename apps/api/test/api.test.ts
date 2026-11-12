@@ -40,6 +40,27 @@ const accessKeyView = (params: any): MockAnswer | undefined => {
     return { result: { nonce: 1, permission: { FunctionCall: { allowance: null, receiver_id: "x.testnet", method_names: [] } }, block_height: 1000, block_hash: "x" } };
   return { result: { block_height: 1000, block_hash: "x", error: `access key ${params.public_key} does not exist while viewing`, logs: [] } };
 };
+const keyListView = (params: any): MockAnswer | undefined => {
+  if (params?.request_type !== "view_access_key_list") return undefined;
+  if (params.account_id === "agent.testnet")
+    return {
+      result: {
+        keys: [
+          { public_key: "ed25519:11111111111111111111111111111111", access_key: { nonce: 1, permission: "FullAccess" } },
+          { public_key: "ed25519:22222222222222222222222222222222", access_key: { nonce: 1, permission: { FunctionCall: { allowance: null, receiver_id: "vault.testnet", method_names: ["spend"] } } } },
+        ],
+        block_height: 1000,
+        block_hash: "x",
+      },
+    };
+  return { result: { block_height: 1000, block_hash: "x", error: `account ${params.account_id} does not exist while viewing`, logs: [] } };
+};
+const spendView = (params: any): MockAnswer | undefined => {
+  if (params?.request_type !== "call_function" || params.method_name !== "get_spend") return undefined;
+  const args = JSON.parse(Buffer.from(params.args_base64, "base64").toString());
+  const value = args.intent_id === "used-1" ? { receiver_id: "shop.testnet", amount: "1", block_height: 900, status: "Paid" } : null;
+  return { result: { result: [...Buffer.from(JSON.stringify(value))], logs: [], block_height: 1000, block_hash: "x" } };
+};
 const KEY = "test-key-please-change";
 
 const state = { aDown: false, chain: "testnet", txCalls: 0 };
@@ -51,13 +72,13 @@ const handler = (method: string, params: any): MockAnswer => {
   }
   if (method === "status") return { result: { chain_id: state.chain, protocol_version: 88, sync_info: { latest_block_height: 1000, earliest_block_height: 1, syncing: false } } };
   if (method === "block") return { error: { name: "HANDLER_ERROR", code: -32000, message: "x", cause: { name: "UNKNOWN_BLOCK" } } };
-  if (method === "query") return (intentView(params) ?? policyView(params)) ?? accessKeyView(params) ?? UNKNOWN_TX;
+  if (method === "query") return (intentView(params) ?? policyView(params)) ?? spendView(params) ?? keyListView(params) ?? accessKeyView(params) ?? UNKNOWN_TX;
   return UNKNOWN_TX;
 };
 const bHandler = (method: string, params: any): MockAnswer => {
   if (method === "status") return { result: { chain_id: "testnet", protocol_version: 88, sync_info: { latest_block_height: 1000, earliest_block_height: 1, syncing: false } } };
   if (method === "EXPERIMENTAL_tx_status") return params.tx_hash === success.transaction.hash ? { result: success } : UNKNOWN_TX;
-  if (method === "query") return (intentView(params) ?? policyView(params)) ?? accessKeyView(params) ?? UNKNOWN_TX;
+  if (method === "query") return (intentView(params) ?? policyView(params)) ?? spendView(params) ?? keyListView(params) ?? accessKeyView(params) ?? UNKNOWN_TX;
   return UNKNOWN_TX;
 };
 
@@ -423,6 +444,55 @@ describe("vault allowance (read-only)", () => {
     ["missing contract with no VAULT_CONTRACT_ID", "/api/v1/allowance?owner=owner.testnet&agent=agent.testnet"],
     ["bad account", "/api/v1/allowance?contract=vault.testnet&owner=NOPE&agent=agent.testnet"],
     ["unknown query param", "/api/v1/allowance?contract=vault.testnet&owner=owner.testnet&agent=agent.testnet&evil=1"],
+  ])("400 on %s", async (_n, url) => {
+    expect((await get(url)).statusCode).toBe(400);
+  });
+});
+
+describe("agent keys and spend preflight (read-only)", () => {
+  const get = (url: string) => d.app.inject({ method: "GET", url });
+  it("agent-keys: FULL_ACCESS_PRESENT with per-key findings and setup commands", async () => {
+    const r = await get("/api/v1/agent-keys?account=agent.testnet&vault=vault.testnet");
+    expect(r.statusCode).toBe(200);
+    const j = r.json();
+    expect(j).toMatchObject({ accountId: "agent.testnet", vaultContractId: "vault.testnet", status: "FULL_ACCESS_PRESENT", counts: { fullAccess: 1, functionCall: 1 }, blockHeight: 1000 });
+    expect(j.keys.map((k: any) => k.risk)).toEqual(["critical", "good"]);
+    expect(j.setup).toHaveLength(2);
+    expect(j.providers).toHaveLength(2);
+    expect(j.providers[0]).toMatchObject({ answer: "KEYS", keyCount: 2 });
+    expect(typeof j.checkedAt).toBe("string");
+  });
+  it("agent-keys: ACCOUNT_NOT_FOUND for a missing account", async () => {
+    const r = await get("/api/v1/agent-keys?account=ghost.testnet");
+    expect(r.statusCode).toBe(200);
+    expect(r.json()).toMatchObject({ status: "ACCOUNT_NOT_FOUND", keys: [] });
+  });
+  it("spend-preflight: ALLOWED with cost including the fee, and safety on the allowance", async () => {
+    const r = await get("/api/v1/spend-preflight?contract=vault.testnet&owner=owner.testnet&agent=agent.testnet&receiver=shop.testnet&amount=100000000000000000000000&intent=new-1");
+    expect(r.statusCode).toBe(200);
+    const j = r.json();
+    expect(j).toMatchObject({ decision: "ALLOWED", amount: "100000000000000000000000", costYocto: "106000000000000000000000", receiverId: "shop.testnet", intentId: "new-1", duplicate: false });
+    expect(j.advisory).toMatch(/final judge/);
+    expect(j.allowance).toMatchObject({ status: "ACTIVE", safety: { grade: "strong" } });
+  });
+  it("spend-preflight: BLOCKED codes (duplicate, receiver, per-payment, zero amount)", async () => {
+    const base = "/api/v1/spend-preflight?contract=vault.testnet&owner=owner.testnet&agent=agent.testnet";
+    expect((await get(`${base}&receiver=shop.testnet&amount=1&intent=used-1`)).json()).toMatchObject({ decision: "BLOCKED", code: "DUPLICATE_INTENT", duplicate: true });
+    expect((await get(`${base}&receiver=evil.testnet&amount=1`)).json()).toMatchObject({ decision: "BLOCKED", code: "NOT_ALLOWED_RECEIVER" });
+    expect((await get(`${base}&receiver=shop.testnet&amount=5000000000000000000000000`)).json()).toMatchObject({ decision: "BLOCKED", code: "OVER_PER_PAYMENT_LIMIT" });
+    expect((await get(`${base}&receiver=shop.testnet&amount=0`)).json()).toMatchObject({ decision: "BLOCKED", code: "INVALID_AMOUNT" });
+  });
+  it.each([
+    ["agent-keys missing account", "/api/v1/agent-keys"],
+    ["agent-keys bad account", "/api/v1/agent-keys?account=NOPE"],
+    ["agent-keys bad vault", "/api/v1/agent-keys?account=agent.testnet&vault=Bad%20Vault"],
+    ["agent-keys unknown param", "/api/v1/agent-keys?account=agent.testnet&evil=1"],
+    ["preflight no contract and no VAULT_CONTRACT_ID", "/api/v1/spend-preflight?owner=owner.testnet&agent=agent.testnet&receiver=shop.testnet&amount=1"],
+    ["preflight non-digit amount", "/api/v1/spend-preflight?contract=vault.testnet&owner=owner.testnet&agent=agent.testnet&receiver=shop.testnet&amount=0.5"],
+    ["preflight missing amount", "/api/v1/spend-preflight?contract=vault.testnet&owner=owner.testnet&agent=agent.testnet&receiver=shop.testnet"],
+    ["preflight bad receiver", "/api/v1/spend-preflight?contract=vault.testnet&owner=owner.testnet&agent=agent.testnet&receiver=NOPE&amount=1"],
+    ["preflight bad intent", "/api/v1/spend-preflight?contract=vault.testnet&owner=owner.testnet&agent=agent.testnet&receiver=shop.testnet&amount=1&intent=a%20b"],
+    ["preflight unknown param", "/api/v1/spend-preflight?contract=vault.testnet&owner=owner.testnet&agent=agent.testnet&receiver=shop.testnet&amount=1&evil=1"],
   ])("400 on %s", async (_n, url) => {
     expect((await get(url)).statusCode).toBe(400);
   });

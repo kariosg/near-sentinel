@@ -1,3 +1,4 @@
+import { SecurityCard } from "../components/SecurityCard";
 import { Card, CodeBlock as Code, linkClass } from "../components/ui";
 
 const origin = typeof window !== "undefined" ? window.location.origin : "http://127.0.0.1:8080";
@@ -39,12 +40,12 @@ console.log(check.recommendation.reason, check.diagnostics);`}</Code>
       </Card>
 
       <div id="int-mcp" className="scroll-mt-24" />
-      <Card title="AI agents — MCP server (stdio)" icon="bot" subtitle="Seven read-only tools. The agent asks before it ever re-signs or spends.">
+      <Card title="AI agents — MCP server (stdio)" icon="bot" subtitle="Nine read-only tools. The agent asks before it ever re-signs or spends.">
         <Code title="shell">{`# Claude Code (after \`pnpm build\`; use the ABSOLUTE path to your clone)
 claude mcp add near-sentinel -e NEAR_SENTINEL_NETWORK=testnet -- node /abs/path/to/near-sentinel/packages/mcp/dist/server.js
 
 # Any MCP client: command = "node", args = ["/abs/path/to/near-sentinel/packages/mcp/dist/server.js"]
-# Tools: check_retry_safety · inspect_transaction · trace_receipts · diagnose_submission_error · provider_health · check_intent · check_spend_allowance`}</Code>
+# Tools: check_retry_safety · inspect_transaction · trace_receipts · diagnose_submission_error · provider_health · check_intent · check_spend_allowance · preflight_spend · audit_agent_keys`}</Code>
       </Card>
 
       <div id="int-rest" className="scroll-mt-24" />
@@ -93,8 +94,17 @@ near account add-key <agent>.testnet grant-function-call-access --allowance '0.2
   network-config testnet sign-with-legacy-keychain send
 
 # Agent: before paying, ask how much it may spend now (read-only, every provider)
-curl -s '${origin}/api/v1/allowance?contract=vault.karios.testnet&owner=karios.testnet&agent=kariosr.testnet'`}</Code>
+curl -s '${origin}/api/v1/allowance?contract=vault.karios.testnet&owner=karios.testnet&agent=kariosr.testnet'
+
+# Agent: would THIS payment be allowed? (the Vault's own rules, before signing; amount in yoctoNEAR)
+curl -s '${origin}/api/v1/spend-preflight?contract=vault.karios.testnet&owner=karios.testnet&agent=kariosr.testnet&receiver=karios.testnet&amount=1000000000000000000000'
+
+# Owner: can this agent's keys drain its account?
+curl -s '${origin}/api/v1/agent-keys?account=kariosr.testnet&vault=vault.karios.testnet'`}</Code>
       </Card>
+
+      <div id="int-security" className="scroll-mt-24" />
+      <SecurityCard />
 
       <Card title="Use it in your project — and how it stays sustainable" icon="layers">
         <div className="grid gap-5 text-sm text-ink-2 md:grid-cols-2">

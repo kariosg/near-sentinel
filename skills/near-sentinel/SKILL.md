@@ -33,10 +33,15 @@ Unknown is never reported as safe. If the tool itself fails, treat the result as
 
 ## 2. Paying from a Sentinel Vault allowance
 
-1. Call `check_spend_allowance` (`contractId`, `ownerId`, `agentId`) before `spend`.
+1. Call `preflight_spend` (`contractId`, `ownerId`, `agentId`, `receiverId`, `amountYocto`, `intentId`) before every `spend`.
+   Only `ALLOWED` means pay. `BLOCKED` (with a code such as `NOT_ALLOWED_RECEIVER` or `OVER_DAILY_LIMIT`) or `UNKNOWN` means: do not pay.
+   (`check_spend_allowance` gives the overall picture: `availableNow`, the limits and a safety score.)
 2. Never pay more than `availableNow`, and never pay a receiver outside `allowed_receivers` (when the list is not empty).
 3. `FROZEN`, `EXHAUSTED`, `NO_POLICY` or `UNKNOWN` mean: do not pay.
 4. Use a fresh `intent_id` per payment. Re-sending `spend` with the **same** `intent_id` cannot pay twice.
+   Never put an email, phone or order number in an `intent_id`: it is public on-chain forever (use a hashed id).
+5. When setting up or reviewing an agent, call `audit_agent_keys`: the agent should hold only a function-call key
+   limited to `spend` on the vault, never a full-access key.
 
 ## 3. Paying through Sentinel Guard
 
@@ -55,13 +60,15 @@ args:    ["/abs/path/to/near-sentinel/packages/mcp/dist/server.js"]
 env:     NEAR_SENTINEL_NETWORK=testnet
 ```
 
-Tools: `check_retry_safety`, `check_intent`, `check_spend_allowance`, `inspect_transaction`, `trace_receipts`,
-`diagnose_submission_error`, `provider_health`.
+Tools: `check_retry_safety`, `check_intent`, `check_spend_allowance`, `preflight_spend`, `audit_agent_keys`,
+`inspect_transaction`, `trace_receipts`, `diagnose_submission_error`, `provider_health`.
 
 **REST fallback** (live testnet instance, no key needed):
 
 - `POST https://64-177-60-105.sslip.io/api/v1/transactions/retry-check` with `{"transactionHash","senderAccountId"}` or `{"signedTransactionBase64"}`
 - `GET https://64-177-60-105.sslip.io/api/v1/intents?contract=&payer=&intent=`
 - `GET https://64-177-60-105.sslip.io/api/v1/allowance?contract=&owner=&agent=`
+- `GET https://64-177-60-105.sslip.io/api/v1/spend-preflight?contract=&owner=&agent=&receiver=&amount=<yoctoNEAR>&intent=`
+- `GET https://64-177-60-105.sslip.io/api/v1/agent-keys?account=&vault=`
 
 Sentinel never signs or sends anything. Signing stays with your wallet or your own agent.

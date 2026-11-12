@@ -38,6 +38,12 @@ export const envSchema = z.object({
     .or(z.literal("").transform(() => undefined)),
 
   DATA_DIR: z.string().default("./data"),
+  /** Optional salt for hashing client IPs in the audit log. Unset = random per process (hashes unlinkable across restarts). */
+  AUDIT_IP_SALT: z
+    .string()
+    .min(16, "AUDIT_IP_SALT must be at least 16 characters")
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
   /** Comma-separated SHA-256 hex digests of API keys. Empty = protected endpoints disabled. */
   API_KEYS_SHA256: csv.pipe(z.array(z.string().regex(/^[a-f0-9]{64}$/, "API_KEYS_SHA256 entries must be 64-char lowercase hex"))),
 

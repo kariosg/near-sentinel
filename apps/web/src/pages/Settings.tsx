@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api";
-import { Card, ErrorBox, Loading, Mono, Pill } from "../components/ui";
+import { Card, ErrorBox, linkClass, Loading, Mono, Pill } from "../components/ui";
 
 export function SettingsPage() {
   const cfg = useQuery({ queryKey: ["providers"], queryFn: api.providers });
@@ -62,6 +62,12 @@ export function SettingsPage() {
           <li>Read-only: Sentinel never signs, submits or holds keys. It only reads public chain data.</li>
           <li>Unknown is never reported as safe. SAFE_TO_RETRY requires proof from independent operators.</li>
           <li>Provider answers are validated (right tx hash, well-formed) before they count as evidence.</li>
+          <li>
+            Privacy: no cookies or analytics; admin-action IPs are kept only as a salted hash for 30 days.{" "}
+            <a className={linkClass} href="#/integrate" onClick={() => setTimeout(() => document.getElementById("int-security")?.scrollIntoView({ block: "start" }), 400)}>
+              Security &amp; privacy for AI agents
+            </a>
+          </li>
         </ul>
       </Card>
     </div>

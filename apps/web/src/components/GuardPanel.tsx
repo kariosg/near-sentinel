@@ -1,5 +1,5 @@
 import { Help, Term } from "./Term";
-import { GUARD_STATUS_HELP } from "../vaultInfo";
+import { GUARD_STATUS_HELP, intentIdPrivacyWarning } from "../vaultInfo";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useState, type FormEvent } from "react";
 import { api, type IntentCheck } from "../api";
@@ -54,6 +54,11 @@ export function GuardPanel() {
           {m.isPending ? "Checking…" : "Check intent"}
         </Button>
       </form>
+      {intentIdPrivacyWarning(intent) && (
+        <p role="note" className="mt-2 text-xs text-warning">
+          {intentIdPrivacyWarning(intent)}
+        </p>
+      )}
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <span className="text-xs text-muted">Live testnet deployment ({LIVE.contract}):</span>
         {LIVE_EXAMPLES.map((x) => (

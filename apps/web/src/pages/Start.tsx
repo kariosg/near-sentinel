@@ -67,7 +67,7 @@ const STEPS: Step[] = [
     href: "#/integrate",
     time: "1 min",
     icon: "bot",
-    what: "Seven read-only MCP tools, including check_retry_safety, check_intent and check_spend_allowance.",
+    what: "Nine read-only MCP tools, including check_retry_safety, check_intent, check_spend_allowance, preflight_spend and audit_agent_keys.",
     expect: "A copy-paste command for Claude Code or any MCP client.",
     cta: "Open",
   },
@@ -373,9 +373,9 @@ export function StartPage() {
           <SectionTitle id="verify-title" eyebrow="Reproduce it" title="Verify from your terminal" sub="Node ≥ 22.16 and pnpm 8. Docker only for the contract suite." />
           <ul className="space-y-3 text-sm text-ink-2">
             {[
-              ["240 unit and integration tests", "SDK, MCP server (real stdio), API, demo, NEAR AI agent"],
+              ["310 unit and integration tests", "SDK, MCP server (real stdio), API, demo, NEAR AI agent"],
               ["10 live tests", "read-only, against public testnet and mainnet RPCs"],
-              ["46 browser tests", "flows, accessibility, phone/tablet/desktop, keyboard, this tour, the demo data"],
+              ["50 browser tests", "flows, accessibility, phone/tablet/desktop, keyboard, this tour, the demo data, agent security"],
               ["33 + 27 + 21 contract checks", "Guard and Vault: Rust unit tests, a local NEAR node, then live on testnet"],
             ].map(([a, b]) => (
               <li key={a} className="flex gap-3">
@@ -390,7 +390,7 @@ export function StartPage() {
           </ul>
         </div>
         <CodeBlock title="bash">{`pnpm install && pnpm build
-pnpm test            # secrets check + 240 tests
+pnpm test            # secrets check + 310 tests
 pnpm demo            # naive agent pays 2 NEAR, guarded pays 1
 pnpm start           # this dashboard on http://127.0.0.1:8080
 pnpm test:contract   # Docker: 33 Rust tests + 27 on-chain checks`}</CodeBlock>
@@ -402,7 +402,7 @@ pnpm test:contract   # Docker: 33 Rust tests + 27 on-chain checks`}</CodeBlock>
         <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {(
             [
-              ["bot", "MCP server", "Seven read-only tools for AI agents: check_retry_safety, inspect_transaction, trace_receipts, diagnose_submission_error, provider_health, check_intent, check_spend_allowance.", "#/integrate"],
+              ["bot", "MCP server", "Nine read-only tools for AI agents: check_retry_safety, inspect_transaction, trace_receipts, diagnose_submission_error, provider_health, check_intent, check_spend_allowance, preflight_spend, audit_agent_keys.", "#/integrate"],
               ["layers", "TypeScript SDK", "checkRetrySafety, inspectTransaction, checkIntent, checkSpendAllowance and more. Validates every RPC answer.", "#/integrate"],
               ["terminal", "REST API", "Fastify API with OpenAPI docs, rate limits, live updates over SSE.", "/docs"],
               ["shieldCheck", "Sentinel Guard contract", "Rust, no owner, no admin, live on testnet. A repeated intent is rejected on-chain and refunded.", "#/integrate"],

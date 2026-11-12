@@ -15,7 +15,7 @@ They sign with keys the operator places in **git-ignored** `.env` files (`exampl
 
 **Secrets gate:** `pnpm test` starts with `scripts/check-secrets.mjs`, which fails if any file git would commit contains a NEAR secret key, a seed-phrase-like word list, or a `.env` file. It prints only file and line, never the match.
 
-**Guard contract:** no owner, no admin methods, no upgrade path. The callback is `#[private]` (verified on-chain). See [contracts/guard/README.md](contracts/guard/README.md).
+**Guard contract:** no owner, no admin methods, no upgrade method in the code. On testnet the contract accounts still hold the deployer's full-access key, so they are not locked (the Agent keys tool shows this; see [docs/KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md)). The callback is `#[private]` (verified on-chain). See [contracts/guard/README.md](contracts/guard/README.md).
 
 **Optional account verification (NEP-413):** server-issued 32-byte nonces, single use, 5-minute expiry, burned on the first attempt; recipient and message bound; ed25519 verified server-side; the key must be a FullAccess key of the account on-chain. It creates no session and grants no rights.
 
@@ -46,6 +46,29 @@ They sign with keys the operator places in **git-ignored** `.env` files (`exampl
 | Guard contract: duplicate intent, private callback, input validation, concurrent race | `contracts/guard` | Rust unit tests + on-chain sandbox suite |
 | No secrets in the repository | `scripts/check-secrets.mjs` | runs first in `pnpm test`; self-tested with planted fake key and seed line |
 | Dependency scanning | `pnpm audit` | "No known vulnerabilities found" (2026-11-10) |
+
+## Agent security (OWASP Top 10 for Agentic Applications, 2026)
+
+How Sentinel maps to the [OWASP Top 10 for Agentic Applications (2026)](https://genai.owasp.org/resource/owasp-top-10-for-agentic-applications-for-2026/). The core idea: an agent's spending limits live **on-chain**, not in its prompt, so a hijacked or confused model still cannot exceed them.
+
+| Risk | What Sentinel does |
+|---|---|
+| **ASI01 Agent Goal Hijack** | Vault limits are enforced by the contract: per-payment cap, 24-hour cap and receiver allowlist. A prompt-injected agent can only fail against them. Spend preflight (`GET /api/v1/spend-preflight`, MCP `preflight_spend`) runs the same checks before signing and says which rule would block the payment. |
+| **ASI02 Tool Misuse and Exploitation** | All MCP tools are read-only and carry `readOnlyHint` annotations; none can sign or send. `compareProviders` accepts only an allow-list of read methods. Guard enforces pay-once per intent ID, so a retried or looped tool call cannot pay twice. |
+| **ASI03 Identity and Privilege Abuse** | Agent key audit (`GET /api/v1/agent-keys`, MCP `audit_agent_keys`) flags full-access keys and recommends a function-call key limited to the vault's `spend` method. The Vault checks `predecessor_account_id` (the direct caller), not the signer, so another contract cannot spend on an agent's behalf. The owner can freeze an agent at any time (kill switch). |
+| **ASI04 Agentic Supply Chain** | Lockfile-pinned dependencies (`--frozen-lockfile` in the Docker build), `pnpm audit` before release, and a secrets gate that runs first in `pnpm test`. The Guard contract has no owner, admin or upgrade method (on testnet its account is not yet locked). |
+| **ASI05 Unexpected Code Execution** | **Not covered.** Sentinel runs no agent-generated code; sandboxing the agent itself is the host's job. |
+| **ASI06 Memory & Context Poisoning** | **Not covered.** Sentinel keeps no agent memory; it cannot see or clean an agent's context. |
+| **ASI07 Insecure Inter-Agent Communication** | **Not covered.** Sentinel is not a messaging layer between agents. |
+| **ASI08 Cascading Failures** | Multi-provider consensus: `SAFE_TO_RETRY` needs proof from at least 2 independent operators, and "unknown" is never turned into "safe". When providers disagree or are missing, Sentinel says so instead of guessing. |
+| **ASI09 Human-Agent Trust Exploitation** | Verdicts are plain-language with the evidence behind them (per-provider answers, block heights). Allowance safety score shows how much an agent could still spend. |
+| **ASI10 Rogue Agents** | Vault freeze stops a misbehaving agent immediately, on-chain. The 24-hour cap bounds the worst case before anyone notices. |
+
+Limits of this mapping: an empty Vault allowlist allows any receiver, and the key audit only reports; it cannot change keys. Both are the owner's choice.
+
+## Privacy
+
+What the API and dashboard store, for how long, and what they never store: see [docs/PRIVACY.md](docs/PRIVACY.md). In short: no keys, no cookies, no analytics; audit-log IPs are hashed and kept 30 days.
 
 ## Reporting a vulnerability
 

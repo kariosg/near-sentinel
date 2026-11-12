@@ -71,3 +71,28 @@ export function friendlyVaultError(raw: string): string {
   for (const [re, text] of ERRORS) if (re.test(raw)) return text;
   return raw;
 }
+
+/**
+ * Payment / intent ids are stored on-chain and public forever. Warn when one looks like personal data.
+ * Same rules as `intentIdPrivacyWarning` in the SDK (kept as a copy: the browser must not load Node crypto).
+ */
+export function intentIdPrivacyWarning(id: string): string | null {
+  const v = id.trim();
+  if (!v || /^p:[0-9a-f]{40}$/.test(v)) return null; // privateIntentId() output: random-looking hex by design
+  if (/[^\s@]+@[^\s@]+\.[^\s@]+/.test(v)) return "This looks like an email address. Payment ids are public on-chain forever: use a random or hashed id instead.";
+  if (/\+\d{8,}|\d{3}[-. ]\d{3}[-. ]\d{3,4}/.test(v)) return "This looks like a phone number. Payment ids are public on-chain forever: use a random or hashed id instead.";
+  if (/\d{9,}/.test(v)) return "This has a long number (an order, card or customer number?). Payment ids are public on-chain forever: use a random or hashed id instead.";
+  return null;
+}
+
+/** Plain meaning of each agent-key-check status. */
+export const KEY_STATUS_HELP: Record<string, string> = {
+  FULL_ACCESS_PRESENT:
+    "At least one key can do anything with this account: move all its NEAR, add keys, deploy code. If an agent holds it and it leaks, everything is gone. Give the agent a function-call key instead (commands below).",
+  REVIEW_NEEDED:
+    "No full-access keys, but some function-call keys are not proven least privilege: they call another contract (or this account's own), or more than spend. A function-call key cannot transfer NEAR itself, but check what those contracts can do.",
+  LEAST_PRIVILEGE: "Every key is a function-call key limited to spend on the vault, so the vault's limits apply to every payment. This is how an agent account should look.",
+  NO_KEYS: "This account has no keys, so nobody can sign for it (it is locked).",
+  ACCOUNT_NOT_FOUND: "This account does not exist on this network. Check the spelling and the network (testnet vs mainnet).",
+  UNKNOWN: "No provider answered, so Sentinel will not guess. Try again in a moment.",
+};

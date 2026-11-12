@@ -5,7 +5,9 @@
  * provider for `get_intent(payer_id, intent_id)` and returns what the chain says, with evidence.
  * It never signs or submits anything.
  */
+import { createHmac } from "node:crypto";
 import { z } from "zod";
+import { SentinelInputError } from "./errors.js";
 import { formatNear, plural } from "./text.js";
 import type { RpcObservation } from "./types.js";
 import { isValidAccountId } from "./validation.js";
@@ -117,4 +119,32 @@ export function decideIntent(input: IntentInput, providers: IntentProviderAnswer
     };
   }
   return { ...base, status: "UNKNOWN", resendSameIntentIsSafe: true, reason: "No provider answered (network errors, or the contract does not exist / is not a Sentinel Guard). Re-check shortly." };
+}
+
+/* --------------------------- private payment IDs --------------------------- */
+
+/**
+ * A payment ID that reveals nothing about your reference (order number, email, invoice): "p:" + the first
+ * 40 hex chars of HMAC-SHA256(secret, reference). Same inputs give the same ID, so retries stay idempotent.
+ * Intent IDs are public on-chain forever; keep the secret server-side.
+ */
+export function privateIntentId(secret: string, reference: string): string {
+  if (typeof secret !== "string" || secret.length < 16) throw new SentinelInputError("privateIntentId: secret must be at least 16 characters");
+  if (typeof reference !== "string" || reference.length === 0) throw new SentinelInputError("privateIntentId: reference must be a non-empty string");
+  return `p:${createHmac("sha256", secret).update(reference, "utf8").digest("hex").slice(0, 40)}`;
+}
+
+/** Soft check: does this intent ID look like personal data? Returns a warning, or null. IDs are public forever. */
+export function intentIdPrivacyWarning(id: string): string | null {
+  const s = String(id ?? "");
+  if (/^p:[0-9a-f]{40}$/.test(s)) return null; // privateIntentId() output: random-looking hex by design
+  const why =
+    /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*/.test(s)
+      ? "an email address"
+      : /\+\d{8,}/.test(s) || /\+?\d{2,4}[-. ]\d{3,4}[-. ]\d{3,4}/.test(s)
+        ? "a phone number"
+        : /\d{9,}/.test(s)
+          ? "a long number (card, phone or account number?)"
+          : null;
+  return why ? `This ID looks like it contains ${why}. Intent IDs are public on-chain forever; use privateIntentId() or a random ID instead.` : null;
 }

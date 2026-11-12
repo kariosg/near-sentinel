@@ -16,6 +16,20 @@ const success = JSON.parse(readFileSync(join(here, "../../sdk/test/fixtures/tx-s
 const partial = JSON.parse(readFileSync(join(here, "../../sdk/test/fixtures/tx-partial.json"), "utf8"));
 const UNKNOWN_TX = { error: { name: "HANDLER_ERROR", code: -32000, message: "Server error", cause: { name: "UNKNOWN_TRANSACTION", info: {} } } };
 
+const view = (v: unknown) => ({ result: { result: [...Buffer.from(JSON.stringify(v))], logs: [], block_height: 10, block_hash: "x" } });
+const POLICY = {
+  owner_id: "alice.testnet",
+  agent_id: "agent.alice.testnet",
+  balance: "2000000000000000000000000",
+  per_payment_max: "1000000000000000000000000",
+  daily_max: "1500000000000000000000000",
+  spent_in_window: "0",
+  available_now: "1000000000000000000000000",
+  window_resets_at_ms: 1800000000000,
+  allowed_receivers: [],
+  frozen: false,
+};
+
 let a: RunningServer, b: RunningServer;
 let client: Client;
 
@@ -27,6 +41,10 @@ const handler = (method: string, params: any) => {
   }
   if (method === "status") return { result: { chain_id: "testnet", protocol_version: 88, sync_info: { latest_block_height: 10, earliest_block_height: 1, syncing: false } } };
   if (method === "block") return { error: { name: "HANDLER_ERROR", code: -32000, message: "x", cause: { name: "UNKNOWN_BLOCK" } } };
+  if (method === "query" && params?.request_type === "view_access_key_list")
+    return { result: { keys: [{ public_key: "ed25519:11111111111111111111111111111111", access_key: { nonce: 1, permission: "FullAccess" } }], block_height: 10, block_hash: "x" } };
+  if (method === "query" && params?.method_name === "get_policy") return view(POLICY);
+  if (method === "query" && params?.method_name === "get_spend") return view(null);
   return UNKNOWN_TX;
 };
 
@@ -57,10 +75,20 @@ afterAll(async () => {
 const text = (r: any) => r.content.map((c: any) => c.text).join("\n");
 
 describe("near-sentinel MCP server (stdio, built)", () => {
-  it("lists exactly the 7 read-only tools", async () => {
+  it("lists exactly the 9 read-only tools", async () => {
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual(
-      ["check_intent", "check_retry_safety", "check_spend_allowance", "diagnose_submission_error", "inspect_transaction", "provider_health", "trace_receipts"].sort(),
+      [
+        "audit_agent_keys",
+        "check_intent",
+        "check_retry_safety",
+        "check_spend_allowance",
+        "diagnose_submission_error",
+        "inspect_transaction",
+        "preflight_spend",
+        "provider_health",
+        "trace_receipts",
+      ].sort(),
     );
     for (const t of tools) expect(t.annotations?.readOnlyHint).toBe(true);
     const check = tools.find((t) => t.name === "check_retry_safety")!;
@@ -152,6 +180,35 @@ describe("near-sentinel MCP server (stdio, built)", () => {
     expect(r.isError).toBeFalsy();
     expect(["ACTIVE", "EXHAUSTED", "FROZEN", "NO_POLICY", "UNKNOWN"]).toContain(r.structuredContent.status);
     expect(r.structuredContent.providers.length).toBeGreaterThan(0);
+  });
+
+  it("check_spend_allowance text includes the safety line", async () => {
+    const r: any = await client.callTool({ name: "check_spend_allowance", arguments: { contractId: "vault.example.testnet", ownerId: "alice.testnet", agentId: "agent.alice.testnet" } });
+    expect(r.structuredContent.safety.grade).toBe("fair");
+    expect(text(r)).toMatch(/Safety: fair \(65\/100\) - \[high\] Any receiver allowed/);
+  });
+
+  it("preflight_spend: ALLOWED, then BLOCKED over the per-payment limit; tells agents the contract is final", async () => {
+    const base = { contractId: "vault.example.testnet", ownerId: "alice.testnet", agentId: "agent.alice.testnet", receiverId: "shop.testnet" };
+    const ok: any = await client.callTool({ name: "preflight_spend", arguments: { ...base, amountYocto: "100000000000000000000000", intentId: "order-9" } });
+    expect(ok.isError).toBeFalsy();
+    expect(ok.structuredContent).toMatchObject({ decision: "ALLOWED", duplicate: false, costYocto: "106000000000000000000000" });
+    expect(text(ok)).toMatch(/final judge/);
+    const no: any = await client.callTool({ name: "preflight_spend", arguments: { ...base, amountYocto: "5000000000000000000000000" } });
+    expect(no.structuredContent).toMatchObject({ decision: "BLOCKED", code: "OVER_PER_PAYMENT_LIMIT" });
+    expect(text(no)).toMatch(/BLOCKED \(OVER_PER_PAYMENT_LIMIT\)/);
+    const bad: any = await client.callTool({ name: "preflight_spend", arguments: { ...base, amountYocto: "0.1" } });
+    expect(bad.isError).toBe(true);
+  });
+
+  it("audit_agent_keys reports a full-access key as critical", async () => {
+    const r: any = await client.callTool({ name: "audit_agent_keys", arguments: { accountId: "agent.alice.testnet", vaultContractId: "vault.example.testnet" } });
+    expect(r.isError).toBeFalsy();
+    expect(r.structuredContent).toMatchObject({ status: "FULL_ACCESS_PRESENT", counts: { fullAccess: 1, functionCall: 0 } });
+    expect(r.structuredContent.keys[0].risk).toBe("critical");
+    expect(text(r)).toMatch(/FULL_ACCESS_PRESENT/);
+    const bad: any = await client.callTool({ name: "audit_agent_keys", arguments: { accountId: "Not Valid" } });
+    expect(bad.isError).toBe(true);
   });
 
   it("check_spend_allowance rejects an invalid account id as a tool error", async () => {

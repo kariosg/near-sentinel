@@ -4,6 +4,23 @@
 
 First release, built for NEAR HACKATHON (Nov 2026).
 
+### Agent security and privacy (2026-11-12)
+- **Agent key check** (SDK `auditAgentKeys`, `GET /api/v1/agent-keys`, MCP `audit_agent_keys`, Inspect → ④ Agent keys). It lists every access key on an agent account, cross-checked on every provider, and flags full-access keys. A function-call key limited to the Vault's `spend` is graded least privilege, and the result prints the near-cli-rs commands for that safe setup. A missing account is confirmed with `view_account`, because providers answer an empty key list for unknown accounts.
+- **"Would this payment be allowed?"** (SDK `preflightSpend` / `decideSpendPreflight`, `GET /api/v1/spend-preflight`, MCP `preflight_spend`, a form in the Vault panel). It runs the Vault contract's own checks in the contract's order, before anything is signed. It never answers ALLOWED above the smallest amount any provider reports. It is advisory: the contract stays the final judge.
+- **Allowance safety score** (SDK `assessAllowanceSafety`, an optional `safety` field on allowance checks, the Vault panel, `check_spend_allowance`). It flags any receiver allowed, an agent that can pay itself, a single payment that can use the whole day, and a day that can empty the vault.
+- **Private payment ids**: SDK `privateIntentId(secret, reference)` (HMAC) and `intentIdPrivacyWarning`. The Guard and Vault panels warn when an id looks like an email, a phone number or a long number.
+- **Server privacy**:
+  - audit-log IPs are stored only as a salted HMAC (optional `AUDIT_IP_SALT`), raw IPs from older databases are converted on open, and rows are deleted after 30 days;
+  - retention also runs at start-up;
+  - API request logs and the Caddy access log no longer contain client IPs.
+- **Docs and UI**:
+  - `docs/PRIVACY.md`;
+  - `SECURITY.md` mapping to the OWASP Top 10 for Agentic Applications (2026), including what is not covered;
+  - new threat-model rows;
+  - a "Security & privacy for AI agents" card on Integrate;
+  - README section, JUDGING claims and demo rows, TESTING steps 10-13.
+- MCP server now has 9 read-only tools. Tests: SDK 207 (+ live), API 73, MCP 16, browser 50; an independent review's findings fixed (worst-case provider consensus for keys, no lock-out advice, no silent demo-vault default, stricter "not used" check, hourly retention, secure_delete).
+
 ### Judge helpers: real demo data, glossary, diagrams, GIFs (2026-11-12)
 - Dashboard: one shared list of real testnet demo data (`apps/web/src/demoData.ts`). The Inspect page now has 8 one-click examples in two groups (the real-money demo and real edge cases); each shows what you will see as visible text, not only on hover. The Start page proof strip links straight into Sentinel ("Check it in Sentinel"), and a new tour step checks the real-money payment.
 - Start page: "Real demo data, no wallet needed" (transactions with expected verdicts, the demo accounts with explorer links) and a glossary; a decision tree showing how a verdict is chosen (mirrors `packages/sdk/src/retry.ts`).

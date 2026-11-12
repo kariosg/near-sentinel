@@ -6,6 +6,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { api, type AllowanceCheck } from "../api";
 import { Icon } from "./icons";
 import { Button, Card, ErrorBox, Field, Loading, Pill, toneText, type Tone } from "./ui";
+import { PreflightForm, SafetyBlock } from "./SpendSafety";
 import { VaultOwnerActions } from "./VaultOwnerActions";
 
 const statusTone = (s: AllowanceCheck["status"]): Tone =>
@@ -85,6 +86,7 @@ export function VaultPanel() {
             <span className="text-sm text-ink">{r.reason}</span>
             {VAULT_STATUS_HELP[r.status] && <span className="basis-full text-xs text-ink-2">{VAULT_STATUS_HELP[r.status]}</span>}
           </div>
+          {r.safety && <SafetyBlock safety={r.safety} />}
           {p && (
             <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
               <dt className="text-muted">
@@ -154,6 +156,7 @@ export function VaultPanel() {
               ))}
             </tbody>
           </table>
+          {p && <PreflightForm key={`${r.contractId}|${r.ownerId}|${r.agentId}`} contract={r.contractId} owner={r.ownerId} agent={r.agentId} />}
         </div>
       )}
       <VaultOwnerActions contract={contract} />

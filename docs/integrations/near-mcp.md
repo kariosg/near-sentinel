@@ -12,7 +12,7 @@ That server lets an agent act on NEAR. NEAR Sentinel's MCP server is the read-on
 
 **The agent calls `near-sentinel` before any resend or re-sign.** After a timeout or unclear result it calls
 `check_retry_safety` and acts on the verdict (`DO_NOT_RETRY`, `WAIT_AND_RECHECK`, `SAFE_TO_RETRY`,
-`MANUAL_REVIEW_REQUIRED`). Before paying from a Sentinel Vault it calls `check_spend_allowance`.
+`MANUAL_REVIEW_REQUIRED`). Before paying from a Sentinel Vault it calls `preflight_spend` (or `check_spend_allowance` for the overall picture), and `audit_agent_keys` checks that the agent holds no full-access key.
 The full procedure is in the Agent Skill: [skills/near-sentinel/SKILL.md](../../skills/near-sentinel/SKILL.md).
 
 ## Example MCP client config (two servers)

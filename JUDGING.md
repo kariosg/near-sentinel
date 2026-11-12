@@ -9,7 +9,7 @@ For human judges and AI reviewers. Each claim below links to the command, transa
 | Time | Do | Expect |
 |---|---|---|
 | 1 min | Open **https://64-177-60-105.sslip.io** | The live dashboard on NEAR testnet. Start page → "Start the 3-minute tour". |
-| 10 min | `npm install -g pnpm@8` (if needed), `pnpm install`, then **`pnpm verify`** | One summary table: build, 240 tests, demo, live testnet, 46 browser tests, contracts (if Docker). Exit code 0. |
+| 10 min | `npm install -g pnpm@8` (if needed), `pnpm install`, then **`pnpm verify`** | One summary table: build, 310 tests, demo, live testnet, 50 browser tests, contracts (if Docker). Exit code 0. |
 | 3 min | `pnpm install && pnpm verify --quick` | Same, without network, browser or Docker. |
 
 Verified on 2026-11-11 on Windows (Node 22.16, Chrome) and in a clean Linux container (`mcr.microsoft.com/playwright:v1.65.0-noble`: Node 26, no git checkout, no Chrome; the browser tests used Playwright's bundled Chromium).
@@ -34,6 +34,8 @@ Every item is real on NEAR testnet (nothing mocked). Each link opens the live da
 | Top-level success hiding a failed `ft_burn` | [partial](https://64-177-60-105.sslip.io/#/inspect?example=partial) | `MANUAL_REVIEW_REQUIRED` |
 | Guard contract, paid intent `tmwbtoqi6-a` | Inspect → Guard → *Paid intent* | `PAID` on every provider |
 | Vault allowance for agent `kariosr.testnet` | Inspect → Vault → *Live agent allowance* | `ACTIVE`, the limits and the amount available now |
+| Agent key check for `kariosr.testnet` | Inspect → ④ Agent keys → *Live demo agent keys* | `FULL_ACCESS_PRESENT`: our demo agent keeps a full-access key for simplicity; the result explains the risk and prints the commands for a `spend`-only key |
+| Would this payment be allowed? | Inspect → Vault → *Live agent allowance*, then 0.001 NEAR to `karios.testnet` / 5 NEAR / any other receiver | `ALLOWED` / `BLOCKED OVER_PER_PAYMENT_LIMIT` / `BLOCKED NOT_ALLOWED_RECEIVER`, before anything is signed |
 
 Demo accounts: `karios.testnet` (payer, Vault owner), `kariosr.testnet` (receiver, Vault agent), `guard.karios.testnet` (Guard contract), `vault.karios.testnet` (Vault contract). The Start page also has a glossary of the NEAR terms used (nonce, validity window, receipts, function-call key…).
 
@@ -82,8 +84,18 @@ Demo accounts: `karios.testnet` (payer, Vault owner), `kariosr.testnet` (receive
 | Claim | Check |
 |---|---|
 | An AI agent on **NEAR AI Cloud** (TEE-hosted model) decides real payment situations with Sentinel as its tools; Sentinel's verdict is binding (a model that proposes paying again is overruled) | `examples/near-ai-agent` (`src/agent.ts` guard, `test/agent.test.ts` 7 offline tests incl. the overrule case); live run `pnpm demo:near-ai` (needs a NEAR AI key) wrote [docs/near-ai-run.md](docs/near-ai-run.md) on 2026-11-12: **4/4 decisions as expected**, each answer signed by NEAR AI, and the model's TEE attestation report contains the same signing address |
-| MCP server with 7 read-only tools (`check_retry_safety`, `check_intent`, `check_spend_allowance`, …) | `packages/mcp`; `packages/mcp/test/mcp.test.ts` starts the built server over real stdio with the official client |
+| MCP server with 9 read-only tools (`check_retry_safety`, `check_intent`, `check_spend_allowance`, `preflight_spend`, `audit_agent_keys`, …) | `packages/mcp`; `packages/mcp/test/mcp.test.ts` starts the built server over real stdio with the official client |
 | SDK and REST API | `packages/sdk/README.md`; OpenAPI at https://64-177-60-105.sslip.io/docs |
+
+### Agent security and privacy
+| Claim | Check |
+|---|---|
+| Agent key check: flags full-access keys and recommends a function-call key limited to the Vault's `spend` (cross-checked on every provider) | SDK `auditAgentKeys` (`packages/sdk/src/keys.ts`, `packages/sdk/test/keys.test.ts`), `GET /api/v1/agent-keys`, MCP `audit_agent_keys`; live: Inspect → ④ Agent keys |
+| Payment check before signing mirrors the Vault contract's own checks, in the same order, and never says ALLOWED above the smallest amount any provider reports | SDK `preflightSpend` / `decideSpendPreflight` (`packages/sdk/src/vault.ts`, `packages/sdk/test/preflight.test.ts`; order from `contracts/guard/vault/src/lib.rs` `spend`), `GET /api/v1/spend-preflight`, MCP `preflight_spend` |
+| Allowance safety score (any receiver, agent can pay itself, per-payment = daily, daily ≥ balance) | SDK `assessAllowanceSafety`; shown in the Vault panel and in `check_spend_allowance` |
+| No personal data on-chain by accident | SDK `privateIntentId` (HMAC) and `intentIdPrivacyWarning`; warnings in the Guard and Vault panels |
+| Server privacy: audit-log IPs stored only as a salted hash, deleted after 30 days; no cookies or analytics | `apps/api/src/db.ts`, `apps/api/test/privacy.test.ts`, [docs/PRIVACY.md](docs/PRIVACY.md) |
+| Mapped to the OWASP Top 10 for Agentic Applications (2026), including what is not covered | [SECURITY.md](SECURITY.md), Integrate page → *Security & privacy for AI agents* |
 
 ### Safety and security of the service itself
 | Claim | Check |
