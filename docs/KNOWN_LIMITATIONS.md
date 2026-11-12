@@ -26,6 +26,14 @@ Honest list. Nothing here is claimed as working elsewhere.
 - **Policy view is a snapshot.** `available_now` can be lower by the time `spend` lands (another spend, or a freeze); the contract re-checks every rule on-chain, so a stale view can only lead to a rejected spend, never an overspend.
 - **Record fee:** 0.006 NEAR per spend is kept from the vault balance for the record's storage.
 
+## Agent security checks (key check, payment preflight, safety score)
+- **The payment check is advisory.** It mirrors `spend()` on the views it read; the contract re-checks on-chain. A view older than a 24-hour window reset can only make it say UNKNOWN, never a wrong ALLOWED (differential test: 50,000 random cases, 0 false ALLOWED).
+- **The key check sees keys, not where they are stored.** It cannot tell a full-access key kept offline by the owner from one on the agent's machine, so any full-access key is flagged.
+- **Function-call keys for other contracts are graded "review", not proven safe.** A function-call key cannot transfer NEAR itself, but Sentinel does not analyse what the target contract's methods can do.
+- **Our demo agent `kariosr.testnet` keeps a full-access key** for simplicity, so the live key check shows FULL_ACCESS_PRESENT on purpose. The spend-only key flow is proven on the sandbox (see the Vault section).
+- **The safety score is a heuristic** over the policy's limits (any receiver, agent can pay itself, per-payment = daily, daily ≥ balance); it does not know what the receivers are.
+- **Privacy is pseudonymisation.** Audit-log IPs are salted hashes, not anonymous data; whoever holds the salt can test a known IP. A rare low-level proxy error line (e.g. a failed TLS handshake) can still name the peer address.
+
 ## Optional account verification
 - **MyNearWallet only** (NEP-413 sign-message redirect). Other wallets (Meteor, HOT, Ledger) are not wired; no wallet library is bundled.
 - **A label, not authentication.** It shows which account the dashboard user is; it grants no extra rights and creates no session. Protected endpoints still use API keys.

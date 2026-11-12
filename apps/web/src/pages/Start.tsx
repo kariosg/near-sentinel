@@ -62,6 +62,16 @@ const STEPS: Step[] = [
     cta: "Open",
   },
   {
+    id: "security",
+    title: "Check an agent's keys and a payment before signing",
+    href: "#/inspect?tool=keys",
+    time: "30 s",
+    icon: "lock",
+    what: "Agent security: the key check flags keys that could drain an agent's account, and the Vault's payment check runs the contract's own rules before anything is signed.",
+    expect: "FULL_ACCESS_PRESENT for the demo agent, with the commands for a safe spend-only key. In the Vault panel above it, a payment to an unlisted receiver is BLOCKED.",
+    cta: "Check it",
+  },
+  {
     id: "mcp",
     title: "Connect an AI agent (MCP)",
     href: "#/integrate",
@@ -375,7 +385,7 @@ export function StartPage() {
             {[
               ["310 unit and integration tests", "SDK, MCP server (real stdio), API, demo, NEAR AI agent"],
               ["10 live tests", "read-only, against public testnet and mainnet RPCs"],
-              ["50 browser tests", "flows, accessibility, phone/tablet/desktop, keyboard, this tour, the demo data, agent security"],
+              ["51 browser tests", "flows, accessibility, phone/tablet/desktop, keyboard, this tour, the demo data, agent security"],
               ["33 + 27 + 21 contract checks", "Guard and Vault: Rust unit tests, a local NEAR node, then live on testnet"],
             ].map(([a, b]) => (
               <li key={a} className="flex gap-3">
@@ -403,12 +413,13 @@ pnpm test:contract   # Docker: 33 Rust tests + 27 on-chain checks`}</CodeBlock>
           {(
             [
               ["bot", "MCP server", "Nine read-only tools for AI agents: check_retry_safety, inspect_transaction, trace_receipts, diagnose_submission_error, provider_health, check_intent, check_spend_allowance, preflight_spend, audit_agent_keys.", "#/integrate"],
-              ["layers", "TypeScript SDK", "checkRetrySafety, inspectTransaction, checkIntent, checkSpendAllowance and more. Validates every RPC answer.", "#/integrate"],
+              ["layers", "TypeScript SDK", "checkRetrySafety, inspectTransaction, checkIntent, checkSpendAllowance, preflightSpend, auditAgentKeys and more. Validates every RPC answer.", "#/integrate"],
               ["terminal", "REST API", "Fastify API with OpenAPI docs, rate limits, live updates over SSE.", "/docs"],
               ["shieldCheck", "Sentinel Guard contract", "Rust, no owner, no admin, live on testnet. A repeated intent is rejected on-chain and refunded.", "#/integrate"],
               ["wallet", "Sentinel Vault contract", "Give an agent money, not keys: per-payment and daily limits, receiver allowlist, freeze. The agent spends with a function-call key. Live on testnet.", "#/integrate"],
               ["activity", "This dashboard", "Provider health, incidents, benchmarks, receipt graphs. Works on phones.", "#/overview"],
-              ["lock", "Safe by design", "Never signs, never holds keys. Testnet by default. Optional wallet check stores nothing.", "#/settings"],
+              ["shieldCheck", "Agent security & privacy", "Key check (no full-access keys on agents), payment check before signing, safety score for limits, private payment ids. Mapped to the OWASP agentic top 10.", "#/inspect?tool=keys"],
+              ["lock", "Safe by design", "Never signs, never holds keys. Testnet by default. No cookies or tracking; IPs only hashed, kept 30 days.", "#/settings"],
             ] as Array<[IconName, string, string, string]>
           ).map(([icon, title, text, href]) => (
             <a key={title} href={href} target={href.startsWith("/") ? "_blank" : undefined} rel="noreferrer" className="card card-hover group rounded-2xl border border-line p-5">

@@ -109,6 +109,13 @@ docker compose up -d --build
 - `pnpm contract:deploy` runs `pnpm --filter … run deploy` (plain `deploy` would hit pnpm's built-in command). `-- --i-confirm` forwarding verified.
 
 ## Uncommitted work
+- **Ready, waiting for the owner's commit/push approval** (2026-11-12, on `master` after `817bf8d`): agent security shown everywhere.
+  - Start: tour step 7 and an "Agent security & privacy" card.
+  - Inspect: `#/inspect?tool=…` deep links.
+  - README: `docs/media/agent-security.gif` and the security rows.
+  - Docs: JUDGING fastest path, TESTING link, ARCHITECTURE modules, a KNOWN_LIMITATIONS section, and `AUDIT_IP_SALT` in both env examples.
+  - Tests: 51 e2e.
+  - After commit: redeploy the app image only (no Caddy or database change), then live tests.
 - None except this STATUS update. `master` = `ed1fbb0` (2026-11-12): agent security and privacy, merged fast-forward from `feature/agent-security`. Both branches are pushed; the branch is kept.
 - **Deployed and verified live** at https://64-177-60-105.sslip.io (2026-11-12 ~15:30 UTC):
   - containers: sentinel healthy, Caddy recreated with the new log filter;

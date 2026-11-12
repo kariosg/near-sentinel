@@ -18,7 +18,7 @@ Live dashboard: **https://64-177-60-105.sslip.io** (if a "Verify your NEAR accou
 | 8 | Press **Ctrl+K**, type "guarded", Enter | The real-money example runs. |
 | 9 | Optional: narrow the window to phone width | Everything fits; the menu becomes a drawer. |
 | 10 | Inspect → **③ Vault** → *Live agent allowance*, then *Would this payment be allowed?*: receiver `karios.testnet`, amount `0.001`; then amount `5`; then receiver `stranger.testnet` | A **Safety check** score above the details; then `ALLOWED` (cost incl. the 0.006 fee), `BLOCKED · OVER_PER_PAYMENT_LIMIT`, `BLOCKED · NOT_ALLOWED_RECEIVER`. Nothing is signed. |
-| 11 | Inspect → **④ Agent keys** → *Live demo agent keys* | `FULL_ACCESS_PRESENT` for `kariosr.testnet` (our demo agent keeps a full-access key for simplicity), what that risks, and the near-cli-rs commands for a key that can only call the Vault's `spend`. |
+| 11 | Inspect → **④ Agent keys** → *Live demo agent keys* (direct link: `#/inspect?tool=keys`) | `FULL_ACCESS_PRESENT` for `kariosr.testnet` (our demo agent keeps a full-access key for simplicity), what that risks, and the near-cli-rs commands for a key that can only call the Vault's `spend`. |
 | 12 | Inspect → Guard → type `order-123456789012` as Intent ID | A warning: payment ids are public on-chain forever. |
 | 13 | Integrate → **Security & privacy for AI agents** | Six safety layers, the OWASP agentic mapping (with what is *not* covered), and what the server stores. |
 
@@ -58,7 +58,7 @@ Needs Node ≥ 22.16 and pnpm 8; Docker only for the contract suite.
 
 ```bash
 pnpm install
-pnpm verify            # one table: build, 310 unit/integration tests, demo, 10 live tests, 50 browser tests, contracts (if Docker)
+pnpm verify            # one table: build, 310 unit/integration tests, demo, 10 live tests, 51 browser tests, contracts (if Docker)
 pnpm verify --quick    # same without network, browser or Docker
 ```
 
@@ -66,7 +66,7 @@ pnpm verify --quick    # same without network, browser or Docker
 |---|---|
 | `pnpm test` | Secrets gate + 310 tests: SDK 207, MCP server over real stdio 16, API 73, demo 7, NEAR AI agent 7 (offline) |
 | `pnpm test:live` | 10 read-only tests against public testnet and mainnet RPCs |
-| `pnpm test:e2e` | 50 browser tests: every flow above, accessibility (WCAG 2.1 AA), phone/tablet/desktop, keyboard, the real demo data |
+| `pnpm test:e2e` | 51 browser tests: every flow above, accessibility (WCAG 2.1 AA), phone/tablet/desktop, keyboard, the real demo data |
 | `pnpm test:contract` | Docker: Guard 14 + Vault 19 Rust unit tests, then 27 checks on a local NEAR node (incl. a function-call key that can only `spend`) |
 | `pnpm test:load` | Load and soak test of the server (17 gates, no memory leak) |
 | `pnpm demo` | Simulated: naive agent pays 2 NEAR, guarded agent pays 1 |

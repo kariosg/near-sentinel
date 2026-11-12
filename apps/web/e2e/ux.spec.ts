@@ -238,14 +238,14 @@ test.describe("redesign: judge-first navigation", () => {
     await page.goto("/");
     await expect(page.locator("main h1")).toContainText("Did the payment land");
     await expect(page.getByRole("img", { name: /Diagram: an AI agent asks NEAR Sentinel/ })).toBeVisible();
-    await expect(page.getByText("0 of 6 done")).toBeVisible();
+    await expect(page.getByText("0 of 7 done")).toBeVisible();
     await expect(page.getByRole("heading", { name: "Four verdicts, never a guess" })).toBeVisible();
     await page.screenshot({ path: `${SHOTS}/start.png`, fullPage: true, style: SHOT_CSS });
     await page.getByRole("link", { name: /Run it: Inspect a real testnet transaction/ }).click();
     await expect(page.locator("main h1")).toHaveText("Inspect & retry check");
     await expect(page.getByText("Manual review required")).toBeVisible({ timeout: 30_000 });
     await page.goto("/#/start");
-    await expect(page.getByText("1 of 6 done")).toBeVisible();
+    await expect(page.getByText("1 of 7 done")).toBeVisible();
     expect(errors).toEqual([]);
   });
 
@@ -541,6 +541,16 @@ test.describe("agent security and privacy", () => {
     expect(intentIdPrivacyWarning("+14155550123")).toContain("phone");
     expect(intentIdPrivacyWarning("order-123456789012")).toContain("long number");
     expect(intentIdPrivacyWarning("p:3f2a9c")).toBeNull();
+  });
+
+  test("start tour step 7 deep-links to the agent key check; the Start page shows the security card", async ({ page }) => {
+    await skipIdentity(page);
+    await page.goto("/#/start");
+    await expect(page.locator("#tour")).toContainText("Check an agent's keys and a payment before signing");
+    await expect(page.getByRole("link", { name: "Agent security & privacy" }).or(page.locator("a", { hasText: "Agent security & privacy" })).first()).toHaveAttribute("href", "#/inspect?tool=keys");
+    await page.getByRole("link", { name: "Check it: Check an agent's keys and a payment before signing" }).click();
+    await expect(page).toHaveURL(/#\/inspect\?tool=keys$/);
+    await expect(page.locator("#tool-keys")).toBeInViewport();
   });
 
   test("integrate page: security and privacy card with the OWASP agentic mapping", async ({ page }) => {

@@ -31,6 +31,10 @@ A guard contract (including our own Sentinel Guard) only knows about calls that 
 |---|---|---|
 | ![One click on the real-money payment: DO_NOT_RETRY](docs/media/inspect-verdict.gif) | ![Guard contract: a paid intent is PAID, a retry is refused](docs/media/guard-duplicate.gif) | ![Vault: how much the agent may spend now](docs/media/vault-allowance.gif) |
 
+**Agent security, in 15 seconds:** the key check finds a full-access key on the demo agent and shows the safe setup; a prompt-injected payment to `attacker.testnet` is BLOCKED before anything is signed.
+
+![Agent security: key check, then a prompt-injected payment blocked before signing](docs/media/agent-security.gif)
+
 **Real demo data for testing:** every example in the dashboard is a real testnet transaction or account, one click each, no wallet. See the list with expected results in [JUDGING.md → Demo data](JUDGING.md#demo-data-for-testing).
 
 ## NEAR technology we use
@@ -41,7 +45,7 @@ A guard contract (including our own Sentinel Guard) only knows about calls that 
 | **Access-key nonces + validity window** | Proves a transaction can *never* land → `SAFE_TO_RETRY` | Real testnet: unsent tx → WAIT, then SAFE after its nonce was used ([tx](https://testnet.nearblocks.io/txns/6jM2toRMAb9KDNTSNHrCVSGEY5ttJenXnAiirBPE7wnj)) |
 | **Receipt model** (async, cross-contract) | Finds a failed downstream call hidden behind a top-level "success" → `MANUAL_REVIEW_REQUIRED` | Real tx [`EtpgCjJP…`](https://testnet.nearblocks.io/txns/EtpgCjJPA1WN9MxG17C88GtEU5kf6mx77YxhrWdjMuBd) |
 | **Smart contracts** (Rust, near-sdk 5) | **Sentinel Guard** (pay once per intent) and **Sentinel Vault** (agent allowance), both live on testnet | [`guard.karios.testnet`](https://testnet.nearblocks.io/address/guard.karios.testnet), [`vault.karios.testnet`](https://testnet.nearblocks.io/address/vault.karios.testnet); 33 Rust unit + 27 sandbox + 21 live checks |
-| **Function-call access keys** | An agent's key may only call `spend` on the Vault: it can pay within limits and do nothing else | Sandbox: NEAR rejects any other use (`INVALID_TRANSACTION`) |
+| **Function-call access keys** | An agent's key may only call `spend` on the Vault: it can pay within limits and do nothing else. The agent key check (`view_access_key_list`) flags agents that hold a full-access key instead | Sandbox: NEAR rejects any other use (`INVALID_TRANSACTION`); live: [Inspect → ④ Agent keys](https://64-177-60-105.sslip.io/#/inspect?tool=keys) |
 | **NEAR AI Cloud** (TEE-hosted model, signed answers, attestation) | An AI agent decides real payment situations with Sentinel as its tools; Sentinel's verdict is binding | [docs/near-ai-run.md](docs/near-ai-run.md): 4/4, every answer signed, attestation contains the signing address |
 | **NEAR Connect** (`@hot-labs/near-connect`) | Vault owners fund, freeze or withdraw from the dashboard with their own wallet | Dashboard → Inspect → *Owner actions* |
 | **MCP for agents** + **Agent Skills** | 9 read-only MCP tools; an Agent Skill; designed to run next to NEAR's official MCP Server (`@nearai/near-mcp`), which has no status check | [skills/near-sentinel](skills/near-sentinel/SKILL.md), [docs/integrations/near-mcp.md](docs/integrations/near-mcp.md) |
@@ -87,8 +91,9 @@ It ships as a TypeScript SDK, an **MCP server for AI agents**, a REST API and a 
 | Benchmarks page → **Run simulated faults** (no key needed) | 12/12 fault scenarios classified correctly in a few seconds |
 | `pnpm test:live` | 10 read-only tests against public RPCs: 7 on testnet, 3 on mainnet (a real recent mainnet transaction picked live) |
 | `pnpm test:contract` (Docker) | 33 Rust unit tests (Guard 14 + Vault 19) + 27 on-chain checks on a local NEAR sandbox, including a duplicate payment rejected with `DUPLICATE_INTENT` and an agent whose function-call key can only `spend` within its allowance |
-| `pnpm test:e2e` (starts the built API itself; uses Google Chrome if installed, otherwise run `pnpm --filter @near-sentinel/web exec playwright install chromium` once) | 50 browser tests: flows, accessibility, mobile, keyboard, judge tour, command palette, modal focus, reduced motion |
-| MCP: see [From an AI agent](#from-an-ai-agent-mcp) | `check_retry_safety`, `check_intent`, `check_spend_allowance` and 4 more read-only tools |
+| `pnpm test:e2e` (starts the built API itself; uses Google Chrome if installed, otherwise run `pnpm --filter @near-sentinel/web exec playwright install chromium` once) | 51 browser tests: flows, accessibility, mobile, keyboard, judge tour, command palette, modal focus, reduced motion |
+| Inspect page → ④ **Agent keys** → *Live demo agent keys*; ③ Vault → *Would this payment be allowed?* | Agent security: a full-access key flagged with the safe setup; a payment to an unlisted receiver BLOCKED before signing |
+| MCP: see [From an AI agent](#from-an-ai-agent-mcp) | `check_retry_safety`, `check_intent`, `check_spend_allowance`, `preflight_spend`, `audit_agent_keys` and 4 more read-only tools |
 
 ## The demo in one picture
 
@@ -354,7 +359,7 @@ Give an agent money, not your keys, and keep its limits outside the AI. A prompt
 
 | Layer | What it stops | Where |
 |---|---|---|
-| **Limited key** | A leaked or tricked agent emptying its account. `audit_agent_keys` / `GET /api/v1/agent-keys` flags full-access keys and prints the near-cli-rs commands for a key that can only call the Vault's `spend`. | Inspect → ④ Agent keys |
+| **Limited key** | A leaked or tricked agent emptying its account. `audit_agent_keys` / `GET /api/v1/agent-keys` flags full-access keys and prints the near-cli-rs commands for a key that can only call the Vault's `spend`. | [Inspect → ④ Agent keys](https://64-177-60-105.sslip.io/#/inspect?tool=keys) |
 | **Vault limits on-chain** | Overspending: per-payment and 24 h limits, receiver allowlist, freeze. The contract checks the direct caller (`predecessor_account_id`), not the signer. | `contracts/guard/vault` |
 | **Check before signing** | Doomed or unwanted payments: `preflight_spend` / `GET /api/v1/spend-preflight` runs the Vault's rules in the contract's order. | Inspect → ③ Vault |
 | **Safety score** | Risky limits: "any receiver", agent can pay itself, one payment can use the whole day, one day can empty the vault. | Inspect → ③ Vault |

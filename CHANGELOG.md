@@ -19,7 +19,13 @@ First release, built for NEAR HACKATHON (Nov 2026).
   - new threat-model rows;
   - a "Security & privacy for AI agents" card on Integrate;
   - README section, JUDGING claims and demo rows, TESTING steps 10-13.
-- MCP server now has 9 read-only tools. Tests: SDK 207 (+ live), API 73, MCP 16, browser 50; an independent review's findings fixed (worst-case provider consensus for keys, no lock-out advice, no silent demo-vault default, stricter "not used" check, hourly retention, secure_delete).
+- Shown everywhere a judge looks:
+  - Start tour step 7 "Check an agent's keys and a payment before signing";
+  - an "Agent security & privacy" card on Start;
+  - deep links `#/inspect?tool=keys|vault|guard|check` (tour, Ctrl+K, docs);
+  - a 15-second GIF (`docs/media/agent-security.gif`) in the README;
+  - security rows in the README NEAR-technology table, JUDGING fastest paths and the TESTING links.
+- MCP server now has 9 read-only tools. Tests: SDK 207 (+ live), API 73, MCP 16, browser 51; an independent review's findings fixed (worst-case provider consensus for keys, no lock-out advice, no silent demo-vault default, stricter "not used" check, hourly retention, secure_delete).
 
 ### Judge helpers: real demo data, glossary, diagrams, GIFs (2026-11-12)
 - Dashboard: one shared list of real testnet demo data (`apps/web/src/demoData.ts`). The Inspect page now has 8 one-click examples in two groups (the real-money demo and real edge cases); each shows what you will see as visible text, not only on hover. The Start page proof strip links straight into Sentinel ("Check it in Sentinel"), and a new tour step checks the real-money payment.

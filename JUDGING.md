@@ -9,8 +9,9 @@ For human judges and AI reviewers. Each claim below links to the command, transa
 | Time | Do | Expect |
 |---|---|---|
 | 1 min | Open **https://64-177-60-105.sslip.io** | The live dashboard on NEAR testnet. Start page → "Start the 3-minute tour". |
-| 10 min | `npm install -g pnpm@8` (if needed), `pnpm install`, then **`pnpm verify`** | One summary table: build, 310 tests, demo, live testnet, 50 browser tests, contracts (if Docker). Exit code 0. |
+| 10 min | `npm install -g pnpm@8` (if needed), `pnpm install`, then **`pnpm verify`** | One summary table: build, 310 tests, demo, live testnet, 51 browser tests, contracts (if Docker). Exit code 0. |
 | 3 min | `pnpm install && pnpm verify --quick` | Same, without network, browser or Docker. |
+| 1 min | Agent security: [Inspect → ④ Agent keys](https://64-177-60-105.sslip.io/#/inspect?tool=keys) → *Live demo agent keys*, then ③ Vault → *Live agent allowance* → *Would this payment be allowed?* to `attacker.testnet` | `FULL_ACCESS_PRESENT` with the safe spend-only setup; the payment is `BLOCKED · NOT_ALLOWED_RECEIVER` before anything is signed. Mapping to the OWASP agentic top 10: Integrate → *Security & privacy for AI agents*. |
 
 Verified on 2026-11-11 on Windows (Node 22.16, Chrome) and in a clean Linux container (`mcr.microsoft.com/playwright:v1.65.0-noble`: Node 26, no git checkout, no Chrome; the browser tests used Playwright's bundled Chromium).
 
@@ -34,7 +35,7 @@ Every item is real on NEAR testnet (nothing mocked). Each link opens the live da
 | Top-level success hiding a failed `ft_burn` | [partial](https://64-177-60-105.sslip.io/#/inspect?example=partial) | `MANUAL_REVIEW_REQUIRED` |
 | Guard contract, paid intent `tmwbtoqi6-a` | Inspect → Guard → *Paid intent* | `PAID` on every provider |
 | Vault allowance for agent `kariosr.testnet` | Inspect → Vault → *Live agent allowance* | `ACTIVE`, the limits and the amount available now |
-| Agent key check for `kariosr.testnet` | Inspect → ④ Agent keys → *Live demo agent keys* | `FULL_ACCESS_PRESENT`: our demo agent keeps a full-access key for simplicity; the result explains the risk and prints the commands for a `spend`-only key |
+| Agent key check for `kariosr.testnet` | [Inspect → ④ Agent keys](https://64-177-60-105.sslip.io/#/inspect?tool=keys) → *Live demo agent keys* | `FULL_ACCESS_PRESENT`: our demo agent keeps a full-access key for simplicity; the result explains the risk and prints the commands for a `spend`-only key |
 | Would this payment be allowed? | Inspect → Vault → *Live agent allowance*, then 0.001 NEAR to `karios.testnet` / 5 NEAR / any other receiver | `ALLOWED` / `BLOCKED OVER_PER_PAYMENT_LIMIT` / `BLOCKED NOT_ALLOWED_RECEIVER`, before anything is signed |
 
 Demo accounts: `karios.testnet` (payer, Vault owner), `kariosr.testnet` (receiver, Vault agent), `guard.karios.testnet` (Guard contract), `vault.karios.testnet` (Vault contract). The Start page also has a glossary of the NEAR terms used (nonce, validity window, receipts, function-call key…).

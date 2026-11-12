@@ -19,6 +19,8 @@ const VERDICT_TEXT: Record<string, string> = {
   MANUAL_REVIEW_REQUIRED: "Manual review required",
 };
 
+const TOOLS = ["check", "guard", "vault", "keys"];
+
 function readQuery(): { hash?: string; sender?: string } {
   const q = new URLSearchParams(window.location.hash.split("?")[1] ?? "");
   const ex = EXAMPLES.find((e) => e.key === q.get("example"));
@@ -45,6 +47,17 @@ export function InspectPage() {
     setSender(x.sender);
     m.mutate({ transactionHash: x.hash, senderAccountId: x.sender });
   };
+
+  // ?tool=check|guard|vault|keys opens the page at that tool (links from the tour, the palette and the docs).
+  useEffect(() => {
+    const go = () => {
+      const tool = new URLSearchParams(window.location.hash.split("?")[1] ?? "").get("tool");
+      if (tool && TOOLS.includes(tool)) setTimeout(() => jump({ preventDefault() {} }, `tool-${tool}`), 50);
+    };
+    go();
+    window.addEventListener("hashchange", go);
+    return () => window.removeEventListener("hashchange", go);
+  }, []);
 
   // The page stays mounted when only the ?example= query changes (e.g. from Ctrl+K), so react to it here.
   useEffect(() => {

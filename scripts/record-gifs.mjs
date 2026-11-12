@@ -5,10 +5,11 @@
  *   guard-duplicate  — the Guard contract: a paid intent is PAID, a retry would be refused
  *   vault-allowance  — the Vault: how much the agent may spend now
  *   run-it-live      — the Start page replay: naive agent pays twice, guarded agent once
+ *   agent-security   — the agent key check and the "would this payment be allowed?" check
  * Output: media/<name>.webm (git-ignored). Convert to docs/media/<name>.gif with the ffmpeg command below.
  *
  *   pnpm start                        # in another terminal
- *   node scripts/record-gifs.mjs      # optional: SENTINEL_URL=https://64-177-60-105.sslip.io
+ *   node scripts/record-gifs.mjs      # optional: SENTINEL_URL=https://64-177-60-105.sslip.io, ONLY=<name> for one clip
  *
  * GIF: docker run --rm -v "$PWD:/w" linuxserver/ffmpeg -y -i /w/media/<name>.webm \
  *   -vf "fps=10,scale=960:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=96[p];[b][p]paletteuse=dither=bayer:bayer_scale=4" \
@@ -28,6 +29,7 @@ const size = { width: 1280, height: 760 };
 const browser = await chromium.launch({ channel: process.env.PW_CHANNEL ?? "chrome" });
 
 async function clip(name, run) {
+  if (process.env.ONLY && process.env.ONLY !== name) return;
   const ctx = await browser.newContext({ viewport: size, recordVideo: { dir: out, size }, colorScheme: "dark" });
   await ctx.addInitScript(() => localStorage.setItem("sentinel.identity", JSON.stringify({ skipped: true })));
   const page = await ctx.newPage();
@@ -99,6 +101,29 @@ await clip("run-it-live", async (page, caption, wait) => {
   await page.evaluate(() => window.scrollBy({ top: 260, behavior: "smooth" }));
   await wait(600);
   await caption("Naive agent: paid twice. Sentinel-guarded agent: paid once.", 3600);
+});
+
+await clip("agent-security", async (page, caption, wait) => {
+  await page.goto(`${BASE}/#/inspect?tool=keys`);
+  await wait(800);
+  await caption("Can this AI agent's keys drain its account?", 1800);
+  await page.getByRole("button", { name: "Live demo agent keys" }).click();
+  await page.getByRole("list", { name: "Access keys" }).waitFor({ timeout: 30000 });
+  await page.evaluate(() => document.getElementById("tool-keys")?.querySelector("[aria-live]")?.scrollIntoView({ block: "start" }));
+  await caption("Full-access key found: Sentinel shows how to give the agent a spend-only key.", 3200);
+  await page.goto(`${BASE}/#/inspect?tool=vault`);
+  await wait(800);
+  await page.getByRole("button", { name: "Live agent allowance" }).click();
+  const pre = page.locator("section", { hasText: "Would this payment be allowed?" }).last();
+  await pre.waitFor({ timeout: 30000 });
+  await pre.scrollIntoViewIfNeeded();
+  await page.evaluate(() => window.scrollBy({ top: 120 }));
+  await caption("A prompt-injected payment, checked BEFORE signing…", 1400);
+  await pre.getByLabel("Receiver").fill("attacker.testnet");
+  await pre.getByLabel("Amount (NEAR)").fill("0.05");
+  await pre.getByRole("button", { name: "Check payment" }).click();
+  await pre.getByText("NOT_ALLOWED_RECEIVER").first().waitFor({ timeout: 30000 });
+  await caption("BLOCKED: not on the owner's allowlist. The Vault contract enforces it on-chain too.", 3600);
 });
 
 await browser.close();

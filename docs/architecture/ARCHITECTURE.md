@@ -32,6 +32,9 @@ flowchart LR
 | `diagnostics.ts` | Rule-based diagnostics, each citing the observation or receipt it came from. Includes submission-error classification (nearcore `TIMEOUT_ERROR` causes, `InvalidTxError` variants, dRPC shapes). |
 | `retry.ts` | Pure decision function over gathered evidence (see [STATE_MAPPING.md](STATE_MAPPING.md)). |
 | `sentinel.ts` | Orchestration: input validation, signed-tx decoding, phased fan-out with correct ordering, answer validation, agreement, read failover, capability probing, subscription, report export. |
+| `intent.ts` | Sentinel Guard intent lookups (`checkIntent`), `privateIntentId` (HMAC id so no order number goes on-chain) and `intentIdPrivacyWarning`. |
+| `vault.ts` | Sentinel Vault: allowance decision (`checkSpendAllowance`, smallest `available_now` wins), the spend preflight (`decideSpendPreflight`: the contract's `spend()` checks in the same order, never ALLOWED above `available_now`) and the allowance safety score. |
+| `keys.ts` | Agent key audit (`view_access_key_list` + `view_account` on every provider): grades each key; when providers disagree the riskiest answer wins. |
 | `ssrf.ts` | URL policy and a guarded `fetch` that re-checks the IP at connect time. |
 | `metrics.ts` | Rolling per-provider counters and latency percentiles. |
 | `testing.ts` | Scriptable mock RPC and a fault-injection proxy (`delay`, `hang`, `forward-then-hang`, `reset`, `malformed`, `rate-limit`, `http-502`, `oversized`, `stale-unknown-tx`). |
@@ -43,6 +46,7 @@ flowchart LR
 **`apps/api`.** Fastify 5.
 - Zod is the single validator; route JSON schemas exist only for OpenAPI.
 - SQLite via `node:sqlite` with numbered migrations. Tables: `provider_samples`, `incidents`, `reports`, `benchmark_runs`, `audit_log`, `custom_providers`.
+- Privacy: `audit_log` stores client IPs only as a salted HMAC (`AUDIT_IP_SALT`, else random per process); retention runs at start-up and hourly (samples 7 days, reports and audit log 30 days) with `secure_delete`. Request logs carry no client IP (see [PRIVACY.md](../PRIVACY.md)).
 - Background prober: status every 30 s, capabilities every 10 min. Incidents open after 2 consecutive bad samples and close on recovery.
 - Single-flight de-duplication of identical concurrent inspections.
 - SSE stream. Prometheus on a separate localhost-only listener.
@@ -63,6 +67,7 @@ flowchart LR
 - The agent calls `spend(owner_id, intent_id, receiver_id, amount)` with no deposit, so it can hold only a function-call key limited to `spend`. Each `(owner, agent, intent_id)` pays at most once; a failed transfer restores the balance and allowance.
 - Views: `get_policy` (with `available_now`), `get_spend`, `record_fee`, `version`. No admin or upgrade method.
 - The SDK's `checkSpendAllowance`, the MCP `check_spend_allowance` tool and `GET /api/v1/allowance` read it (the smallest `available_now` any provider reports wins).
+- Before an agent signs, `preflightSpend` / MCP `preflight_spend` / `GET /api/v1/spend-preflight` runs the same checks as `spend()` (advisory; the contract stays the final judge), and `auditAgentKeys` / `audit_agent_keys` / `GET /api/v1/agent-keys` checks that the agent holds no full-access key.
 
 **`examples/agent-demo`.** Naive vs guarded agents.
 - The simulated chain enforces nonces and hash de-duplication.

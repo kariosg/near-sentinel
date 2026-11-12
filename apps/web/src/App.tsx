@@ -144,7 +144,7 @@ function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void 
       { id: "ex-success", label: "Inspect a successful real testnet tx", hint: "Example", icon: "play" as const, run: go(`/inspect?example=success`) },
       { id: "ex-guarded", label: "Real money: the guarded agent's payment (paid once)", hint: "Example", icon: "play" as const, run: go(`/inspect?example=guarded`) },
       { id: "ex-naive", label: "Real money: the naive agent's duplicate payment", hint: "Example", icon: "play" as const, run: go(`/inspect?example=naive2`) },
-      { id: "keys", label: "Agent keys: can this agent drain its account?", hint: "Security", icon: "lock" as const, run: () => { window.location.hash = "/inspect"; setTimeout(() => document.getElementById("tool-keys")?.scrollIntoView({ block: "start" }), 400); } },
+      { id: "keys", label: "Agent keys: can this agent drain its account?", hint: "Security", icon: "lock" as const, run: go(`/inspect?tool=keys`) },
       { id: "security", label: "Security & privacy for AI agents (OWASP mapping)", hint: "Security", icon: "shieldCheck" as const, run: () => { window.location.hash = "/integrate"; setTimeout(() => document.getElementById("int-security")?.scrollIntoView({ block: "start" }), 400); } },
       { id: "glossary", label: "Glossary and demo accounts", hint: "Help", icon: "book" as const, run: () => { window.location.hash = "/start"; setTimeout(() => document.getElementById("glossary")?.scrollIntoView({ block: "center" }), 400); } },
       { id: "bench", label: "Run the 12 fault-injection scenarios", hint: "Action", icon: "zap" as const, run: go(`/benchmarks?run=simulated`) },
