@@ -1,6 +1,6 @@
 # STATUS (resume point)
 
-_Last updated: 2026-11-12. Everything is done, verified and pushed: product, Guard (`guard.karios.testnet`, live 11/11) and Vault (`vault.karios.testnet`, live 10/10) on testnet, NEAR AI agent (4/4 live), live dashboard https://64-177-60-105.sslip.io (live e2e 43/43 at `59d5d6b`; 46/46 locally with the audit fixes and new brand). Submitted 2026-11-11; the owner sent a change request (name, Open Innovation track, description). Hackathon deadline: **2026-11-14 23:59 UTC**; no code changes after it._
+_Last updated: 2026-11-12. Everything is done, verified and pushed: product, Guard (`guard.karios.testnet`, live 11/11) and Vault (`vault.karios.testnet`, live 10/10) on testnet, NEAR AI agent (4/4 live), live dashboard https://64-177-60-105.sslip.io (live e2e 46/46 and the docs/TESTING.md walkthrough 20/20 at `3b1cda0`). Submitted 2026-11-11; the owner sent a change request (name, Open Innovation track, description). Hackathon deadline: **2026-11-14 23:59 UTC**; no code changes after it._
 
 ## How to resume
 ```bash
@@ -109,8 +109,7 @@ docker compose up -d --build
 - `pnpm contract:deploy` runs `pnpm --filter … run deploy` (plain `deploy` would hit pnpm's built-in command). `-- --i-confirm` forwarding verified.
 
 ## Uncommitted work
-- `master` = `59d5d6b` is pushed and deployed (live e2e 43/43; rollback image `near-sentinel:previous`).
-- **Uncommitted, verified locally, waiting for the owner's "push"** (2026-11-12): fixes from an independent code review and a docs audit (decision tree matches `retry.ts`; Owner actions re-read live state, pre-fill limits/receivers, "Failed on-chain" wording, staked NEAR; accessible tooltips with Escape); `docs/TESTING.md` step-by-step guide (walked through 20/20); share preview (description, Open Graph, X card, `og.png`); new brand "Shield S" logo + stacked "NEAR / Sentinel" name everywhere (app, favicon, iPhone icon, README header `docs/media/logo.svg`, share image, all 4 GIFs via `scripts/record-gifs.mjs`); STATUS/verify label/README diagram corrections; README + Integrate-page "Integration, sustainability and business model"; 46 e2e. After the push: redeploy, live e2e, walkthrough on the live site.
+- None. `master` = `3b1cda0` (2026-11-12: brand, TESTING guide, business model, review/audit fixes, phone polish; 46 e2e) is pushed and deployed to https://64-177-60-105.sslip.io: live e2e 46/46, walkthrough 20/20, health OK; rollback image `near-sentinel:previous` (= `59d5d6b`).
 - `packages/sdk/t.cjs` is a local scratch file, deliberately untracked. `media/` (local clips, logo options page) is git-ignored.
 - The tag `hackathon-submission` still points to `cc2aa40`; moving it needs a force tag push, which only the owner approves.
 
