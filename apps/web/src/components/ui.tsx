@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useId, useRef, useState, type InputHTMLAttributes, type ReactNode, type RefObject } from "react";
+import { cloneElement, createContext, isValidElement, useCallback, useContext, useEffect, useId, useRef, useState, type InputHTMLAttributes, type ReactNode, type RefObject } from "react";
 import { ApiError } from "../api";
 import { Icon, type IconName } from "./icons";
 
@@ -39,9 +39,51 @@ export function Card({
           {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
         </header>
       )}
-      {/* Wide content (tables) scrolls inside the card instead of widening the page. */}
-      <div className={`overflow-x-auto ${bodyClassName}`}>{children}</div>
+      {/* Wide content (tables) scrolls inside the card instead of widening the page, with a visible scroll hint. */}
+      <ScrollArea className={bodyClassName}>{children}</ScrollArea>
     </section>
+  );
+}
+
+/**
+ * Horizontal scroll container with edge fades that show more content is off-screen (common on phones).
+ * The fades disappear at either end; when it can scroll it is keyboard-focusable (WCAG scrollable-region).
+ */
+export function ScrollArea({ children, className = "", label, fade = "surface" }: { children: ReactNode; className?: string; label?: string; fade?: "surface" | "page" }) {
+  const from = fade === "page" ? "from-page" : "from-surface";
+  const ref = useRef<HTMLDivElement>(null);
+  const [edge, setEdge] = useState({ left: false, right: false });
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const update = () => setEdge({ left: el.scrollLeft > 2, right: el.scrollLeft + el.clientWidth < el.scrollWidth - 2 });
+    update();
+    el.addEventListener("scroll", update, { passive: true });
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(update) : undefined;
+    ro?.observe(el);
+    if (el.firstElementChild) ro?.observe(el.firstElementChild);
+    return () => {
+      el.removeEventListener("scroll", update);
+      ro?.disconnect();
+    };
+  }, []);
+  const scrollable = edge.left || edge.right;
+  return (
+    <div className="relative">
+      <div
+        ref={ref}
+        className={`overflow-x-auto ${className}`}
+        tabIndex={scrollable ? 0 : undefined}
+        role={scrollable ? "region" : undefined}
+        aria-label={scrollable ? (label ?? "Scrollable content") : undefined}
+      >
+        {children}
+      </div>
+      <div aria-hidden className={`pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r ${from} to-transparent transition-opacity ${edge.left ? "opacity-100" : "opacity-0"}`} />
+      <div aria-hidden className={`pointer-events-none absolute inset-y-0 right-0 flex w-10 items-center justify-end bg-gradient-to-l ${from} to-transparent pr-1 text-muted transition-opacity ${edge.right ? "opacity-100" : "opacity-0"}`}>
+        <Icon name="arrowRight" size={14} />
+      </div>
+    </div>
   );
 }
 
@@ -175,16 +217,25 @@ export function Kbd({ children }: { children: ReactNode }) {
   return <kbd className="rounded border border-line-strong bg-surface-2 px-1.5 py-0.5 font-mono text-[11px] text-ink-2">{children}</kbd>;
 }
 
-/** Hover/focus tooltip. The trigger must be focusable for keyboard users. */
+/**
+ * Hover/focus tooltip. The trigger must be focusable for keyboard users. The trigger gets aria-describedby, the text is
+ * hidden from assistive tech until shown (visibility), and Escape dismisses it (WCAG 1.4.13).
+ */
 export function Tooltip({ tip, children, align = "center" }: { tip: ReactNode; children: ReactNode; align?: "center" | "start" }) {
   const id = useId();
+  const trigger = isValidElement<{ "aria-describedby"?: string }>(children) ? cloneElement(children, { "aria-describedby": id }) : children;
   return (
-    <span className="group relative inline-flex" aria-describedby={id}>
-      {children}
+    <span
+      className="group relative inline-flex"
+      onKeyDown={(e) => {
+        if (e.key === "Escape" && document.activeElement instanceof HTMLElement && e.currentTarget.contains(document.activeElement)) document.activeElement.blur();
+      }}
+    >
+      {trigger}
       <span
         id={id}
         role="tooltip"
-        className={`pointer-events-none absolute bottom-full z-30 mb-2 w-64 ${align === "start" ? "left-0" : "left-1/2 -translate-x-1/2"} translate-y-1 rounded-lg border border-line-strong bg-surface-3 px-3 py-2 text-xs leading-relaxed text-ink-2 opacity-0 shadow-xl transition group-focus-within:translate-y-0 group-focus-within:opacity-100 group-hover:translate-y-0 group-hover:opacity-100`}
+        className={`pointer-events-none invisible absolute bottom-full z-30 mb-2 w-64 ${align === "start" ? "left-0" : "left-1/2 -translate-x-1/2"} translate-y-1 rounded-lg border border-line-strong bg-surface-3 px-3 py-2 text-xs leading-relaxed text-ink-2 opacity-0 shadow-xl transition group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100`}
       >
         {tip}
       </span>
@@ -409,7 +460,7 @@ export function CopyButton({ text, label = "copy" }: { text: string; label?: str
   );
 }
 
-/** Code block with a copy button. Focusable so keyboard users can scroll wide code (WCAG 2.1.1). */
+/** Code block with a copy button. Wide code scrolls with an edge hint and is keyboard-focusable when it overflows (WCAG 2.1.1). */
 export function CodeBlock({ children, title }: { children: string; title?: string }) {
   return (
     <div className="overflow-hidden rounded-xl border border-line bg-page/80">
@@ -424,9 +475,9 @@ export function CodeBlock({ children, title }: { children: string; title?: strin
         </span>
         <CopyButton text={children} />
       </div>
-      <pre tabIndex={0} aria-label={title ? `${title} code` : "Code example"} className="overflow-x-auto p-4 font-mono text-[12.5px] leading-relaxed text-ink-2">
-        {children}
-      </pre>
+      <ScrollArea fade="page" label={title ? `${title} code` : "Code example"}>
+        <pre className="w-max min-w-full p-4 font-mono text-[12.5px] leading-relaxed text-ink-2">{children}</pre>
+      </ScrollArea>
     </div>
   );
 }

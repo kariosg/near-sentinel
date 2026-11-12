@@ -6,11 +6,13 @@ import { toneText, verdictTone } from "./ui";
  * Plain HTML, so it reflows on phones and screen readers read it as a list.
  */
 const BRANCHES: Array<{ q: string; a: string; verdict: string; why: string }> = [
-  { q: "Found on chain and fully succeeded?", a: "yes", verdict: "DO_NOT_RETRY", why: "It landed. Paying again would pay twice." },
+  { q: "Found, but providers report different outcomes?", a: "yes", verdict: "MANUAL_REVIEW_REQUIRED", why: "Sentinel never guesses between conflicting answers." },
+  { q: "Found and succeeded, or still executing?", a: "yes", verdict: "DO_NOT_RETRY", why: "It landed or is landing. Paying again would pay twice." },
   { q: "Found, but a downstream receipt failed?", a: "yes", verdict: "MANUAL_REVIEW_REQUIRED", why: "Part of it ran. A human or the agent's own logic must decide." },
-  { q: "Found and failed, confirmed by ≥ 2 independent operators?", a: "yes", verdict: "SAFE_TO_RETRY", why: "Nothing moved, so a new transaction is safe." },
-  { q: "Not found, and its nonce is used or its validity window expired (≥ 2 operators)?", a: "yes", verdict: "SAFE_TO_RETRY", why: "Proven: it can never land." },
-  { q: "Not found and not yet proven?", a: "otherwise", verdict: "WAIT_AND_RECHECK", why: "It may still land. Re-send the same signed bytes only, then check again." },
+  { q: "Found and failed with no side effects, final on ≥ 2 independent operators?", a: "yes", verdict: "SAFE_TO_RETRY", why: "Nothing moved, so a new transaction is safe. Fewer operators: WAIT_AND_RECHECK." },
+  { q: "Not found, signed bytes given, and on ≥ 2 operators that hold the history: nonce used or validity window expired?", a: "yes", verdict: "SAFE_TO_RETRY", why: "Proven: it can never land." },
+  { q: "Not found, some sign it can't land, but not proven on enough operators?", a: "yes", verdict: "MANUAL_REVIEW_REQUIRED", why: "Likely dead, but not proven. Don't sign anything new yet." },
+  { q: "Otherwise (not found, not proven, or no signed bytes)", a: "otherwise", verdict: "WAIT_AND_RECHECK", why: "It may still land. Re-send the same signed bytes only, then check again." },
 ];
 
 const SHORT: Record<string, string> = {
@@ -51,7 +53,7 @@ export function VerdictTree() {
           );
         })}
       </ol>
-      <p className="mt-3 text-xs text-muted">If providers contradict each other, Sentinel never guesses: it returns MANUAL_REVIEW_REQUIRED.</p>
+      <p className="mt-3 text-xs text-muted">Unknown is never reported as safe. Full rules: packages/sdk/src/retry.ts.</p>
     </figure>
   );
 }

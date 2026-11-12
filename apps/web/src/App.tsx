@@ -253,9 +253,10 @@ export function App() {
   const brand = (
     <a href="#/start" className="flex items-center gap-3 rounded-lg px-1">
       <Logo size={34} />
-      <span>
-        <span className="block text-[15px] font-semibold tracking-tight text-ink">NEAR Sentinel</span>
-        <span className="block text-xs text-muted">Transaction-safety guard</span>
+      <span className="leading-none">
+        <span className="block text-[10px] font-medium uppercase tracking-[0.22em] text-muted">NEAR</span>
+        <span className="mt-1 block text-[17px] font-bold tracking-tight text-ink">Sentinel</span>
+        <span className="sr-only"> (NEAR Sentinel, transaction-safety guard)</span>
       </span>
     </a>
   );

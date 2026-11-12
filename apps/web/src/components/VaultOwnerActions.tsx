@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { api } from "../api";
 import { friendlyVaultError, nearExact, nearOf, RECORD_FEE_NEAR } from "../vaultInfo";
 import { accountBalance, connectWallet, disconnectWallet, nearToYocto, signAndSendFunctionCall, type Connected } from "../wallet";
@@ -60,6 +60,17 @@ export function VaultOwnerActions({ contract }: { contract: string }) {
   const wallet = useQuery({ queryKey: ["walletBalance", owner], queryFn: () => accountBalance(owner!), enabled: !!owner, staleTime: 5_000 });
   const policy = current.data?.policy;
   const status = current.data?.status;
+  const prefilled = useRef("");
+  useEffect(() => {
+    const key = `${owner}|${agentQ}`;
+    if (!policy || prefilled.current === key) return;
+    prefilled.current = key;
+    setPerPayment(nearExact(policy.per_payment_max));
+    setPerDay(nearExact(policy.daily_max));
+    setReceivers(policy.allowed_receivers.join(", "));
+  }, [policy, owner, agentQ]);
+  const refreshTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => () => clearTimeout(refreshTimer.current), []);
 
   const connect = async () => {
     setMsg(undefined);
@@ -74,22 +85,27 @@ export function VaultOwnerActions({ contract }: { contract: string }) {
     }
   };
 
-  const preview = (e: FormEvent) => {
+  const preview = async (e: FormEvent) => {
     e.preventDefault();
     setMsg(undefined);
     try {
       const agent_id = agent.trim();
       if (!agent_id) throw new Error("Enter the agent account.");
       if (!ACCOUNT_RE.test(agent_id)) throw new Error(`"${agent_id}" is not a valid NEAR account id.`);
-      const loadedFor = current.data && agentQ === agent_id ? current.data : undefined;
+      // Validate against fresh on-chain state, never a stale cache. If it can't be read, the contract still decides.
+      const fresh = owner && agentQ === agent_id ? (await current.refetch()).data : undefined;
+      const loadedFor = fresh && fresh.status !== "UNKNOWN" ? fresh : undefined;
       if (action === "fund") {
         const allowed_receivers = receivers.split(",").map((s) => s.trim()).filter(Boolean);
+        if (loadedFor?.policy?.allowed_receivers.length && allowed_receivers.length === 0)
+          throw new Error(`This would remove the receiver allowlist (${loadedFor.policy.allowed_receivers.join(", ")}) and let the agent pay anyone. Re-enter the receivers, or type "any" to allow every receiver.`);
         const per = nearToYocto(perPayment);
         const day = nearToYocto(perDay);
         const dep = nearToYocto(deposit);
         if (BigInt(per) === 0n) throw new Error("The per-payment limit must be more than 0.");
         if (BigInt(per) > BigInt(day)) throw new Error("The per-payment limit must not be higher than the 24-hour limit.");
         if (allowed_receivers.length > 20) throw new Error("Use at most 20 allowed receivers.");
+        if (allowed_receivers.length === 1 && allowed_receivers[0]!.toLowerCase() === "any") allowed_receivers.length = 0;
         const bad = allowed_receivers.find((r) => !ACCOUNT_RE.test(r));
         if (bad) throw new Error(`"${bad}" is not a valid NEAR account id.`);
         if (allowed_receivers.includes(vault)) throw new Error("The vault contract itself cannot be a receiver.");
@@ -122,13 +138,16 @@ export function VaultOwnerActions({ contract }: { contract: string }) {
       setMsg({ kind: "ok", text: `${pending.method} sent. The figures below refresh in a few seconds.`, hash });
       setPending(undefined);
       // Final state needs a couple of blocks; refresh then.
-      setTimeout(() => {
+      clearTimeout(refreshTimer.current);
+      refreshTimer.current = setTimeout(() => {
         void current.refetch();
         void wallet.refetch();
       }, 3_000);
     } catch (e) {
       const raw = (e as Error).message || "cancelled in the wallet";
-      setMsg({ kind: "err", text: `Not sent: ${friendlyVaultError(raw)}`, raw });
+      const onChain = /\(tx [1-9A-HJ-NP-Za-km-z]{43,44}\)$/.exec(raw);
+      const hash = onChain ? raw.slice(onChain.index + 4, -1) : undefined;
+      setMsg({ kind: "err", text: `${hash ? "Failed on-chain (the transaction was sent; only gas was used)" : "Not sent"}: ${friendlyVaultError(raw)}`, raw, hash });
     } finally {
       setBusy(false);
     }
@@ -151,6 +170,7 @@ export function VaultOwnerActions({ contract }: { contract: string }) {
               variant="ghost"
               onClick={() => {
                 void disconnectWallet(conn.wallet);
+                clearTimeout(refreshTimer.current);
                 setConn(undefined);
                 setPending(undefined);
               }}
@@ -166,7 +186,7 @@ export function VaultOwnerActions({ contract }: { contract: string }) {
       </div>
 
       {conn ? (
-        <div className="mt-3 space-y-1.5 rounded-lg border border-line bg-surface/60 px-3 py-2 text-xs text-ink-2" aria-live="polite">
+        <div className="mt-3 space-y-1.5 rounded-lg border border-line bg-surface/60 px-3 py-2 text-xs text-ink-2">
           <p>
             <span className="text-muted">Your wallet:</span>{" "}
             {wallet.data ? (
@@ -183,7 +203,7 @@ export function VaultOwnerActions({ contract }: { contract: string }) {
                     <Help label="staked">NEAR locked in staking. It can&apos;t be used here until it is unstaked.</Help>
                   </>
                 )}
-                <span className="text-muted"> · total {nearOf(wallet.data.total)}</span>
+                <span className="text-muted"> · balance {nearOf(wallet.data.total)} (not counting staked)</span>
               </>
             ) : wallet.isError ? (
               <span>balance unavailable right now (your wallet app shows it too)</span>
@@ -243,8 +263,8 @@ export function VaultOwnerActions({ contract }: { contract: string }) {
       <p className="mt-2 text-[11px] text-ink-2">
         {action === "fund" && (
           <>
-            Creates the allowance, or replaces its limits and adds the deposit to the vault balance. Each agent payment also takes a {RECORD_FEE_NEAR} NEAR fee.
-            <Help label="first deposit">A new allowance keeps a small part of the first deposit (well under 0.01 NEAR) to pay NEAR storage for it, so the vault balance is a little below what you deposit.</Help>
+            Creates the allowance, or replaces its limits <strong className="text-ink">and receiver list</strong> and adds the deposit to the vault balance. Each agent payment also takes a {RECORD_FEE_NEAR} NEAR fee.
+            <Help label="first deposit">Part of the deposit pays NEAR storage for the allowance (more for a new allowance or a longer receiver list, usually around 0.002 to 0.02 NEAR), so the vault balance grows a little less than you deposit. An update that adds receivers needs a deposit too.</Help>
           </>
         )}
         {action === "freeze" && (
@@ -256,7 +276,7 @@ export function VaultOwnerActions({ contract }: { contract: string }) {
         {action === "withdraw" && (
           <>
             Sends NEAR from the vault back to your wallet, up to the whole vault balance.
-            <Help label="how much can I withdraw">At most the vault balance shown above. A new allowance keeps a small part of the first deposit for NEAR storage, so the balance is a little below what you deposited. Use Max for the exact amount.</Help>
+            <Help label="how much can I withdraw">At most the vault balance shown above. Part of each deposit paid for NEAR storage, so the balance is a little below what you deposited. Use Max for the exact amount.</Help>
           </>
         )}
       </p>
@@ -320,7 +340,7 @@ export function VaultOwnerActions({ contract }: { contract: string }) {
               </a>
             )}
           </p>
-          {msg.raw && msg.raw !== msg.text && (
+          {msg.raw && friendlyVaultError(msg.raw) !== msg.raw && (
             <details className="mt-1 text-xs text-muted">
               <summary className="cursor-pointer">Technical details</summary>
               <pre className="mt-1 whitespace-pre-wrap break-all font-mono">{msg.raw}</pre>

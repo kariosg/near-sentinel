@@ -148,11 +148,14 @@ export function StartPage() {
             <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-ink-2">
               <span>
                 Unsent payment: <strong className="text-warning">WAIT</strong>, then proven <strong className="text-good">SAFE to pay again</strong> once its nonce
-                was used
+                was{" "}
+                <span className="whitespace-nowrap">
+                  used{" "}
+                  <a className="font-mono text-xs text-link underline" href="https://testnet.nearblocks.io/txns/6jM2toRMAb9KDNTSNHrCVSGEY5ttJenXnAiirBPE7wnj" target="_blank" rel="noreferrer">
+                    tx
+                  </a>
+                </span>
               </span>
-              <a className="font-mono text-xs text-link underline" href="https://testnet.nearblocks.io/txns/6jM2toRMAb9KDNTSNHrCVSGEY5ttJenXnAiirBPE7wnj" target="_blank" rel="noreferrer">
-                tx
-              </a>
             </p>
           </div>
           <div className="mt-7 flex flex-wrap gap-3">
@@ -199,7 +202,10 @@ export function StartPage() {
             </div>
           </dl>
         </div>
-        <FlowDiagram providers={rows.length ? rows.map((r) => ({ name: r.provider, up: r.reachable })) : undefined} />
+        {/* On phones the diagram would shrink below readable size; the hero text already says the same. */}
+        <div className="hidden sm:block">
+          <FlowDiagram providers={rows.length ? rows.map((r) => ({ name: r.provider, up: r.reachable })) : undefined} />
+        </div>
       </section>
 
       {/* ------------------------------------------------------------ problem / solution */}
@@ -319,11 +325,11 @@ export function StartPage() {
             <h3 className="font-semibold text-ink">Transactions to try</h3>
             <ul className="mt-3 divide-y divide-line">
               {DEMO_TXS.map((x) => (
-                <li key={x.key} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-2.5 text-sm">
+                <li key={x.key} className="py-2.5 text-sm">
                   <a className="font-medium text-link underline underline-offset-2" href={`#/inspect?example=${x.key}`} onClick={() => x.key === "guarded" && mark("proof")}>
                     {x.label}
                   </a>
-                  <span className="text-xs text-ink-2">
+                  <span className="mt-0.5 block text-xs text-ink-2">
                     You&apos;ll see: <span className="font-medium text-ink">{x.expect}</span>
                   </span>
                 </li>
@@ -369,7 +375,7 @@ export function StartPage() {
             {[
               ["240 unit and integration tests", "SDK, MCP server (real stdio), API, demo, NEAR AI agent"],
               ["10 live tests", "read-only, against public testnet and mainnet RPCs"],
-              ["43 browser tests", "flows, accessibility, phone/tablet/desktop, keyboard, this tour, the demo data"],
+              ["46 browser tests", "flows, accessibility, phone/tablet/desktop, keyboard, this tour, the demo data"],
               ["33 + 27 + 21 contract checks", "Guard and Vault: Rust unit tests, a local NEAR node, then live on testnet"],
             ].map(([a, b]) => (
               <li key={a} className="flex gap-3">

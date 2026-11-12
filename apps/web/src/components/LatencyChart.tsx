@@ -152,8 +152,9 @@ export function LatencyChart({ samples, providers }: { samples: HistoryResponse[
                 </text>
               </g>
             ))}
-            {[t0, (t0 + t1) / 2, t1].map((t, i) => (
-              <text key={i} x={x(t)} y={H - 8} textAnchor={i === 0 ? "start" : i === 2 ? "end" : "middle"} fontSize={11} fill="var(--color-muted)">
+            {/* Narrow charts (phones) get only the first and last time, so labels never run together. */}
+            {(w < 300 ? [t0, t1] : [t0, (t0 + t1) / 2, t1]).map((t, i, all) => (
+              <text key={i} x={x(t)} y={H - 8} textAnchor={i === 0 ? "start" : i === all.length - 1 ? "end" : "middle"} fontSize={11} fill="var(--color-muted)">
                 {new Date(t).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
               </text>
             ))}

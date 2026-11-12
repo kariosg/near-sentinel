@@ -22,7 +22,7 @@ export const GLOSSARY = {
   },
   fckey: {
     term: "Function-call key",
-    text: "A limited NEAR access key that can only call named methods of one contract and cannot transfer NEAR directly. The Vault gives the agent one that can only call spend().",
+    text: "A limited NEAR access key that can only call named methods of one contract and cannot transfer NEAR directly. With the Vault, the agent's account holds such a key that can only call the Vault's spend(); the owner or agent adds it to the agent account.",
   },
   intent: {
     term: "Intent",

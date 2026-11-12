@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/media/logo.svg" alt="NEAR Sentinel: did the payment land?" width="520"></p>
+
 # NEAR Sentinel
 
 **The RPC timed out. Did the payment land?**
@@ -19,6 +21,7 @@ A guard contract (including our own Sentinel Guard) only knows about calls that 
 1. **30 seconds:** open https://64-177-60-105.sslip.io and click **Run it live**: both agents replay on a simulated chain in both failure modes. You see the naive agent pay twice, and the guarded agent wait, re-send the same bytes and pay once when the payment was lost.
 2. **3 minutes:** on the same page, *Start the 3-minute tour* (real testnet transactions, the on-chain guard, MCP).
 3. **10 minutes, from source:** `pnpm install && pnpm verify` prints one pass/fail table of every check. [JUDGING.md](JUDGING.md) maps each claim to its proof.
+4. **Step-by-step testing** (browser, your own testnet wallet, or source), each step with its expected result: [docs/TESTING.md](docs/TESTING.md).
 
 ![Run it live: the naive agent pays twice, the Sentinel-guarded agent once](docs/media/run-it-live.gif)
 
@@ -84,7 +87,7 @@ It ships as a TypeScript SDK, an **MCP server for AI agents**, a REST API and a 
 | Benchmarks page → **Run simulated faults** (no key needed) | 12/12 fault scenarios classified correctly in a few seconds |
 | `pnpm test:live` | 10 read-only tests against public RPCs: 7 on testnet, 3 on mainnet (a real recent mainnet transaction picked live) |
 | `pnpm test:contract` (Docker) | 33 Rust unit tests (Guard 14 + Vault 19) + 27 on-chain checks on a local NEAR sandbox, including a duplicate payment rejected with `DUPLICATE_INTENT` and an agent whose function-call key can only `spend` within its allowance |
-| `pnpm test:e2e` (starts the built API itself; uses Google Chrome if installed, otherwise run `pnpm --filter @near-sentinel/web exec playwright install chromium` once) | 43 browser tests: flows, accessibility, mobile, keyboard, judge tour, command palette, modal focus, reduced motion |
+| `pnpm test:e2e` (starts the built API itself; uses Google Chrome if installed, otherwise run `pnpm --filter @near-sentinel/web exec playwright install chromium` once) | 46 browser tests: flows, accessibility, mobile, keyboard, judge tour, command palette, modal focus, reduced motion |
 | MCP: see [From an AI agent](#from-an-ai-agent-mcp) | `check_retry_safety`, `check_intent`, `check_spend_allowance` and 4 more read-only tools |
 
 ## The demo in one picture
@@ -163,7 +166,7 @@ pnpm start          # API + dashboard on http://127.0.0.1:8080 (NEAR testnet, 4 
 - Open http://127.0.0.1:8080 for the dashboard (it opens on a **Start here** page with a guided judge tour), or http://127.0.0.1:8080/docs for interactive OpenAPI.
 - Other gates (all re-run on 2026-11-11, results in [docs/STATUS.md](docs/STATUS.md)):
   - `pnpm test:live`: 10 read-only tests against real RPCs (7 testnet, 3 mainnet).
-  - `pnpm test:e2e`: 43 Playwright tests that drive the dashboard against the running API on testnet: functional flows, **axe accessibility (WCAG 2.1 AA, no serious/critical issues) on every page**, mobile/tablet/desktop layouts, keyboard navigation, the optional account verification (skip, cancel, forged callback), the judge tour, the Ctrl+K command palette, the mobile menu, the one-click benchmark and the live Guard and Vault panels, and every real demo example, the glossary and the Inspect jump links.
+  - `pnpm test:e2e`: 46 Playwright tests that drive the dashboard against the running API on testnet: functional flows, **axe accessibility (WCAG 2.1 AA, no serious/critical issues) on every page**, mobile/tablet/desktop layouts, keyboard navigation, the optional account verification (skip, cancel, forged callback), the judge tour, the Ctrl+K command palette, the mobile menu, the one-click benchmark and the live Guard and Vault panels, and every real demo example, the glossary and the Inspect jump links.
   - `pnpm test:contract`: 33 Rust unit tests (Guard 14 + Vault 19) + a 27-check on-chain suite on a local NEAR sandbox (Docker). See [contracts/guard](contracts/guard/README.md).
   - `pnpm test:load`: load and soak test of the built server against local mock RPCs (public RPCs are never load-tested). Zero errors, p99 budgets, no memory growth after warm-up.
 
@@ -184,7 +187,7 @@ flowchart LR
         SDK["TypeScript SDK"]
         REST["REST API"]
     end
-    AI["NEAR AI Cloud agent<br/>(TEE-hosted model)"] --> MCP
+    AI["NEAR AI Cloud agent<br/>(TEE-hosted model)"] --> SDK
     MCP --> S["NEAR Sentinel<br/>(read-only, holds no keys)"]
     SDK --> S
     REST --> S
@@ -337,7 +340,8 @@ flowchart TD
     F -- "yes, failed with no side effects, final on ≥ 2 operators" --> S1["SAFE_TO_RETRY"]
     F -- "no" --> P{"Signed tx given, and on ≥ 2 independent operators:<br/>nonce used or validity window expired,<br/>history covered, still not found?"}
     P -- "yes: it can never land" --> S2["SAFE_TO_RETRY"]
-    P -- "not proven" --> W["WAIT_AND_RECHECK<br/>(re-send the same bytes only)"]
+    P -- "likely dead, not proven on enough operators" --> M2["MANUAL_REVIEW_REQUIRED"]
+    P -- "not proven, or no signed bytes" --> W["WAIT_AND_RECHECK<br/>(re-send the same bytes only)"]
 ```
 
 Full table: [docs/architecture/STATE_MAPPING.md](docs/architecture/STATE_MAPPING.md). Design: [docs/architecture/ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md).
@@ -385,6 +389,30 @@ docs/                                        architecture, API, security, deploy
 - [Verdict and scope decision](docs/VERDICT.md)
 - [Progress](docs/PROGRESS.md)
 - [Status log](docs/STATUS.md) (test-gate results and history)
+
+## Integration, sustainability and business model
+
+**Any project can integrate it today**, in the way that fits its stack:
+
+| Way | For | Start here |
+|---|---|---|
+| MCP server (7 read-only tools) | AI agents (Claude, NEAR AI Cloud agents, any MCP client) | [From an AI agent](#from-an-ai-agent-mcp) |
+| Agent Skill | Agent frameworks; runs next to NEAR's official MCP Server | [skills/near-sentinel](skills/near-sentinel/SKILL.md) |
+| TypeScript SDK | Wallets, payment apps, bots | [From TypeScript](#from-typescript-sdk) |
+| REST API (Docker image) | Any language or backend; self-host or use a hosted instance | [Over HTTP](#over-http-rest) |
+| Sentinel Guard / Vault contracts | dApps: pay once per intent; agent allowances | [Guard](#on-chain-sentinel-guard-contract), [Vault](#on-chain-sentinel-vault-agent-allowance) |
+
+Today the packages install from this repository; publishing them to npm is a packaging step, not a code change.
+
+**Open source:** MIT. The core (SDK, MCP server, API, contracts) stays free and self-hostable.
+
+**Revenue: none today, but a clear model exists.**
+1. **Hosted API:** a free tier for builders; paid plans by number of checks for wallets, agent platforms and payment apps. The API already supports API keys (hashed, `API_KEYS_SHA256`).
+2. **Enterprise and self-hosted support:** SLAs, custom provider sets and private deployments for wallets, exchanges and custodians that must run it themselves.
+3. **Optional on-chain fee:** today Guard and Vault only charge NEAR storage costs, with no profit. A small, transparent per-payment fee could be set by whoever deploys them.
+4. **Ecosystem grants:** payment safety for AI agents is public-good infrastructure for NEAR's agent economy.
+
+Running costs stay low because the service is read-only, holds no keys and needs only an embedded SQLite file, no database server: the live instance runs on a 1 GB server.
 
 ## Built with, and AI disclosure
 

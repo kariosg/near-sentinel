@@ -49,7 +49,7 @@ export const GUARD_STATUS_HELP: Record<string, string> = {
 
 const ERRORS: Array<[RegExp, string]> = [
   [/INSUFFICIENT_VAULT_BALANCE/, "The vault does not hold that much. Use Max to withdraw the exact balance (a new allowance keeps a small part of the first deposit for NEAR storage)."],
-  [/INSUFFICIENT_DEPOSIT/, "The deposit is too small to pay for storing a new allowance. Attach a little more NEAR (0.01 is plenty)."],
+  [/INSUFFICIENT_DEPOSIT/, "The deposit does not cover the storage this allowance needs (more receivers need more storage). Attach a little more NEAR, e.g. 0.02."],
   [/NO_POLICY/, "This account has no allowance for that agent. You can only manage allowances you funded as the owner: connect the owner's wallet, or create one with Fund."],
   [/FROZEN/, "The owner has frozen this agent, so it cannot pay. The owner can unfreeze it in Freeze / unfreeze."],
   [/OVER_PER_PAYMENT_LIMIT/, "The payment is above the per-payment limit the owner set."],

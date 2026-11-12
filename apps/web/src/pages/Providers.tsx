@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api";
 import { LatencyChart } from "../components/LatencyChart";
-import { Card, Empty, ErrorBox, fmtMs, fmtPct, Loading, Mono, Pill, Source } from "../components/ui";
+import { Card, Empty, ErrorBox, fmtMs, fmtPct, Loading, Mono, Pill, ScrollArea, Source } from "../components/ui";
 
 /** "no" is a warning only where it limits Sentinel (method support); a non-archival node is normal. */
 const yes = (v: boolean | null, noTone: "warning" | "neutral" = "warning") =>
@@ -23,7 +23,8 @@ export function ProvidersPage() {
         ) : health.isError ? (
           <ErrorBox error={health.error} />
         ) : (
-          <div className="overflow-x-auto">
+          <>
+            <ScrollArea label="Provider health table">
             <table className="w-full text-sm">
               <thead className="text-left text-xs text-muted">
                 <tr>
@@ -66,11 +67,12 @@ export function ProvidersPage() {
                 ))}
               </tbody>
             </table>
+            </ScrollArea>
             <p className="mt-2 text-xs text-muted">
               Capabilities are <strong className="text-ink-2">tested</strong> by calling each method, not read from the provider's own <Mono>status</Mono> (which can
               misreport, e.g. archival nodes reporting a recent earliest block).
             </p>
-          </div>
+          </>
         )}
       </Card>
 

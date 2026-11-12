@@ -90,9 +90,16 @@ export function InspectPage() {
                 role="tab"
                 aria-selected={mode === k}
                 onClick={() => setMode(k)}
-                className={`rounded-lg px-3.5 py-1.5 transition ${mode === k ? "bg-surface-3 font-medium text-ink shadow" : "text-ink-2 hover:text-ink"}`}
+                className={`whitespace-nowrap rounded-lg px-3 py-1.5 transition sm:px-3.5 ${mode === k ? "bg-surface-3 font-medium text-ink shadow" : "text-ink-2 hover:text-ink"}`}
               >
-                {k === "hash" ? "Hash + sender" : "Signed transaction (definitive)"}
+                {k === "hash" ? (
+                  "Hash + sender"
+                ) : (
+                  <>
+                    <span className="sm:hidden">Signed tx (definitive)</span>
+                    <span className="hidden sm:inline">Signed transaction (definitive)</span>
+                  </>
+                )}
               </button>
             ))}
           </div>

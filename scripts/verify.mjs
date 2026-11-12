@@ -36,7 +36,7 @@ const major = Number(process.versions.node.split(".")[0]);
 const minor = Number(process.versions.node.split(".")[1]);
 step("Node ≥ 22.16", () => (major > 22 || (major === 22 && minor >= 16) ? { status: "PASS", detail: process.version } : { status: "FAIL", detail: `${process.version} (need ≥ 22.16)` }));
 
-step("Build (6 packages)", () => {
+step("Build (7 packages)", () => {
   const r = run("pnpm", ["build"], 15 * 60_000);
   return { status: r.ok ? "PASS" : "FAIL", detail: r.ok ? `${r.secs}s` : r.out.trim().split("\n").slice(-5).join(" | ") };
 });

@@ -454,3 +454,35 @@ test("friendly messages: every vault contract error becomes a plain sentence", a
   expect(friendlyVaultError("User rejected the request")).toBe("Cancelled in the wallet. Nothing was sent.");
   expect(friendlyVaultError("something new")).toBe("something new");
 });
+
+test("help tooltips: the trigger announces the text, Escape closes it, hidden text is not read before it is shown", async ({ page }) => {
+  await skipIdentity(page);
+  await page.goto("/#/start");
+  const term = page.getByRole("button", { name: "nonce", exact: true });
+  await expect(page.getByRole("tooltip").filter({ hasText: "A counter on each NEAR access key" })).toHaveCount(0);
+  await term.focus();
+  const tip = page.getByRole("tooltip").filter({ hasText: "A counter on each NEAR access key" });
+  await expect(tip).toBeVisible();
+  await expect(term).toHaveAttribute("aria-describedby", (await tip.getAttribute("id"))!);
+  await page.keyboard.press("Escape");
+  await expect(tip).toBeHidden();
+});
+
+test("share preview: description, Open Graph and X card tags, and the preview image is served", async ({ page, request }) => {
+  await page.goto("/");
+  await expect(page.locator('meta[name="description"]')).toHaveAttribute("content", /Did the payment land\?/);
+  await expect(page.locator('meta[property="og:image"]')).toHaveAttribute("content", /\/og\.png$/);
+  await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute("content", "summary_large_image");
+  const og = await request.get("/og.png");
+  expect(og.status()).toBe(200);
+  expect(og.headers()["content-type"]).toContain("image/png");
+});
+
+test("integrate page: how to use it in your project, open source, and the revenue model", async ({ page }) => {
+  await skipIdentity(page);
+  await page.goto("/#/integrate");
+  const card = page.locator("section", { hasText: "Use it in your project" });
+  await expect(card).toContainText("Revenue: none today, but a clear model exists");
+  await expect(card).toContainText("Open source (MIT)");
+  await expect(card.getByRole("link", { name: "Details" })).toHaveAttribute("href", /#integration-sustainability-and-business-model$/);
+});

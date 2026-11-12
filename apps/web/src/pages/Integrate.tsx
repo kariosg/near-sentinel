@@ -95,6 +95,44 @@ near account add-key <agent>.testnet grant-function-call-access --allowance '0.2
 # Agent: before paying, ask how much it may spend now (read-only, every provider)
 curl -s '${origin}/api/v1/allowance?contract=vault.karios.testnet&owner=karios.testnet&agent=kariosr.testnet'`}</Code>
       </Card>
+
+      <Card title="Use it in your project — and how it stays sustainable" icon="layers">
+        <div className="grid gap-5 text-sm text-ink-2 md:grid-cols-2">
+          <div>
+            <p className="font-medium text-ink">Integrate today</p>
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              <li>
+                <strong className="text-ink">MCP server</strong> or <strong className="text-ink">Agent Skill</strong> for AI agents
+              </li>
+              <li>
+                <strong className="text-ink">TypeScript SDK</strong> for wallets, payment apps and bots
+              </li>
+              <li>
+                <strong className="text-ink">REST API</strong> (Docker image): self-host, or use a hosted instance
+              </li>
+              <li>
+                <strong className="text-ink">Guard / Vault contracts</strong> for pay-once and agent allowances on-chain
+              </li>
+            </ul>
+            <p className="mt-2 text-xs text-muted">Open source (MIT): the core stays free and self-hostable.</p>
+          </div>
+          <div>
+            <p className="font-medium text-ink">Revenue: none today, but a clear model exists</p>
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              <li>Hosted API: free tier for builders, paid plans by number of checks (API keys are already supported)</li>
+              <li>Enterprise and self-hosted support: SLAs, custom provider sets, private deployments</li>
+              <li>Optional, transparent on-chain fee in Guard / Vault (today they charge only NEAR storage)</li>
+              <li>Ecosystem grants: payment safety is public-good infrastructure for NEAR&apos;s agent economy</li>
+            </ul>
+            <p className="mt-2 text-xs text-muted">
+              Low running cost: read-only, no keys, an embedded SQLite file; the live instance runs on a 1 GB server.{" "}
+              <a className={linkClass} href="https://github.com/kariosg/near-sentinel#integration-sustainability-and-business-model" target="_blank" rel="noreferrer">
+                Details
+              </a>
+            </p>
+          </div>
+        </div>
+      </Card>
     </div>
   );
 }

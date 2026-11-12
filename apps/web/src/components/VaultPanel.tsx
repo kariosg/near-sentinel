@@ -112,7 +112,7 @@ export function VaultPanel() {
                 {nearOf(p.per_payment_max)} / {nearOf(p.daily_max)} NEAR (spent in window: {nearOf(p.spent_in_window)})
               </dd>
               <dt className="text-muted">
-                Left in this 24 h<Help label="left in this 24-hour window">The 24-hour limit minus what the agent spent since the window started. The window restarts 24 hours after its first payment.</Help>
+                Left in this 24 h<Help label="left in this 24-hour window">The 24-hour limit minus what the agent spent since the window started. The first window starts when the allowance is created; after it ends, a new one starts with the next payment.</Help>
               </dt>
               <dd className="text-ink-2">
                 {nearOf(subYocto(p.daily_max, p.spent_in_window))} NEAR

@@ -4,6 +4,7 @@
  *   inspect-verdict  — one click on the real-money example → DO_NOT_RETRY
  *   guard-duplicate  — the Guard contract: a paid intent is PAID, a retry would be refused
  *   vault-allowance  — the Vault: how much the agent may spend now
+ *   run-it-live      — the Start page replay: naive agent pays twice, guarded agent once
  * Output: media/<name>.webm (git-ignored). Convert to docs/media/<name>.gif with the ffmpeg command below.
  *
  *   pnpm start                        # in another terminal
@@ -86,6 +87,18 @@ await clip("vault-allowance", async (page, caption) => {
   await page.getByText("Available now").first().waitFor({ timeout: 30000 });
   await page.evaluate(() => window.scrollBy({ top: 160 }));
   await caption("Limits per payment and per day, checked on every provider.", 3400);
+});
+
+await clip("run-it-live", async (page, caption, wait) => {
+  await page.goto(`${BASE}/#/start`);
+  await page.getByRole("button", { name: /Run it live/ }).scrollIntoViewIfNeeded();
+  await page.evaluate(() => window.scrollBy({ top: -120 }));
+  await caption("Run it live: two agents, the same RPC timeout.", 1600);
+  await page.getByRole("button", { name: /Run it live/ }).click();
+  await page.getByText(/Sentinel: check 1: WAIT_AND_RECHECK/).waitFor({ timeout: 30000 });
+  await page.evaluate(() => window.scrollBy({ top: 260, behavior: "smooth" }));
+  await wait(600);
+  await caption("Naive agent: paid twice. Sentinel-guarded agent: paid once.", 3600);
 });
 
 await browser.close();

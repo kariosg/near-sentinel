@@ -89,9 +89,12 @@ export async function accountBalance(accountId: string): Promise<AccountBalance>
     const r = j.result;
     if (!r || typeof r.amount !== "string" || !/^\d+$/.test(r.amount)) throw new Error(j.error?.message ?? "No balance returned");
     const total = BigInt(r.amount);
+    const locked = /^\d+$/.test(r.locked ?? "") ? BigInt(r.locked!) : 0n;
     const storage = BigInt(r.storage_usage ?? 0) * 10n ** 19n;
-    const available = total > storage ? total - storage : 0n;
-    return { total: total.toString(), storageReserved: storage.toString(), locked: /^\d+$/.test(r.locked ?? "") ? r.locked! : "0", available: available.toString() };
+    // NEAR covers storage from amount + locked, so staked NEAR reduces what must stay in the liquid balance.
+    const reserve = storage > locked ? storage - locked : 0n;
+    const available = total > reserve ? total - reserve : 0n;
+    return { total: total.toString(), storageReserved: reserve.toString(), locked: locked.toString(), available: available.toString() };
   } finally {
     clearTimeout(t);
   }

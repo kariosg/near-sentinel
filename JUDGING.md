@@ -9,10 +9,14 @@ For human judges and AI reviewers. Each claim below links to the command, transa
 | Time | Do | Expect |
 |---|---|---|
 | 1 min | Open **https://64-177-60-105.sslip.io** | The live dashboard on NEAR testnet. Start page → "Start the 3-minute tour". |
-| 10 min | `npm install -g pnpm@8` (if needed), `pnpm install`, then **`pnpm verify`** | One summary table: build, 240 tests, demo, live testnet, 43 browser tests, contracts (if Docker). Exit code 0. |
+| 10 min | `npm install -g pnpm@8` (if needed), `pnpm install`, then **`pnpm verify`** | One summary table: build, 240 tests, demo, live testnet, 46 browser tests, contracts (if Docker). Exit code 0. |
 | 3 min | `pnpm install && pnpm verify --quick` | Same, without network, browser or Docker. |
 
 Verified on 2026-11-11 on Windows (Node 22.16, Chrome) and in a clean Linux container (`mcr.microsoft.com/playwright:v1.65.0-noble`: Node 26, no git checkout, no Chrome; the browser tests used Playwright's bundled Chromium).
+
+Integration and sustainability: any project can integrate it today (MCP, Agent Skill, SDK, REST/Docker, contracts); open source (MIT). **Revenue: none today, but a clear model exists** (hosted API plans, enterprise support, optional on-chain fee, grants): [README → Integration, sustainability and business model](README.md#integration-sustainability-and-business-model).
+
+Step-by-step test checklist with expected results (browser, own testnet wallet, source): [docs/TESTING.md](docs/TESTING.md).
 
 ## Demo data for testing
 
@@ -21,8 +25,8 @@ Every item is real on NEAR testnet (nothing mocked). Each link opens the live da
 | Scenario | One click | You'll see |
 |---|---|---|
 | Real money: the guarded agent's payment (reply timed out, it asked Sentinel) | [guarded](https://64-177-60-105.sslip.io/#/inspect?example=guarded) | `DO_NOT_RETRY`: it landed, so paying again would double-pay |
-| Real money: the naive agent's first payment | [naive1](https://64-177-60-105.sslip.io/#/inspect?example=naive1) | `DO_NOT_RETRY`: it landed… |
-| Real money: the naive agent's duplicate | [naive2](https://64-177-60-105.sslip.io/#/inspect?example=naive2) | `DO_NOT_RETRY`: …and so did the duplicate (paid twice) |
+| Real money: the naive agent's first payment | [naive1](https://64-177-60-105.sslip.io/#/inspect?example=naive1) | `DO_NOT_RETRY`: this one landed… |
+| Real money: the naive agent's duplicate | [naive2](https://64-177-60-105.sslip.io/#/inspect?example=naive2) | `DO_NOT_RETRY`: …and so did this duplicate (paid twice) |
 | The tx that used an unsent payment's nonce | [nonce](https://64-177-60-105.sslip.io/#/inspect?example=nonce) | `DO_NOT_RETRY` on this tx; it is why the unsent one was proven `SAFE_TO_RETRY` |
 | Normal success | [success](https://64-177-60-105.sslip.io/#/inspect?example=success) | `DO_NOT_RETRY` |
 | Success across 2 receipts | [receipts](https://64-177-60-105.sslip.io/#/inspect?example=receipts) | `DO_NOT_RETRY`, 2 receipts in the graph |
