@@ -9,10 +9,29 @@ For human judges and AI reviewers. Each claim below links to the command, transa
 | Time | Do | Expect |
 |---|---|---|
 | 1 min | Open **https://64-177-60-105.sslip.io** | The live dashboard on NEAR testnet. Start page → "Start the 3-minute tour". |
-| 10 min | `npm install -g pnpm@8` (if needed), `pnpm install`, then **`pnpm verify`** | One summary table: build, 240 tests, demo, live testnet, 34 browser tests, contracts (if Docker). Exit code 0. |
+| 10 min | `npm install -g pnpm@8` (if needed), `pnpm install`, then **`pnpm verify`** | One summary table: build, 240 tests, demo, live testnet, 43 browser tests, contracts (if Docker). Exit code 0. |
 | 3 min | `pnpm install && pnpm verify --quick` | Same, without network, browser or Docker. |
 
 Verified on 2026-11-11 on Windows (Node 22.16, Chrome) and in a clean Linux container (`mcr.microsoft.com/playwright:v1.65.0-noble`: Node 26, no git checkout, no Chrome; the browser tests used Playwright's bundled Chromium).
+
+## Demo data for testing
+
+Every item is real on NEAR testnet (nothing mocked). Each link opens the live dashboard and runs the check, no wallet. Verdicts were re-checked against the live API on 2026-11-12.
+
+| Scenario | One click | You'll see |
+|---|---|---|
+| Real money: the guarded agent's payment (reply timed out, it asked Sentinel) | [guarded](https://64-177-60-105.sslip.io/#/inspect?example=guarded) | `DO_NOT_RETRY`: it landed, so paying again would double-pay |
+| Real money: the naive agent's first payment | [naive1](https://64-177-60-105.sslip.io/#/inspect?example=naive1) | `DO_NOT_RETRY`: it landed… |
+| Real money: the naive agent's duplicate | [naive2](https://64-177-60-105.sslip.io/#/inspect?example=naive2) | `DO_NOT_RETRY`: …and so did the duplicate (paid twice) |
+| The tx that used an unsent payment's nonce | [nonce](https://64-177-60-105.sslip.io/#/inspect?example=nonce) | `DO_NOT_RETRY` on this tx; it is why the unsent one was proven `SAFE_TO_RETRY` |
+| Normal success | [success](https://64-177-60-105.sslip.io/#/inspect?example=success) | `DO_NOT_RETRY` |
+| Success across 2 receipts | [receipts](https://64-177-60-105.sslip.io/#/inspect?example=receipts) | `DO_NOT_RETRY`, 2 receipts in the graph |
+| Contract panic | [panic](https://64-177-60-105.sslip.io/#/inspect?example=panic) | An explained failure |
+| Top-level success hiding a failed `ft_burn` | [partial](https://64-177-60-105.sslip.io/#/inspect?example=partial) | `MANUAL_REVIEW_REQUIRED` |
+| Guard contract, paid intent `tmwbtoqi6-a` | Inspect → Guard → *Paid intent* | `PAID` on every provider |
+| Vault allowance for agent `kariosr.testnet` | Inspect → Vault → *Live agent allowance* | `ACTIVE`, the limits and the amount available now |
+
+Demo accounts: `karios.testnet` (payer, Vault owner), `kariosr.testnet` (receiver, Vault agent), `guard.karios.testnet` (Guard contract), `vault.karios.testnet` (Vault contract). The Start page also has a glossary of the NEAR terms used (nonce, validity window, receipts, function-call key…).
 
 ## Claims
 

@@ -3,16 +3,13 @@ import { useEffect, useState, type FormEvent } from "react";
 import { api, type Diagnostic, type Inspection, type InspectInput } from "../api";
 import { GuardPanel } from "../components/GuardPanel";
 import { VaultPanel } from "../components/VaultPanel";
-import { Icon, type IconName } from "../components/icons";
+import { Icon } from "../components/icons";
+import { DEMO_TXS, explorerTx, type DemoTx } from "../demoData";
 import { ReceiptTree } from "../components/ReceiptTree";
 import { Button, Card, download, Empty, ErrorBox, Field, fmtMs, linkClass, Loading, Mono, Pill, ProgressBar, stateTone, toneBg, toneText, VERDICTS, verdictTone } from "../components/ui";
 
-/** Real testnet transactions captured 2026-11-09 (also the SDK test fixtures). Not mock data. */
-const EXAMPLES: Array<{ key: string; label: string; hint: string; icon: IconName; hash: string; sender: string }> = [
-  { key: "success", label: "Succeeded", hint: "expect DO_NOT_RETRY", icon: "check", hash: "9WeBPyuE9vC6CSTUF2iSujGq7Use1B4SrSfcPZNkRsc8", sender: "atlas.loca-swarm-mvwu8dfo.testnet" },
-  { key: "panic", label: "Contract panic", hint: "expect an explained failure", icon: "x", hash: "8mSLr4P4p576mKVyLwMEKMmaqGLmW7NwLqDd28s5zeiK", sender: "predit-fc-operator.testnet" },
-  { key: "partial", label: "Partially completed", hint: "expect MANUAL_REVIEW_REQUIRED", icon: "hand", hash: "EtpgCjJPA1WN9MxG17C88GtEU5kf6mx77YxhrWdjMuBd", sender: "amstr-admin-zxlhcx.testnet" },
-];
+/** Real testnet transactions (real-money demo + SDK test fixtures). Not mock data. */
+const EXAMPLES = DEMO_TXS;
 
 const VERDICT_TEXT: Record<string, string> = {
   DO_NOT_RETRY: "Do not retry",
@@ -41,6 +38,25 @@ export function InspectPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const pick = (x: DemoTx) => {
+    setMode("hash");
+    setHash(x.hash);
+    setSender(x.sender);
+    m.mutate({ transactionHash: x.hash, senderAccountId: x.sender });
+  };
+
+  // The page stays mounted when only the ?example= query changes (e.g. from Ctrl+K), so react to it here.
+  useEffect(() => {
+    const on = () => {
+      const key = new URLSearchParams(window.location.hash.split("?")[1] ?? "").get("example");
+      const ex = EXAMPLES.find((e) => e.key === key);
+      if (ex) pick(ex);
+    };
+    window.addEventListener("hashchange", on);
+    return () => window.removeEventListener("hashchange", on);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const submit = (e: FormEvent) => {
     e.preventDefault();
     if (mode === "hash") m.mutate({ transactionHash: hash.trim(), senderAccountId: sender.trim() });
@@ -49,6 +65,21 @@ export function InspectPage() {
 
   return (
     <div className="space-y-6">
+      <nav aria-label="Tools on this page" className="rounded-xl border border-line bg-surface-2/50 px-4 py-3 text-sm text-ink-2">
+        <span className="mr-1 font-medium text-ink">This page has 3 read-only tools:</span>
+        <a className={linkClass} href="#/inspect" onClick={(e) => jump(e, "tool-check")}>
+          ① Did my transaction land?
+        </a>
+        <span className="mx-1.5 text-muted">·</span>
+        <a className={linkClass} href="#/inspect" onClick={(e) => jump(e, "tool-guard")}>
+          ② Guard: was this intent already paid?
+        </a>
+        <span className="mx-1.5 text-muted">·</span>
+        <a className={linkClass} href="#/inspect" onClick={(e) => jump(e, "tool-vault")}>
+          ③ Vault: how much may this agent spend?
+        </a>
+      </nav>
+      <div id="tool-check" className="scroll-mt-24">
       <Card title="Check a transaction" subtitle="Nothing is signed or sent. Sentinel only reads from public RPC providers." icon="search">
         <form onSubmit={submit} className="space-y-4">
           <div className="inline-flex rounded-xl border border-line bg-page/60 p-1 text-sm" role="tablist" aria-label="Input type">
@@ -74,6 +105,15 @@ export function InspectPage() {
             <label className="block text-xs font-medium text-ink-2">
               Signed transaction (Base64-encoded Borsh). It contains a signature, never a private key. With it Sentinel can prove whether the transaction can still land
               (nonce + expiry + history coverage).
+              <span className="mt-1 block font-normal text-muted">
+                Where to get it: your agent already has these bytes. It is what it sent to the RPC (in near-api-js:{" "}
+                <code className="font-mono">Buffer.from(signedTx.encode()).toString(&quot;base64&quot;)</code>). Keep them after a timeout and paste them here, or
+                call the SDK; see{" "}
+                <a className={linkClass} href="#/integrate">
+                  Integrate
+                </a>
+                .
+              </span>
               <textarea
                 value={signed}
                 onChange={(e) => setSigned(e.target.value)}
@@ -87,38 +127,74 @@ export function InspectPage() {
             <Button type="submit" icon="search" disabled={m.isPending}>
               {m.isPending ? "Checking providers…" : "Inspect"}
             </Button>
-            {mode === "hash" && (
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs text-muted">Real testnet examples:</span>
-                {EXAMPLES.map((x) => (
-                  <button
-                    key={x.hash}
-                    type="button"
-                    title={`${x.hash} (${x.hint})`}
-                    onClick={() => {
-                      setHash(x.hash);
-                      setSender(x.sender);
-                      m.mutate({ transactionHash: x.hash, senderAccountId: x.sender });
-                    }}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-line-strong bg-surface-2/60 px-3 py-1.5 text-xs font-medium text-ink transition hover:border-link/60 hover:bg-surface-3"
-                  >
-                    <Icon name={x.icon} size={13} className="text-link" />
-                    {x.label}
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
+          {mode === "hash" && (
+            <div className="space-y-3">
+              <ExampleGroup
+                title="Real-money demo on testnet (one click, no wallet)"
+                items={EXAMPLES.filter((x) => x.group === "real-money")}
+                onPick={pick}
+              />
+              <ExampleGroup title="Edge cases from real testnet" items={EXAMPLES.filter((x) => x.group === "edge-case")} onPick={pick} />
+            </div>
+          )}
         </form>
       </Card>
+      </div>
 
       {m.isPending && <Querying />}
       {m.isError && <ErrorBox error={m.error} />}
       {m.data && <Result key={m.data.inspectedAt} r={m.data} />}
       {!m.data && !m.isPending && !m.isError && <Empty icon="search">Enter a transaction or pick an example. Nothing is signed or sent.</Empty>}
 
-      <GuardPanel />
-      <VaultPanel />
+      <div id="tool-guard" className="scroll-mt-24">
+        <GuardPanel />
+      </div>
+      <div id="tool-vault" className="scroll-mt-24">
+        <VaultPanel />
+      </div>
+    </div>
+  );
+}
+
+/** Jump to a section without changing the hash route. */
+function jump(e: { preventDefault(): void }, id: string) {
+  e.preventDefault();
+  const el = document.getElementById(id);
+  el?.scrollIntoView({ behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+  el?.querySelector<HTMLElement>("input, button, textarea")?.focus({ preventScroll: true });
+}
+
+/** Real testnet examples with a visible "you'll see" line (not hidden in a hover title, so touch users see it too). */
+function ExampleGroup({ title, items, onPick }: { title: string; items: DemoTx[]; onPick: (x: DemoTx) => void }) {
+  return (
+    <div>
+      <p className="mb-1.5 text-xs font-medium text-muted">{title}</p>
+      <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+        {items.map((x) => (
+          <li key={x.key} className="rounded-xl border border-line bg-surface-2/50 p-2.5">
+            <button
+              type="button"
+              aria-label={x.label}
+              title={x.story}
+              onClick={() => onPick(x)}
+              className="inline-flex items-center gap-1.5 rounded-full border border-line-strong bg-surface-2/60 px-3 py-1.5 text-xs font-medium text-ink transition hover:border-link/60 hover:bg-surface-3"
+            >
+              <Icon name={x.icon} size={13} className="text-link" />
+              {x.label}
+            </button>
+            <p className="mt-1.5 text-[11px] leading-snug text-ink-2">
+              You&apos;ll see: <span className="font-medium text-ink">{x.expect}</span>
+            </p>
+            <p className="mt-0.5 text-[11px] leading-snug text-muted">
+              {x.story}{" "}
+              <a className="text-link underline" href={explorerTx(x.hash)} target="_blank" rel="noreferrer">
+                explorer
+              </a>
+            </p>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

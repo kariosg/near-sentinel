@@ -2,12 +2,25 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { api, type DemoRun } from "../api";
 import { Icon, type IconName } from "../components/icons";
+import { GLOSSARY, Term } from "../components/Term";
 import { CodeBlock, CountUp, LiveDot, Pill, toneText, VERDICTS, verdictTone } from "../components/ui";
+import { VerdictTree } from "../components/VerdictTree";
+import { DEMO_ACCOUNTS, DEMO_TXS, explorerAccount } from "../demoData";
 
 const TOUR_KEY = "sentinel.tour";
 
 type Step = { id: string; title: string; href: string; time: string; icon: IconName; what: string; expect: string; cta: string };
 const STEPS: Step[] = [
+  {
+    id: "proof",
+    title: "Check the real-money proof yourself",
+    href: "#/inspect?example=guarded",
+    time: "20 s",
+    icon: "coins",
+    what: "The real testnet payment from the demo: the reply timed out, the guarded agent asked Sentinel instead of paying again.",
+    expect: "DO_NOT_RETRY: the payment landed, confirmed by independent providers. The naive agent's two payments are one click away on the same page.",
+    cta: "Check it",
+  },
   {
     id: "inspect",
     title: "Inspect a real testnet transaction",
@@ -106,8 +119,8 @@ export function StartPage() {
           </h1>
           <p className="mt-5 max-w-xl text-base leading-relaxed text-ink-2">
             Sign again and an AI agent may pay twice; don&apos;t, and it may never pay. NEAR Sentinel answers with proof from independent RPC providers before the
-            agent signs anything new: <strong>landed</strong>, <strong>can still land</strong>, <strong>can never land</strong> (proven by its nonce or
-            validity window), or <strong>partly executed</strong>. It works on any NEAR transaction, guarded or not, with no contract to adopt.
+            agent signs anything new: <strong>landed</strong>, <strong>can still land</strong>, <strong>can never land</strong> (proven by its <Term k="nonce">nonce</Term> or{" "}
+            <Term k="validity">validity window</Term>), or <strong>partly executed</strong>. It works on any NEAR transaction, guarded or not, with no contract to adopt.
           </p>
           <div className="mt-5 max-w-xl rounded-xl border border-line bg-surface-2/60 px-4 py-3 text-sm" aria-label="Proof on testnet with real money">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted">Proven on testnet with real money</p>
@@ -127,6 +140,9 @@ export function StartPage() {
               </span>
               <a className="font-mono text-xs text-link underline" href="https://testnet.nearblocks.io/txns/C59gttNUHCaVTHVi2GKCw6zu5C7QcmwPbUuw9NeaXnzS" target="_blank" rel="noreferrer">
                 tx
+              </a>
+              <a className="text-xs font-medium text-link underline" href="#/inspect?example=guarded" onClick={() => mark("proof")}>
+                Check it in Sentinel →
               </a>
             </p>
             <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-ink-2">
@@ -172,7 +188,9 @@ export function StartPage() {
               </dd>
             </div>
             <div>
-              <dt className="text-xs text-muted">Operators for “safe”</dt>
+              <dt className="text-xs text-muted">
+                <Term k="operators">Operators</Term> for “safe”
+              </dt>
               <dd className="mt-1 text-xl font-semibold text-ink">≥ {providers.data?.minIndependentOperators ?? 2}</dd>
             </div>
             <div>
@@ -285,6 +303,62 @@ export function StartPage() {
             );
           })}
         </div>
+        <VerdictTree />
+      </section>
+
+      {/* ------------------------------------------------------------ demo data + glossary */}
+      <section aria-labelledby="demo-data-title">
+        <SectionTitle
+          id="demo-data-title"
+          eyebrow="Test it yourself"
+          title="Real demo data, no wallet needed"
+          sub="Every transaction and account below is real on NEAR testnet. Click one to check it in Sentinel, or open it in the explorer."
+        />
+        <div className="grid gap-5 lg:grid-cols-[1.3fr_1fr]">
+          <div className="card rounded-2xl border border-line p-5">
+            <h3 className="font-semibold text-ink">Transactions to try</h3>
+            <ul className="mt-3 divide-y divide-line">
+              {DEMO_TXS.map((x) => (
+                <li key={x.key} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-2.5 text-sm">
+                  <a className="font-medium text-link underline underline-offset-2" href={`#/inspect?example=${x.key}`} onClick={() => x.key === "guarded" && mark("proof")}>
+                    {x.label}
+                  </a>
+                  <span className="text-xs text-ink-2">
+                    You&apos;ll see: <span className="font-medium text-ink">{x.expect}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="space-y-5">
+            <div className="card rounded-2xl border border-line p-5">
+              <h3 className="font-semibold text-ink">Demo accounts</h3>
+              <ul className="mt-3 space-y-2.5 text-sm">
+                {DEMO_ACCOUNTS.map((a) => (
+                  <li key={a.id}>
+                    <a className="font-mono text-xs text-link underline" href={explorerAccount(a.id)} target="_blank" rel="noreferrer">
+                      {a.id}
+                    </a>
+                    <p className="text-xs text-ink-2">{a.role}</p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="card rounded-2xl border border-line p-5">
+              <h3 id="glossary" className="font-semibold text-ink">
+                Glossary
+              </h3>
+              <dl className="mt-3 space-y-2.5 text-sm">
+                {Object.values(GLOSSARY).map((g) => (
+                  <div key={g.term}>
+                    <dt className="font-medium text-ink">{g.term}</dt>
+                    <dd className="text-xs leading-relaxed text-ink-2">{g.text}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          </div>
+        </div>
       </section>
 
       {/* ------------------------------------------------------------ terminal */}
@@ -295,7 +369,7 @@ export function StartPage() {
             {[
               ["240 unit and integration tests", "SDK, MCP server (real stdio), API, demo, NEAR AI agent"],
               ["10 live tests", "read-only, against public testnet and mainnet RPCs"],
-              ["34 browser tests", "flows, accessibility, phone/tablet/desktop, keyboard, this tour"],
+              ["43 browser tests", "flows, accessibility, phone/tablet/desktop, keyboard, this tour, the demo data"],
               ["33 + 27 + 21 contract checks", "Guard and Vault: Rust unit tests, a local NEAR node, then live on testnet"],
             ].map(([a, b]) => (
               <li key={a} className="flex gap-3">

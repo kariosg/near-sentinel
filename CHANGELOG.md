@@ -4,6 +4,15 @@
 
 First release, built for NEAR HACKATHON (Nov 2026).
 
+### Judge helpers: real demo data, glossary, diagrams, GIFs (2026-11-12)
+- Dashboard: one shared list of real testnet demo data (`apps/web/src/demoData.ts`). The Inspect page now has 8 one-click examples in two groups (the real-money demo and real edge cases); each shows what you will see as visible text, not only on hover. The Start page proof strip links straight into Sentinel ("Check it in Sentinel"), and a new tour step checks the real-money payment.
+- Start page: "Real demo data, no wallet needed" (transactions with expected verdicts, the demo accounts with explorer links) and a glossary; a decision tree showing how a verdict is chosen (mirrors `packages/sdk/src/retry.ts`).
+- Plain-language tooltips (tap, hover or keyboard) for nonce, validity window, independent operators, intent, allowance and function-call key; Inspect gets an intro with jump links to its three tools and help on where signed-transaction bytes come from; Ctrl+K gets the real-money examples and the glossary. Choosing an example from Ctrl+K while already on Inspect now runs it.
+- README: 3 mermaid diagrams (the problem, the decision tree, the architecture) and 3 short GIFs (`scripts/record-gifs.mjs`); JUDGING.md: a "Demo data for testing" table with one-click links to the live site.
+- Vault panel shows everything the contract reports, each with an ⓘ help: owner and agent, available now, vault balance, limits, what is left in the 24-hour window and when it resets, the 0.006 NEAR fee per payment, frozen, allowed receivers, plus what the status means and what to do next. The Guard panel explains each status the same way.
+- Owner actions: the connected wallet's balance (available, reserved for storage, staked), the current allowance for the typed agent, guidance per tab, a Max button for withdraw, and checks before anything is signed (limits, account ids, wallet balance, vault balance, "not your allowance"). Contract and wallet errors are shown in plain language with the technical details one click away, and a transaction that fails on-chain is never reported as sent.
+- 9 new browser tests (43 in total). No change to the SDK, API, MCP server or contracts.
+
 ### Sentinel Vault (2026-11-11)
 - New contract `contracts/guard/vault` (crate `sentinel-vault`): an owner-funded allowance for an AI agent with a per-payment limit, a rolling 24-hour limit, a receiver allowlist, freeze and owner-only withdraw. The agent calls `spend` with no deposit, so it can hold only a function-call key limited to `spend`. Pay-once per (owner, agent, intent); a failed transfer restores the balance and allowance.
 - 19 Rust unit tests; 14 sandbox checks, including a function-call key that pays within the policy and is rejected by NEAR for a direct transfer or any other method (sandbox total 27/27 with the guard).

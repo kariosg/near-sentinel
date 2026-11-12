@@ -238,14 +238,14 @@ test.describe("redesign: judge-first navigation", () => {
     await page.goto("/");
     await expect(page.locator("main h1")).toContainText("Did the payment land");
     await expect(page.getByRole("img", { name: /Diagram: an AI agent asks NEAR Sentinel/ })).toBeVisible();
-    await expect(page.getByText("0 of 5 done")).toBeVisible();
+    await expect(page.getByText("0 of 6 done")).toBeVisible();
     await expect(page.getByRole("heading", { name: "Four verdicts, never a guess" })).toBeVisible();
     await page.screenshot({ path: `${SHOTS}/start.png`, fullPage: true, style: SHOT_CSS });
     await page.getByRole("link", { name: /Run it: Inspect a real testnet transaction/ }).click();
     await expect(page.locator("main h1")).toHaveText("Inspect & retry check");
     await expect(page.getByText("Manual review required")).toBeVisible({ timeout: 30_000 });
     await page.goto("/#/start");
-    await expect(page.getByText("1 of 5 done")).toBeVisible();
+    await expect(page.getByText("1 of 6 done")).toBeVisible();
     expect(errors).toEqual([]);
   });
 
@@ -321,4 +321,136 @@ test("reduced motion: the start page shows final values immediately and still wo
   expect(parseFloat(anim)).toBeLessThan(0.01);
   expect(errors).toEqual([]);
   await ctx.close();
+});
+
+test.describe("judge helpers: real demo data, glossary, jump links", () => {
+  test("real-money example: one click from the proof strip shows DO_NOT_RETRY", async ({ page }) => {
+    const errors = trackErrors(page);
+    await skipIdentity(page);
+    await page.goto("/#/start");
+    await page.getByRole("link", { name: "Check it in Sentinel →" }).click();
+    await expect(page.locator("main h1")).toHaveText("Inspect & retry check");
+    await expect(page.getByLabel("Transaction hash")).toHaveValue("C59gttNUHCaVTHVi2GKCw6zu5C7QcmwPbUuw9NeaXnzS");
+    await expect(page.getByText("Do not retry", { exact: true }).first()).toBeVisible({ timeout: 30_000 });
+    expect(errors).toEqual([]);
+  });
+
+  test("inspect: every demo example shows its expected result visibly, and the naive duplicate also landed", async ({ page }) => {
+    const errors = trackErrors(page);
+    await skipIdentity(page);
+    await page.goto("/#/inspect");
+    for (const label of ["Guarded agent paid once", "Naive agent, payment 1", "Naive agent, payment 2", "Nonce proof", "Succeeded", "Multi-receipt success", "Contract panic", "Partially completed"]) {
+      await expect(page.getByRole("button", { name: label, exact: true })).toBeVisible();
+    }
+    await expect(page.getByText("MANUAL_REVIEW_REQUIRED", { exact: true }).first()).toBeVisible();
+    await page.getByRole("button", { name: "Naive agent, payment 2", exact: true }).click();
+    await expect(page.getByLabel("Transaction hash")).toHaveValue("6h2hMxjpjdYwDF6zXJ5gTwD5MY47UT7thdRaxZM2Pc6h");
+    await expect(page.getByText("Do not retry", { exact: true }).first()).toBeVisible({ timeout: 30_000 });
+    expect(errors).toEqual([]);
+  });
+
+  test("inspect: jump links reach the Guard and Vault tools", async ({ page }) => {
+    await skipIdentity(page);
+    await page.goto("/#/inspect");
+    const nav = page.getByRole("navigation", { name: "Tools on this page" });
+    await nav.getByRole("link", { name: /Vault: how much/ }).click();
+    await expect(page.locator("#tool-vault")).toBeInViewport();
+    await expect(page).toHaveURL(/#\/inspect$/);
+    await nav.getByRole("link", { name: /Guard: was this intent/ }).click();
+    await expect(page.locator("#tool-guard")).toBeInViewport();
+  });
+
+  test("glossary: a term explains itself on keyboard focus; glossary, demo accounts and decision tree are on Start", async ({ page }) => {
+    await skipIdentity(page);
+    await page.goto("/#/start");
+    const nonce = page.getByRole("button", { name: "nonce", exact: true });
+    await nonce.focus();
+    await expect(page.getByRole("tooltip").filter({ hasText: "A counter on each NEAR access key" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Real demo data, no wallet needed" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "vault.karios.testnet" })).toHaveAttribute("href", /nearblocks\.io\/address\/vault\.karios\.testnet/);
+    await expect(page.getByRole("figure", { name: /How Sentinel decides/ })).toBeVisible();
+    await expect(page.locator("#glossary")).toBeVisible();
+  });
+
+  test("command palette: a real-money example opens even when already on Inspect", async ({ page }) => {
+    await skipIdentity(page);
+    await page.goto("/#/inspect?example=success");
+    await expect(page.getByLabel("Transaction hash")).toHaveValue("9WeBPyuE9vC6CSTUF2iSujGq7Use1B4SrSfcPZNkRsc8");
+    await page.keyboard.press("Control+k");
+    await page.keyboard.type("guarded agent");
+    await page.keyboard.press("Enter");
+    await expect(page.getByLabel("Transaction hash")).toHaveValue("C59gttNUHCaVTHVi2GKCw6zu5C7QcmwPbUuw9NeaXnzS");
+  });
+});
+
+test.describe("vault and guard: complete information and guidance", () => {
+  test("vault result shows owner, agent, balance, today's headroom, fee, frozen and receivers, each with help", async ({ page }) => {
+    const errors = trackErrors(page);
+    await skipIdentity(page);
+    await page.goto("/#/inspect");
+    const panel = page.locator("section", { hasText: "Agent allowance —" });
+    await page.getByRole("button", { name: "Live agent allowance" }).click();
+    await expect(panel).toContainText("ACTIVE", { timeout: 30_000 });
+    for (const t of ["Owner / agent", "Available now", "Balance", "Left in this 24 h", "Fee per payment", "0.006 NEAR", "Frozen", "Allowed receivers", "The agent can pay now"]) {
+      await expect(panel).toContainText(t);
+    }
+    await expect(panel.getByRole("link", { name: "karios.testnet", exact: true })).toHaveAttribute("href", /nearblocks\.io\/address\/karios\.testnet/);
+    await panel.getByRole("button", { name: "Help: fee per payment" }).focus();
+    await expect(page.getByRole("tooltip").filter({ hasText: "pay-once record" }).first()).toBeVisible();
+    expect(errors).toEqual([]);
+  });
+
+  test("guard result explains what the status means and what to do", async ({ page }) => {
+    await skipIdentity(page);
+    await page.goto("/#/inspect");
+    await page.getByRole("button", { name: "Paid intent" }).click();
+    await expect(page.getByText(/Never pay it again by any other route/)).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole("button", { name: "Help: receiver" })).toBeVisible();
+  });
+
+  test("owner actions: guidance per tab and clear checks before anything is signed (no wallet)", async ({ page }) => {
+    const errors = trackErrors(page);
+    await skipIdentity(page);
+    await page.goto("/#/inspect");
+    const owner = page.locator("section", { hasText: "Owner actions (your wallet signs)" }).last();
+    await expect(owner).toContainText("Connect the owner's wallet to see its balance");
+    await expect(owner).toContainText("Creates the allowance, or replaces its limits");
+    await owner.getByLabel("Agent to manage").fill("agent.example.testnet");
+    await owner.getByLabel("Per payment (NEAR)").fill("0.5");
+    await owner.getByLabel("Per 24 h (NEAR)").fill("0.1");
+    await owner.getByRole("button", { name: "Preview transaction" }).click();
+    await expect(owner).toContainText("must not be higher than the 24-hour limit");
+    await expect(owner.locator("pre")).toHaveCount(0);
+    await owner.getByLabel("Agent to manage").fill("Not An Account!");
+    await owner.getByRole("button", { name: "Preview transaction" }).click();
+    await expect(owner).toContainText("is not a valid NEAR account id");
+    await owner.getByRole("tab", { name: "Withdraw" }).click();
+    await expect(owner).toContainText("Sends NEAR from the vault back to your wallet");
+    await owner.getByLabel("Agent to manage").fill("agent.example.testnet");
+    await owner.getByLabel("Amount to withdraw (NEAR)").fill("0");
+    await owner.getByRole("button", { name: "Preview transaction" }).click();
+    await expect(owner).toContainText("The amount must be more than 0.");
+    await owner.getByRole("tab", { name: "Freeze / unfreeze" }).click();
+    await expect(owner).toContainText("Freezing stops the agent from paying at once");
+    expect(errors).toEqual([]);
+  });
+});
+
+test("friendly messages: every vault contract error becomes a plain sentence", async () => {
+  const { friendlyVaultError } = await import("../src/vaultInfo");
+  const codes = [
+    "INSUFFICIENT_VAULT_BALANCE", "INSUFFICIENT_DEPOSIT: attach at least 1 yoctoNEAR for storage", "NO_POLICY: this owner has no policy for this agent",
+    "FROZEN: the owner has frozen this agent's spending", "OVER_PER_PAYMENT_LIMIT", "OVER_DAILY_LIMIT", "NOT_ALLOWED_RECEIVER: receiver is not on the owner's allowlist",
+    "DUPLICATE_INTENT: a already used intent_id b", "INVALID_POLICY: per_payment_max must be <= daily_max", "INVALID_POLICY: per_payment_max must be > 0",
+    "INVALID_POLICY: at most 20 allowed receivers", "INVALID_POLICY: the vault cannot be a receiver", "INVALID_RECEIVER: cannot pay the vault itself",
+    "INVALID_AMOUNT: must be > 0", "INVALID_INTENT_ID: must not be empty", "INVALID_INTENT_ID: longer than 64 bytes", "NO_POLICY: create it with set_policy first",
+  ];
+  for (const c of codes) {
+    const raw = `{"index":0,"kind":{"FunctionCallError":{"ExecutionError":"Smart contract panicked: ${c}"}}}`;
+    const out = friendlyVaultError(raw);
+    expect(out, c).not.toBe(raw);
+    expect(out, c).not.toMatch(/[A-Z]{3,}_[A-Z_]+/);
+  }
+  expect(friendlyVaultError("User rejected the request")).toBe("Cancelled in the wallet. Nothing was sent.");
+  expect(friendlyVaultError("something new")).toBe("something new");
 });

@@ -1,3 +1,5 @@
+import { Help, Term } from "./Term";
+import { GUARD_STATUS_HELP } from "../vaultInfo";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useState, type FormEvent } from "react";
 import { api, type IntentCheck } from "../api";
@@ -42,7 +44,7 @@ export function GuardPanel() {
     <Card title="Guard contract — has this payment intent already been paid?" icon="shieldCheck" subtitle="Read-only lookup on the Sentinel Guard contract, cross-checked on every provider">
       <p className="mb-4 text-sm text-ink-2">
         Agents that pay through the <strong>Sentinel Guard</strong> contract (<code className="font-mono text-xs">pay(intent_id, receiver_id)</code>) can never
-        double-pay: the contract rejects a repeated <code className="font-mono text-xs">intent_id</code> on-chain. This is a read-only lookup.
+        double-pay: the contract rejects a repeated <Term k="intent">intent</Term> on-chain. This is a read-only lookup.
       </p>
       <form onSubmit={submit} className="grid gap-4 md:grid-cols-[1fr_1fr_1fr_auto] md:items-end">
         <Field label="Guard contract" value={contract} onChange={(e) => setContract(e.target.value)} placeholder="e.g. guard.example.testnet" required />
@@ -72,6 +74,10 @@ export function GuardPanel() {
           </button>
         ))}
       </div>
+      <p className="mt-1.5 text-[11px] text-ink-2">
+        You&apos;ll see: <span className="font-medium text-ink">Paid intent → PAID</span> (a retry with this intent would be refused and refunded) ·{" "}
+        <span className="font-medium text-ink">Unused intent → NOT_RECORDED</span> (safe to pay).
+      </p>
       {m.isPending && <Loading label="Asking every provider…" />}
       {m.isError && (
         <div className="mt-3">
@@ -86,14 +92,21 @@ export function GuardPanel() {
             </span>
             <Pill tone={statusTone(r.status)}>{r.status}</Pill>
             <span className="text-sm text-ink">{r.reason}</span>
+            {GUARD_STATUS_HELP[r.status] && <span className="basis-full text-xs text-ink-2">{GUARD_STATUS_HELP[r.status]}</span>}
           </div>
           {r.intent && (
             <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-              <dt className="text-muted">Receiver</dt>
+              <dt className="text-muted">
+                Receiver<Help label="receiver">The account the Guard paid for this intent.</Help>
+              </dt>
               <dd className="font-mono text-ink-2">{r.intent.receiver_id}</dd>
-              <dt className="text-muted">Amount</dt>
+              <dt className="text-muted">
+                Amount<Help label="amount">The NEAR forwarded to the receiver: the payer's deposit minus a small storage fee the Guard keeps for the pay-once record.</Help>
+              </dt>
               <dd className="text-ink-2">{yoctoToNear(r.intent.amount)} NEAR</dd>
-              <dt className="text-muted">Recorded at block</dt>
+              <dt className="text-muted">
+                Recorded at block<Help label="recorded at block">The NEAR block where the Guard stored this payment. Every provider must see the same record.</Help>
+              </dt>
               <dd className="text-ink-2">{r.intent.block_height}</dd>
             </dl>
           )}

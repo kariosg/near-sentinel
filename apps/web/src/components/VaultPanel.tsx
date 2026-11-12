@@ -1,3 +1,6 @@
+import { Help, Term } from "./Term";
+import { explorerAccount } from "../demoData";
+import { nearOf, RECORD_FEE_NEAR, subYocto, VAULT_STATUS_HELP } from "../vaultInfo";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useState, type FormEvent } from "react";
 import { api, type AllowanceCheck } from "../api";
@@ -8,12 +11,6 @@ import { VaultOwnerActions } from "./VaultOwnerActions";
 const statusTone = (s: AllowanceCheck["status"]): Tone =>
   s === "ACTIVE" ? "good" : s === "EXHAUSTED" ? "warning" : s === "FROZEN" ? "critical" : s === "NO_POLICY" ? "neutral" : "serious";
 
-const nearOf = (y: string) => {
-  const s = y.padStart(25, "0");
-  const whole = s.slice(0, -24).replace(/^0+(?=\d)/, "");
-  const frac = s.slice(-24).replace(/0+$/, "").slice(0, 4);
-  return frac ? `${whole}.${frac}` : whole;
-};
 
 /** Live Sentinel Vault on testnet: an allowance funded by the owner for an agent account. */
 const LIVE = { contract: "vault.karios.testnet", owner: "karios.testnet", agent: "kariosr.testnet" };
@@ -39,8 +36,8 @@ export function VaultPanel() {
   return (
     <Card title="Agent allowance — how much may this agent spend now?" icon="wallet" subtitle="Read-only lookup on the Sentinel Vault contract, cross-checked on every provider">
       <p className="mb-4 text-sm text-ink-2">
-        <strong>Sentinel Vault</strong> gives an AI agent money without giving it the keys: the owner funds an allowance with a per-payment limit, a 24-hour
-        limit and an optional receiver allowlist, and the agent spends with a function-call key that can only call{" "}
+        <strong>Sentinel Vault</strong> gives an AI agent money without giving it the keys: the owner funds an <Term k="allowance">allowance</Term> with a per-payment limit, a
+        24-hour limit and an optional receiver allowlist, and the agent spends with a <Term k="fckey">function-call key</Term> that can only call{" "}
         <code className="font-mono text-xs">spend(owner_id, intent_id, receiver_id, amount)</code>. Each intent pays at most once.
       </p>
       <form onSubmit={submit} className="grid gap-4 md:grid-cols-[1fr_1fr_1fr_auto] md:items-end">
@@ -68,6 +65,10 @@ export function VaultPanel() {
           Live agent allowance
         </button>
       </div>
+      <p className="mt-1.5 text-[11px] text-ink-2">
+        You&apos;ll see: <span className="font-medium text-ink">how much {LIVE.agent} may spend right now</span>, the per-payment and 24-hour limits, and
+        whether every provider agrees.
+      </p>
       {m.isPending && <Loading label="Asking every provider…" />}
       {m.isError && (
         <div className="mt-3">
@@ -82,18 +83,52 @@ export function VaultPanel() {
             </span>
             <Pill tone={statusTone(r.status)}>{r.status}</Pill>
             <span className="text-sm text-ink">{r.reason}</span>
+            {VAULT_STATUS_HELP[r.status] && <span className="basis-full text-xs text-ink-2">{VAULT_STATUS_HELP[r.status]}</span>}
           </div>
           {p && (
-            <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-              <dt className="text-muted">Available now</dt>
+            <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
+              <dt className="text-muted">
+                Owner / agent<Help label="owner and agent">The owner funds the allowance and is the only one who can change, freeze or withdraw it. The agent can only spend within the limits.</Help>
+              </dt>
+              <dd className="font-mono text-xs text-ink-2">
+                <a className="text-link underline" href={explorerAccount(p.owner_id)} target="_blank" rel="noreferrer">
+                  {p.owner_id}
+                </a>{" "}
+                →{" "}
+                <a className="text-link underline" href={explorerAccount(p.agent_id)} target="_blank" rel="noreferrer">
+                  {p.agent_id}
+                </a>
+              </dd>
+              <dt className="text-muted">
+                Available now<Help label="available now">The most the agent can pay in one payment right now: the smallest of the per-payment limit, what is left of the 24-hour limit, and the vault balance minus the {RECORD_FEE_NEAR} NEAR fee.</Help>
+              </dt>
               <dd className="font-semibold text-ink">{nearOf(r.availableNow)} NEAR</dd>
+              <dt className="text-muted">
+                Balance<Help label="vault balance">NEAR held in the vault for this agent. It always belongs to the owner, who can withdraw all of it at any time.</Help>
+              </dt>
+              <dd className="text-ink-2">{nearOf(p.balance)} NEAR</dd>
               <dt className="text-muted">Per payment / per 24 h</dt>
               <dd className="text-ink-2">
                 {nearOf(p.per_payment_max)} / {nearOf(p.daily_max)} NEAR (spent in window: {nearOf(p.spent_in_window)})
               </dd>
-              <dt className="text-muted">Balance</dt>
-              <dd className="text-ink-2">{nearOf(p.balance)} NEAR</dd>
-              <dt className="text-muted">Allowed receivers</dt>
+              <dt className="text-muted">
+                Left in this 24 h<Help label="left in this 24-hour window">The 24-hour limit minus what the agent spent since the window started. The window restarts 24 hours after its first payment.</Help>
+              </dt>
+              <dd className="text-ink-2">
+                {nearOf(subYocto(p.daily_max, p.spent_in_window))} NEAR
+                {p.window_resets_at_ms > Date.now() && <span className="text-muted"> · resets {new Date(p.window_resets_at_ms).toLocaleString()}</span>}
+              </dd>
+              <dt className="text-muted">
+                Fee per payment<Help label="fee per payment">Each payment also takes {RECORD_FEE_NEAR} NEAR from the vault balance to store its pay-once record on-chain, so the same intent can never be paid twice.</Help>
+              </dt>
+              <dd className="text-ink-2">{RECORD_FEE_NEAR} NEAR</dd>
+              <dt className="text-muted">
+                Frozen<Help label="frozen">When frozen, the agent cannot pay at all. Only the owner can freeze or unfreeze.</Help>
+              </dt>
+              <dd className={p.frozen ? "font-semibold text-critical" : "text-ink-2"}>{p.frozen ? "Yes: the agent cannot pay" : "No"}</dd>
+              <dt className="text-muted">
+                Allowed receivers<Help label="allowed receivers">The agent may only pay these accounts. “any” means no allowlist.</Help>
+              </dt>
               <dd className="font-mono text-ink-2">{p.allowed_receivers.length ? p.allowed_receivers.join(", ") : "any"}</dd>
             </dl>
           )}

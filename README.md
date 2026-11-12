@@ -22,6 +22,14 @@ A guard contract (including our own Sentinel Guard) only knows about calls that 
 
 ![Run it live: the naive agent pays twice, the Sentinel-guarded agent once](docs/media/run-it-live.gif)
 
+**See each part in 10 seconds** (recorded from the dashboard, real testnet data):
+
+| Did it land? | Guard: pay once per intent | Vault: an allowance, not keys |
+|---|---|---|
+| ![One click on the real-money payment: DO_NOT_RETRY](docs/media/inspect-verdict.gif) | ![Guard contract: a paid intent is PAID, a retry is refused](docs/media/guard-duplicate.gif) | ![Vault: how much the agent may spend now](docs/media/vault-allowance.gif) |
+
+**Real demo data for testing:** every example in the dashboard is a real testnet transaction or account, one click each, no wallet. See the list with expected results in [JUDGING.md → Demo data](JUDGING.md#demo-data-for-testing).
+
 ## NEAR technology we use
 
 | NEAR technology | How Sentinel uses it | Proof |
@@ -51,6 +59,8 @@ It ships as a TypeScript SDK, an **MCP server for AI agents**, a REST API and a 
 ![Benchmarks: 12/12 fault scenarios](docs/screenshots/benchmarks.png)
 ![Providers: tested capabilities](docs/screenshots/providers.png)
 ![Mobile layout](docs/screenshots/mobile-overview.png)
+![Inspect a successful testnet transaction](docs/screenshots/inspect-success.png)
+![Integrate: MCP, SDK, REST and contract snippets](docs/screenshots/integrate.png)
 
 </details>
 
@@ -74,10 +84,26 @@ It ships as a TypeScript SDK, an **MCP server for AI agents**, a REST API and a 
 | Benchmarks page → **Run simulated faults** (no key needed) | 12/12 fault scenarios classified correctly in a few seconds |
 | `pnpm test:live` | 10 read-only tests against public RPCs: 7 on testnet, 3 on mainnet (a real recent mainnet transaction picked live) |
 | `pnpm test:contract` (Docker) | 33 Rust unit tests (Guard 14 + Vault 19) + 27 on-chain checks on a local NEAR sandbox, including a duplicate payment rejected with `DUPLICATE_INTENT` and an agent whose function-call key can only `spend` within its allowance |
-| `pnpm test:e2e` (starts the built API itself; uses Google Chrome if installed, otherwise run `pnpm --filter @near-sentinel/web exec playwright install chromium` once) | 34 browser tests: flows, accessibility, mobile, keyboard, judge tour, command palette, modal focus, reduced motion |
+| `pnpm test:e2e` (starts the built API itself; uses Google Chrome if installed, otherwise run `pnpm --filter @near-sentinel/web exec playwright install chromium` once) | 43 browser tests: flows, accessibility, mobile, keyboard, judge tour, command palette, modal focus, reduced motion |
 | MCP: see [From an AI agent](#from-an-ai-agent-mcp) | `check_retry_safety`, `check_intent`, `check_spend_allowance` and 4 more read-only tools |
 
 ## The demo in one picture
+
+```mermaid
+sequenceDiagram
+    participant A as AI agent
+    participant R as RPC node
+    participant N as NEAR
+    participant S as NEAR Sentinel
+    A->>R: send payment (1 NEAR)
+    R->>N: forward
+    N-->>N: payment executes
+    R--xA: reply lost (timeout)
+    Note over A: Naive agent: "it failed", signs a NEW payment → pays twice
+    A->>S: Guarded agent: did it land?
+    S->>N: ask several independent RPC operators
+    S-->>A: DO_NOT_RETRY (landed) → pays once
+```
 
 Run `pnpm demo` (no wallet needed). It uses a local simulated chain plus a fault-injection proxy that *delivers* the transfer but never answers the client:
 
@@ -137,7 +163,7 @@ pnpm start          # API + dashboard on http://127.0.0.1:8080 (NEAR testnet, 4 
 - Open http://127.0.0.1:8080 for the dashboard (it opens on a **Start here** page with a guided judge tour), or http://127.0.0.1:8080/docs for interactive OpenAPI.
 - Other gates (all re-run on 2026-11-11, results in [docs/STATUS.md](docs/STATUS.md)):
   - `pnpm test:live`: 10 read-only tests against real RPCs (7 testnet, 3 mainnet).
-  - `pnpm test:e2e`: 34 Playwright tests that drive the dashboard against the running API on testnet: functional flows, **axe accessibility (WCAG 2.1 AA, no serious/critical issues) on every page**, mobile/tablet/desktop layouts, keyboard navigation, the optional account verification (skip, cancel, forged callback), the judge tour, the Ctrl+K command palette, the mobile menu, the one-click benchmark and the live Guard and Vault panels.
+  - `pnpm test:e2e`: 43 Playwright tests that drive the dashboard against the running API on testnet: functional flows, **axe accessibility (WCAG 2.1 AA, no serious/critical issues) on every page**, mobile/tablet/desktop layouts, keyboard navigation, the optional account verification (skip, cancel, forged callback), the judge tour, the Ctrl+K command palette, the mobile menu, the one-click benchmark and the live Guard and Vault panels, and every real demo example, the glossary and the Inspect jump links.
   - `pnpm test:contract`: 33 Rust unit tests (Guard 14 + Vault 19) + a 27-check on-chain suite on a local NEAR sandbox (Docker). See [contracts/guard](contracts/guard/README.md).
   - `pnpm test:load`: load and soak test of the built server against local mock RPCs (public RPCs are never load-tested). Zero errors, p99 budgets, no memory growth after warm-up.
 
@@ -150,6 +176,26 @@ docker compose up -d --build     # http://127.0.0.1:8080, data in the `sentinel-
 **Production on a VPS (Vultr, HTTPS via Caddy):** see [docs/deployment/VULTR.md](docs/deployment/VULTR.md). It covers server hardening, one-command deploy, update, rollback and backups. No keys ever go on the server.
 
 ## Use it
+
+```mermaid
+flowchart LR
+    subgraph Agent["Your AI agent"]
+        MCP["MCP server<br/>(7 read-only tools)"]
+        SDK["TypeScript SDK"]
+        REST["REST API"]
+    end
+    AI["NEAR AI Cloud agent<br/>(TEE-hosted model)"] --> MCP
+    MCP --> S["NEAR Sentinel<br/>(read-only, holds no keys)"]
+    SDK --> S
+    REST --> S
+    S --> P1["FastNEAR"]
+    S --> P2["FastNEAR archival"]
+    S --> P3["dRPC"]
+    S --> P4["Intear"]
+    P1 & P2 & P3 & P4 --> NEAR[("NEAR")]
+    NEAR --- G["Sentinel Guard<br/>pay once per intent"]
+    NEAR --- V["Sentinel Vault<br/>agent allowance"]
+```
 
 ### From an AI agent (MCP)
 
@@ -282,6 +328,17 @@ Its offline tests (part of `pnpm test`) drive the same loop against a local mock
    - not found.
 
    Anything less gives `WAIT_AND_RECHECK` or `MANUAL_REVIEW_REQUIRED`.
+
+```mermaid
+flowchart TD
+    Q["Timeout: did transaction X land?"] --> F{"Found by any provider?"}
+    F -- "yes, fully succeeded or still executing" --> D["DO_NOT_RETRY"]
+    F -- "yes, some receipts failed, or providers conflict" --> M["MANUAL_REVIEW_REQUIRED"]
+    F -- "yes, failed with no side effects, final on ≥ 2 operators" --> S1["SAFE_TO_RETRY"]
+    F -- "no" --> P{"Signed tx given, and on ≥ 2 independent operators:<br/>nonce used or validity window expired,<br/>history covered, still not found?"}
+    P -- "yes: it can never land" --> S2["SAFE_TO_RETRY"]
+    P -- "not proven" --> W["WAIT_AND_RECHECK<br/>(re-send the same bytes only)"]
+```
 
 Full table: [docs/architecture/STATE_MAPPING.md](docs/architecture/STATE_MAPPING.md). Design: [docs/architecture/ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md).
 

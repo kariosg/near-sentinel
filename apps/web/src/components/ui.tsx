@@ -176,7 +176,7 @@ export function Kbd({ children }: { children: ReactNode }) {
 }
 
 /** Hover/focus tooltip. The trigger must be focusable for keyboard users. */
-export function Tooltip({ tip, children }: { tip: ReactNode; children: ReactNode }) {
+export function Tooltip({ tip, children, align = "center" }: { tip: ReactNode; children: ReactNode; align?: "center" | "start" }) {
   const id = useId();
   return (
     <span className="group relative inline-flex" aria-describedby={id}>
@@ -184,7 +184,7 @@ export function Tooltip({ tip, children }: { tip: ReactNode; children: ReactNode
       <span
         id={id}
         role="tooltip"
-        className="pointer-events-none absolute bottom-full left-1/2 z-30 mb-2 w-64 -translate-x-1/2 translate-y-1 rounded-lg border border-line-strong bg-surface-3 px-3 py-2 text-xs leading-relaxed text-ink-2 opacity-0 shadow-xl transition group-focus-within:translate-y-0 group-focus-within:opacity-100 group-hover:translate-y-0 group-hover:opacity-100"
+        className={`pointer-events-none absolute bottom-full z-30 mb-2 w-64 ${align === "start" ? "left-0" : "left-1/2 -translate-x-1/2"} translate-y-1 rounded-lg border border-line-strong bg-surface-3 px-3 py-2 text-xs leading-relaxed text-ink-2 opacity-0 shadow-xl transition group-focus-within:translate-y-0 group-focus-within:opacity-100 group-hover:translate-y-0 group-hover:opacity-100`}
       >
         {tip}
       </span>

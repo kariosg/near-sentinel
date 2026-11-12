@@ -9,7 +9,7 @@ pnpm build              # sdk → mcp → api → web → demo → guard scripts
 pnpm typecheck
 pnpm test               # secrets gate + sdk 160 + mcp 13 (stdio e2e) + api 53 + demo 7 assertions
 pnpm test:live          # 10 read-only tests against public NEAR RPCs (7 testnet + 3 mainnet)
-pnpm test:e2e           # 32 Playwright tests (functional + axe a11y + responsive + keyboard + optional sign-in + judge tour)
+pnpm test:e2e           # 43 Playwright tests (functional + axe a11y + responsive + keyboard + optional sign-in + judge tour)
 pnpm test:contract      # guard 14 + vault 19 Rust unit tests + 27-check on-chain suite on a local neard sandbox (Docker)
 pnpm verify             # every check above in one summary table (`--quick`: no network/browser/Docker)
 pnpm test:load          # load + soak of the built server against local mock RPCs (17 gates)
@@ -109,6 +109,7 @@ docker compose up -d --build
 - `pnpm contract:deploy` runs `pnpm --filter … run deploy` (plain `deploy` would hit pnpm's built-in command). `-- --i-confirm` forwarding verified.
 
 ## Uncommitted work
+- 2026-11-12 (after `cc2aa40`): judge helpers, additive only: real demo data in the dashboard (`apps/web/src/demoData.ts`), glossary tooltips (`components/Term.tsx`), verdict decision tree (`components/VerdictTree.tsx`), Inspect intro and jump links, 3 README mermaid diagrams, 3 GIFs in `docs/media` (`scripts/record-gifs.mjs`), JUDGING demo-data table, 9 new e2e tests (43/43 locally); plus full Vault/Guard information with ⓘ help, wallet balance, checks before signing and plain-language contract errors. Waiting for the owner's "push", then redeploy and live e2e.
 - None of substance: everything up to commit `aadae02` (2026-11-12) is pushed to `master` (public). `packages/sdk/t.cjs` is a local scratch file, deliberately untracked.
 - Remaining before the deadline (2026-11-14 23:59 UTC): optional live NEAR AI run (`pnpm demo:near-ai`, needs the owner's key), the owner's change request (add track `open`, optional rename, new description; text in the git-ignored submission draft), then tag the final commit `hackathon-submission`.
 
