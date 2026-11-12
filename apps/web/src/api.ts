@@ -133,7 +133,7 @@ export interface DemoRun {
   simulated: true;
   note: string;
   durationMs: number;
-  runs: Array<{ scenario: string; agent: "naive" | "guarded"; transfers: number; receivedNear: number; intendedNear: number; log: string[] }>;
+  runs: Array<{ scenario: string; agent: "naive" | "guarded"; transfers: number; receivedNear: number; intendedNear: number; signedTransactions: number; decisions: string[]; log: string[] }>;
 }
 
 export const api = {

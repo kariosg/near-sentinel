@@ -11,6 +11,12 @@ First release, built for NEAR HACKATHON (Nov 2026).
 - Read-only support everywhere: SDK `checkSpendAllowance`, MCP `check_spend_allowance` (7 tools), API `GET /api/v1/allowance`, dashboard "Agent allowance" panel; the smallest available amount any provider reports wins.
 - `pnpm verify` (one summary table of every check) and `JUDGING.md` (each claim with its proof).
 
+### Positioning from a full directory scan (2026-11-12)
+- NEAR AI live run: 4/4 decisions as expected on `Qwen/Qwen3.6-35B-A3B-FP8` (NEAR AI-hosted, thinking off, answers capped), every answer signed, TEE attestation report contains the signing address (`docs/near-ai-run.md`). `pnpm verify` only runs the paid step with `--near-ai`.
+- Headline is now the question only Sentinel answers: "The RPC timed out. Did the payment land?" (landed / can still land / can never land, proven / partly executed). Several other entries claim "never pay twice" with duplicate-key contracts; the README explains what those cannot decide.
+- "Run it live" shows both failure modes and the guarded agent's verdict path (WAIT → re-send the same bytes → paid once, never signed a new transaction); the API returns decisions and signed counts.
+- Agent Skill (`skills/near-sentinel/SKILL.md`) and a guide for running Sentinel next to NEAR's official MCP Server (`docs/integrations/near-mcp.md`), citing NEAR's own timeout guidance.
+
 ### NEAR AI agent and NEAR Connect (2026-11-12)
 - Start page **Run it live**: `POST /api/v1/demo/run` replays the naive-vs-guarded agents on a local simulated chain (no network, no funds) and shows naive 2 transfers vs guarded 1; the demo logic is shared with `pnpm demo` (`examples/agent-demo/src/run-simulated.ts`).
 - Start page shows the real-money proof on the first screen; `scripts/record-wow.mjs` records a short clip; read-only mainnet live checks (10 live tests).

@@ -1,23 +1,41 @@
 # NEAR Sentinel
 
-**Never pay twice after an RPC timeout.**
+**The RPC timed out. Did the payment land?**
 
-An AI agent sends a NEAR payment, the RPC call times out, and the agent can't tell whether the money moved. Most agents then sign a *new* payment. If the first one had landed, the money moves twice. NEAR Sentinel tells the agent, with evidence from several independent RPC providers, whether paying again is safe.
+An AI agent sends a NEAR payment and the RPC call times out. It can't tell whether the money moved. Sign again and it may pay twice; don't, and it may never pay. NEAR Sentinel answers with proof from several independent RPC providers, before the agent signs anything new:
 
-**Proven on testnet with real money (2026-11-11).** Behind a connection that delivered the payment but dropped the reply, the naive agent paid **twice** ([tx 1](https://testnet.nearblocks.io/txns/185YtdJZxUCMAaqjRtmSj4MTx51mdiMpjhAPmZ3rZaH), [tx 2](https://testnet.nearblocks.io/txns/6h2hMxjpjdYwDF6zXJ5gTwD5MY47UT7thdRaxZM2Pc6h)); the Sentinel-guarded agent got `DO_NOT_RETRY` from all 4 providers and paid **once** ([tx](https://testnet.nearblocks.io/txns/C59gttNUHCaVTHVi2GKCw6zu5C7QcmwPbUuw9NeaXnzS)).
+- **Landed** → `DO_NOT_RETRY`: it already paid.
+- **Can still land** → `WAIT_AND_RECHECK`: re-send the *same* bytes or wait; never sign new ones.
+- **Can never land** → `SAFE_TO_RETRY`, *proven*: its nonce was used or its validity window expired, on at least two independent operators.
+- **Partly executed** → `MANUAL_REVIEW_REQUIRED`: a top-level "success" hid a failed downstream call.
 
-**Try it, no wallet and nothing to install:** https://64-177-60-105.sslip.io → *Run it live* (watch both agents on a simulated chain in about 15 s) or *Start the 3-minute tour* · API docs: https://64-177-60-105.sslip.io/docs
+A guard contract (including our own Sentinel Guard) only knows about calls that reach it. If the RPC times out on the call *to the guard itself*, the contract can't tell you whether that transaction will still land; only the chain can, through the access key's nonce or the transaction's validity window, checked across independent RPC operators. Sentinel answers that for **any** NEAR transaction, guarded or not, with no contract to adopt, and it works read-only on mainnet too. It pairs with any guard.
 
-**Judges and AI reviewers:** `pnpm verify` prints one pass/fail table of every check; [JUDGING.md](JUDGING.md) maps each claim to the command, transaction or file that proves it.
+**Proven on testnet with real money (2026-11-11).**
+- Payment delivered but the reply dropped: the naive agent paid **twice** ([tx 1](https://testnet.nearblocks.io/txns/185YtdJZxUCMAaqjRtmSj4MTx51mdiMpjhAPmZ3rZaH), [tx 2](https://testnet.nearblocks.io/txns/6h2hMxjpjdYwDF6zXJ5gTwD5MY47UT7thdRaxZM2Pc6h)); the guarded agent got `DO_NOT_RETRY` from 4 providers (3 independent operators) and paid **once** ([tx](https://testnet.nearblocks.io/txns/C59gttNUHCaVTHVi2GKCw6zu5C7QcmwPbUuw9NeaXnzS)).
+- A payment signed but never sent: `WAIT_AND_RECHECK` (it could still land). After another transaction used its nonce ([tx](https://testnet.nearblocks.io/txns/6jM2toRMAb9KDNTSNHrCVSGEY5ttJenXnAiirBPE7wnj)), Sentinel proved it can never land: `SAFE_TO_RETRY` (`pnpm demo:critical`, 5/5).
 
-NEAR Sentinel checks several independent RPC providers and answers with evidence:
+**Try it** (no wallet, nothing to install):
+1. **30 seconds:** open https://64-177-60-105.sslip.io and click **Run it live**: both agents replay on a simulated chain in both failure modes. You see the naive agent pay twice, and the guarded agent wait, re-send the same bytes and pay once when the payment was lost.
+2. **3 minutes:** on the same page, *Start the 3-minute tour* (real testnet transactions, the on-chain guard, MCP).
+3. **10 minutes, from source:** `pnpm install && pnpm verify` prints one pass/fail table of every check. [JUDGING.md](JUDGING.md) maps each claim to its proof.
 
-| Verdict | Meaning |
-|---|---|
-| `DO_NOT_RETRY` | It executed, or is executing. A new transaction would duplicate it. |
-| `WAIT_AND_RECHECK` | Not seen yet, but it can still land. Re-broadcast the **identical** signed bytes if you like; don't sign new ones. |
-| `SAFE_TO_RETRY` | Proven dead on ≥ 2 independent operators: its nonce was consumed or it expired, **and** it's absent from history those nodes hold. |
-| `MANUAL_REVIEW_REQUIRED` | Partial multi-receipt execution, or providers disagree. A human should look. |
+![Run it live: the naive agent pays twice, the Sentinel-guarded agent once](docs/media/run-it-live.gif)
+
+## NEAR technology we use
+
+| NEAR technology | How Sentinel uses it | Proof |
+|---|---|---|
+| **NEAR JSON-RPC** (FastNEAR, dRPC, Intear) | Asks several independent providers and compares their answers (`EXPERIMENTAL_tx_status`, `view_access_key`, `block`, views) | `pnpm test:live`: 10/10 on testnet and mainnet |
+| **Access-key nonces + validity window** | Proves a transaction can *never* land → `SAFE_TO_RETRY` | Real testnet: unsent tx → WAIT, then SAFE after its nonce was used ([tx](https://testnet.nearblocks.io/txns/6jM2toRMAb9KDNTSNHrCVSGEY5ttJenXnAiirBPE7wnj)) |
+| **Receipt model** (async, cross-contract) | Finds a failed downstream call hidden behind a top-level "success" → `MANUAL_REVIEW_REQUIRED` | Real tx [`EtpgCjJP…`](https://testnet.nearblocks.io/txns/EtpgCjJPA1WN9MxG17C88GtEU5kf6mx77YxhrWdjMuBd) |
+| **Smart contracts** (Rust, near-sdk 5) | **Sentinel Guard** (pay once per intent) and **Sentinel Vault** (agent allowance), both live on testnet | [`guard.karios.testnet`](https://testnet.nearblocks.io/address/guard.karios.testnet), [`vault.karios.testnet`](https://testnet.nearblocks.io/address/vault.karios.testnet); 33 Rust unit + 27 sandbox + 21 live checks |
+| **Function-call access keys** | An agent's key may only call `spend` on the Vault: it can pay within limits and do nothing else | Sandbox: NEAR rejects any other use (`INVALID_TRANSACTION`) |
+| **NEAR AI Cloud** (TEE-hosted model, signed answers, attestation) | An AI agent decides real payment situations with Sentinel as its tools; Sentinel's verdict is binding | [docs/near-ai-run.md](docs/near-ai-run.md): 4/4, every answer signed, attestation contains the signing address |
+| **NEAR Connect** (`@hot-labs/near-connect`) | Vault owners fund, freeze or withdraw from the dashboard with their own wallet | Dashboard → Inspect → *Owner actions* |
+| **MCP for agents** + **Agent Skills** | 7 read-only MCP tools; an Agent Skill; designed to run next to NEAR's official MCP Server (`@nearai/near-mcp`), which has no status check | [skills/near-sentinel](skills/near-sentinel/SKILL.md), [docs/integrations/near-mcp.md](docs/integrations/near-mcp.md) |
+| **NEP-297 events, NEP-413 signed messages** | Contract events (`EVENT_JSON`); optional "verify your account" in the dashboard | Contract source; dashboard banner |
+| **NearBlocks, near CLI, testnet faucet** | Every proof links to NearBlocks; owner setup commands use the near CLI | Links throughout |
 
 **Unknown is never reported as safe.** Sentinel is read-only: it never signs, submits or stores keys.
 
@@ -55,7 +73,7 @@ It ships as a TypeScript SDK, an **MCP server for AI agents**, a REST API and a 
 | Inspect page → paste a testnet tx hash | Verdict, per-provider evidence, receipt graph |
 | Benchmarks page → **Run simulated faults** (no key needed) | 12/12 fault scenarios classified correctly in a few seconds |
 | `pnpm test:live` | 10 read-only tests against public RPCs: 7 on testnet, 3 on mainnet (a real recent mainnet transaction picked live) |
-| `pnpm test:contract` (Docker) | 33 Rust unit tests (Guard 14 + Vault 16) + 27 on-chain checks on a local NEAR sandbox, including a duplicate payment rejected with `DUPLICATE_INTENT` and an agent whose function-call key can only `spend` within its allowance |
+| `pnpm test:contract` (Docker) | 33 Rust unit tests (Guard 14 + Vault 19) + 27 on-chain checks on a local NEAR sandbox, including a duplicate payment rejected with `DUPLICATE_INTENT` and an agent whose function-call key can only `spend` within its allowance |
 | `pnpm test:e2e` (starts the built API itself; uses Google Chrome if installed, otherwise run `pnpm --filter @near-sentinel/web exec playwright install chromium` once) | 34 browser tests: flows, accessibility, mobile, keyboard, judge tour, command palette, modal focus, reduced motion |
 | MCP: see [From an AI agent](#from-an-ai-agent-mcp) | `check_retry_safety`, `check_intent`, `check_spend_allowance` and 4 more read-only tools |
 
@@ -119,8 +137,8 @@ pnpm start          # API + dashboard on http://127.0.0.1:8080 (NEAR testnet, 4 
 - Open http://127.0.0.1:8080 for the dashboard (it opens on a **Start here** page with a guided judge tour), or http://127.0.0.1:8080/docs for interactive OpenAPI.
 - Other gates (all re-run on 2026-11-11, results in [docs/STATUS.md](docs/STATUS.md)):
   - `pnpm test:live`: 10 read-only tests against real RPCs (7 testnet, 3 mainnet).
-  - `pnpm test:e2e`: 32 Playwright tests that drive the dashboard against the running API on testnet: functional flows, **axe accessibility (WCAG 2.1 AA, no serious/critical issues) on every page**, mobile/tablet/desktop layouts, keyboard navigation, the optional account verification (skip, cancel, forged callback), the judge tour, the Ctrl+K command palette, the mobile menu, the one-click benchmark and the live Guard and Vault panels.
-  - `pnpm test:contract`: 33 Rust unit tests (Guard 14 + Vault 16) + a 27-check on-chain suite on a local NEAR sandbox (Docker). See [contracts/guard](contracts/guard/README.md).
+  - `pnpm test:e2e`: 34 Playwright tests that drive the dashboard against the running API on testnet: functional flows, **axe accessibility (WCAG 2.1 AA, no serious/critical issues) on every page**, mobile/tablet/desktop layouts, keyboard navigation, the optional account verification (skip, cancel, forged callback), the judge tour, the Ctrl+K command palette, the mobile menu, the one-click benchmark and the live Guard and Vault panels.
+  - `pnpm test:contract`: 33 Rust unit tests (Guard 14 + Vault 19) + a 27-check on-chain suite on a local NEAR sandbox (Docker). See [contracts/guard](contracts/guard/README.md).
   - `pnpm test:load`: load and soak test of the built server against local mock RPCs (public RPCs are never load-tested). Zero errors, p99 budgets, no memory growth after warm-up.
 
 **Docker:**
@@ -150,6 +168,8 @@ Tools (all read-only):
 | `provider_health` | Liveness, lag and tested capabilities. |
 | `check_intent` | What a deployed Sentinel Guard contract recorded for (payer, intent): `PAID / PENDING / NOT_RECORDED`. |
 | `check_spend_allowance` | How much an agent may spend now from a Sentinel Vault allowance: `ACTIVE / EXHAUSTED / FROZEN / NO_POLICY`, the limits, and the smallest amount any provider reports. |
+
+**Agent Skill and NEAR MCP Server.** [skills/near-sentinel/SKILL.md](skills/near-sentinel/SKILL.md) is an Agent Skill that tells an agent exactly when to call these tools and what to do with each verdict. [docs/integrations/near-mcp.md](docs/integrations/near-mcp.md) shows Sentinel running next to the official NEAR MCP Server: NEAR's server acts on chain, Sentinel is the read-only check the agent calls before any resend. NEAR's official MCP server ([`@nearai/near-mcp`](https://github.com/nearai/near-mcp)) can send transactions but has no tool to check one's status after a timeout; Sentinel is the read-only layer that answers that question before the agent sends again.
 
 ### From TypeScript (SDK)
 
@@ -190,7 +210,7 @@ near call guard.karios.testnet pay '{"intent_id":"order-42","receiver_id":"<merc
 | Deploy transaction | [`Gmym6RR6…`](https://testnet.nearblocks.io/txns/Gmym6RR6cCkTYedYMD1KJQ7xiqkXDk3MBaC69LV7ZSbN) |
 | On-chain `code_hash` | `FvBGyjBMhRe1VT4YVZxDq1qok1YXqZbZsF824TEV4agQ` (matches the reproducible Docker build) |
 | Live integration suite | 11/11 on testnet (2026-11-11), including a true concurrent race that credited the receiver exactly once |
-| Local sandbox suite | 12/12 (adds a second-payer check) |
+| Local sandbox suite | 13/13 (adds a second-payer check and a failed payment larger than the contract's balance) |
 | Unit tests | 14 (Rust) |
 
 Try it without a wallet: open **Inspect**, then in the Guard contract panel click **Paid intent** (`tmwbtoqi6-a`, paid once, so a retry would be rejected) or **Unused intent**. The same lookup over REST:
@@ -236,7 +256,7 @@ Source and rules: [contracts/guard/vault](contracts/guard/vault/src/lib.rs), [co
 
 ### An AI agent on NEAR AI Cloud
 
-[examples/near-ai-agent](examples/near-ai-agent) is a payments agent running on **NEAR AI Cloud** (an open-weight model NEAR AI hosts in a TEE) with NEAR Sentinel as its tools. It handles four real testnet situations: a timeout after a payment that landed, an unknown transaction, a partly executed transaction, and a payment that its Vault allowance does not permit. **Sentinel's verdict is binding:** if the model proposes "pay again" when Sentinel's evidence says the first payment executed, a deterministic guard overrules it. Each answer's NEAR AI response signature and the model's TEE attestation report are fetched and saved to `docs/near-ai-run.md`.
+[examples/near-ai-agent](examples/near-ai-agent) is a payments agent running on **NEAR AI Cloud** (an open-weight model NEAR AI hosts in a TEE) with NEAR Sentinel as its tools. It handles four real testnet situations: a timeout after a payment that landed, an unknown transaction, a partly executed transaction, and a payment that its Vault allowance does not permit. **Sentinel's verdict is binding:** if the model proposes "pay again" when Sentinel's evidence says the first payment executed, a deterministic guard overrules it. When run with a NEAR AI key, each answer's NEAR AI response signature and the model's TEE attestation report are fetched and written to [docs/near-ai-run.md](docs/near-ai-run.md). **Live run (2026-11-12): 4/4 decisions as expected, every answer signed by NEAR AI, and the TEE attestation report contains the same signing address.**
 
 ```bash
 # needs your NEAR AI Cloud key in examples/near-ai-agent/.env (git-ignored); without it, this prints SKIPPED
@@ -289,6 +309,8 @@ contracts/guard/vault sentinel-vault (Rust)  on-chain agent allowance: limits, a
 apps/api              @near-sentinel/api     Fastify REST API, SQLite history, prober, incidents, benchmarks, OpenAPI
 apps/web              @near-sentinel/web     dashboard (served by the API)
 examples/agent-demo                          naive vs guarded agent (simulated + real testnet)
+examples/near-ai-agent                       AI agent on NEAR AI Cloud with Sentinel as binding tools
+skills/near-sentinel                         Agent Skill: when to call Sentinel and what to do with each verdict
 docs/                                        architecture, API, security, deployment, research, status
 ```
 
@@ -300,10 +322,12 @@ docs/                                        architecture, API, security, deploy
 - [Security model](SECURITY.md) and [threat model](docs/security/THREAT_MODEL.md)
 - [Deployment](docs/deployment/DEPLOY.md)
 - [Known limitations](docs/KNOWN_LIMITATIONS.md)
+- [Agent Skill: near-sentinel](skills/near-sentinel/SKILL.md)
+- [Using Sentinel next to the official NEAR MCP Server](docs/integrations/near-mcp.md)
 - [Competitor research](docs/COMPETITOR_RESEARCH.md)
 - [Verdict and scope decision](docs/VERDICT.md)
 - [Progress](docs/PROGRESS.md)
-- [Status / resume point](docs/STATUS.md)
+- [Status log](docs/STATUS.md) (test-gate results and history)
 
 ## Built with, and AI disclosure
 
@@ -318,7 +342,7 @@ docs/                                        architecture, API, security, deploy
   - Contract: Rust 1.86, near-sdk 5.27 (built in Docker); tested on near-sandbox 0.3.5 (neard 2.14.0)
   - Optional sign-in: MyNearWallet NEP-413 sign-message redirect (no wallet library bundled)
   - Full list with versions: each `package.json` and `pnpm-lock.yaml`.
-- **Public RPC providers used by default (testnet):** FastNEAR (regular + archival), dRPC, near.org (deprecated, rate-limited).
+- **Public RPC providers used by default (testnet):** FastNEAR (regular + archival), dRPC and Intear: 4 endpoints, 3 independent operators (`rpc.*.near.org` is not used: it is a FastNEAR alias).
 - **AI-generated code:** this project was written with **Claude Code (Anthropic)** working with the author during the hackathon window (from 2026-11-09). That covers the research, design, code, tests and docs. Every behaviour claimed here was checked by running it: the test counts above are from real runs, and live tests hit public testnet RPCs.
 
 ## License

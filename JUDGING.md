@@ -1,6 +1,6 @@
 # Judging guide: every claim, and how to check it
 
-**In one line:** after an RPC timeout an AI agent can't tell whether its NEAR payment went through; NEAR Sentinel proves it, so the agent never pays twice. Proven on testnet with real money: naive agent paid twice, guarded agent once (links below).
+**In one line:** the RPC timed out — did the payment land? NEAR Sentinel answers with proof before the agent signs anything new: landed (`DO_NOT_RETRY`), can still land (`WAIT_AND_RECHECK`), can never land (`SAFE_TO_RETRY`, proven by nonce or validity window on ≥ 2 independent operators), or partly executed (`MANUAL_REVIEW_REQUIRED`). A guard contract only knows about calls that reach it; if the call to the guard itself times out, only the chain (nonce or validity window, across independent operators) can say whether it will land. Sentinel answers that for any transaction, with no contract to adopt. Proven on testnet with real money (links below).
 
 For human judges and AI reviewers. Each claim below links to the command, transaction or file that proves it. Nothing here needs a wallet.
 
@@ -58,7 +58,7 @@ Verified on 2026-11-11 on Windows (Node 22.16, Chrome) and in a clean Linux cont
 ### For AI agents
 | Claim | Check |
 |---|---|
-| An AI agent on **NEAR AI Cloud** (TEE-hosted model) decides real payment situations with Sentinel as its tools; Sentinel's verdict is binding (a model that proposes paying again is overruled) | `examples/near-ai-agent` (`src/agent.ts` guard, `test/agent.test.ts` 7 offline tests incl. the overrule case); live run `pnpm demo:near-ai` writes `docs/near-ai-run.md` with each answer's NEAR AI response signature and the model's attestation report (needs a NEAR AI key) |
+| An AI agent on **NEAR AI Cloud** (TEE-hosted model) decides real payment situations with Sentinel as its tools; Sentinel's verdict is binding (a model that proposes paying again is overruled) | `examples/near-ai-agent` (`src/agent.ts` guard, `test/agent.test.ts` 7 offline tests incl. the overrule case); live run `pnpm demo:near-ai` (needs a NEAR AI key) wrote [docs/near-ai-run.md](docs/near-ai-run.md) on 2026-11-12: **4/4 decisions as expected**, each answer signed by NEAR AI, and the model's TEE attestation report contains the same signing address |
 | MCP server with 7 read-only tools (`check_retry_safety`, `check_intent`, `check_spend_allowance`, …) | `packages/mcp`; `packages/mcp/test/mcp.test.ts` starts the built server over real stdio with the official client |
 | SDK and REST API | `packages/sdk/README.md`; OpenAPI at https://64-177-60-105.sslip.io/docs |
 
@@ -72,4 +72,4 @@ Verified on 2026-11-11 on Windows (Node 22.16, Chrome) and in a clean Linux cont
 | Fault injection: timeouts, resets, malformed/oversized replies, lying and lagging providers | Live site → Benchmarks → "Run simulated faults" (12/12); `apps/api/src/benchmarks.ts` |
 
 ## Honest limits
-See `docs/KNOWN_LIMITATIONS.md`. In short: testnet only (mainnet defaults exist but were not exercised), the contract is not audited, and operator independence relies on labels for custom providers.
+See `docs/KNOWN_LIMITATIONS.md`. In short: anything that moves funds ran on testnet only (mainnet is exercised read-only by `pnpm test:live`), the contract is not audited, and operator independence relies on labels for custom providers.

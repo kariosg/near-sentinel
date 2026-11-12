@@ -71,7 +71,7 @@ await caption("On-chain guard: a repeated intent is rejected and refunded.", 430
 
 // 18–21 s: call to action.
 await page.goto(`${BASE}/#/start`);
-await caption("NEAR Sentinel — never pay twice. Try it live, no wallet needed.", 3000);
+await caption("NEAR Sentinel: did the payment land? Proof before you pay again. Try it live, no wallet.", 3000);
 
 const video = page.video();
 await ctx.close();

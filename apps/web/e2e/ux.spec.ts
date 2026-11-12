@@ -225,7 +225,9 @@ test("start page: 'Run it live' shows the naive agent paying twice and the guard
   await page.goto("/#/start");
   await page.getByRole("button", { name: /Run it live/ }).click();
   await expect(page.getByText(/2 transfers · merchant got 2 NEAR/)).toBeVisible({ timeout: 60_000 });
-  await expect(page.getByText(/1 transfer · merchant got 1 NEAR/)).toBeVisible();
+  await expect(page.getByText(/1 transfer · merchant got 1 NEAR/).first()).toBeVisible();
+  await expect(page.getByText("The payment was lost before it landed")).toBeVisible();
+  await expect(page.getByText(/Sentinel: check 1: WAIT_AND_RECHECK/)).toBeVisible();
   expect(errors).toEqual([]);
 });
 
@@ -234,7 +236,7 @@ test.describe("redesign: judge-first navigation", () => {
     const errors = trackErrors(page);
     await skipIdentity(page);
     await page.goto("/");
-    await expect(page.locator("main h1")).toContainText("Never pay twice");
+    await expect(page.locator("main h1")).toContainText("Did the payment land");
     await expect(page.getByRole("img", { name: /Diagram: an AI agent asks NEAR Sentinel/ })).toBeVisible();
     await expect(page.getByText("0 of 5 done")).toBeVisible();
     await expect(page.getByRole("heading", { name: "Four verdicts, never a guess" })).toBeVisible();
@@ -311,7 +313,7 @@ test("reduced motion: the start page shows final values immediately and still wo
   const errors = trackErrors(page);
   await skipIdentity(page);
   await page.goto("/#/start");
-  await expect(page.locator("main h1")).toContainText("Never pay twice");
+  await expect(page.locator("main h1")).toContainText("Did the payment land");
   // Count-ups render their final value without animating (2 NEAR / 1 NEAR in the comparison).
   await expect(page.getByText("2 NEAR", { exact: true })).toBeVisible();
   await expect(page.getByText("1 NEAR", { exact: true })).toBeVisible();

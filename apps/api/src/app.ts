@@ -485,7 +485,7 @@ export async function buildApp(env: Env, opts: { db?: Db } = {}): Promise<AppDep
   /* ------------- the naive-vs-guarded demo, live (local simulated chain only) ------------- */
   // Public: it only talks to an in-process mock chain on 127.0.0.1 with a throwaway in-memory key; no real
   // network, no funds. Concurrent callers share one run.
-  type DemoRow = { name: string; which: "naive" | "guarded"; transfers: number; received: bigint; lines: string[] };
+  type DemoRow = { name: string; which: "naive" | "guarded"; transfers: number; received: bigint; lines: string[]; run: { signed: unknown[]; decisions: string[] } };
   let demoRun: Promise<DemoRow[]> | undefined;
   app.post(
     "/api/v1/demo/run",
@@ -507,7 +507,7 @@ export async function buildApp(env: Env, opts: { db?: Db } = {}): Promise<AppDep
         simulated: true,
         note: "SIMULATED: local mock chain and a fault-injection proxy that delivers the payment but drops the reply. No real network, no real funds.",
         durationMs: Date.now() - t0,
-        runs: rows.map((r) => ({ scenario: r.name, agent: r.which, transfers: r.transfers, receivedNear: Number(r.received / 10n ** 21n) / 1000, intendedNear: 1, log: r.lines })),
+        runs: rows.map((r) => ({ scenario: r.name, agent: r.which, transfers: r.transfers, receivedNear: Number(r.received / 10n ** 21n) / 1000, intendedNear: 1, signedTransactions: r.run.signed.length, decisions: r.run.decisions, log: r.lines })),
       };
     },
   );

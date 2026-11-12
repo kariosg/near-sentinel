@@ -401,6 +401,10 @@ describe("live naive-vs-guarded demo (simulated chain)", () => {
     expect(delivered.find((x: any) => x.agent === "naive")).toMatchObject({ transfers: 2, receivedNear: 2 });
     expect(delivered.find((x: any) => x.agent === "guarded")).toMatchObject({ transfers: 1, receivedNear: 1 });
     expect(b.runs.every((x: any) => Array.isArray(x.log) && x.log.length > 0)).toBe(true);
+    // Payment dropped in transit: the guarded agent waits, re-sends the SAME bytes, and never signs a new transaction.
+    const dropped = b.runs.find((x: any) => x.scenario.includes("dropped") && x.agent === "guarded");
+    expect(dropped).toMatchObject({ transfers: 1, signedTransactions: 1 });
+    expect(dropped.decisions[0]).toMatch(/WAIT_AND_RECHECK/);
   }, 60_000);
 });
 

@@ -5,6 +5,7 @@
  *
  *   pnpm verify            build + unit/integration + demo + live testnet + browser + contract (Docker, if present)
  *   pnpm verify --quick    build + unit/integration + demo only (no network, no browser, no Docker)
+ *   pnpm verify --near-ai  also runs the live NEAR AI agent (needs a key; spends a few cents of NEAR AI credits)
  *
  * Exit code 0 only if every step that ran passed. Steps that cannot run here (no Docker, no browser) are
  * reported as SKIPPED with the reason, never as passed.
@@ -81,7 +82,10 @@ if (quick) {
   });
 }
 
-if (!quick)
+const nearAi = process.argv.includes("--near-ai");
+if (!quick && !nearAi)
+  rows.push({ name: "NEAR AI agent: live decisions on NEAR AI Cloud (TEE-signed)", status: "SKIPPED", detail: "uses NEAR AI credits: run `pnpm verify --near-ai` or `pnpm demo:near-ai` (last live run: docs/near-ai-run.md)" });
+if (!quick && nearAi)
   step("NEAR AI agent: live decisions on NEAR AI Cloud (TEE-signed)", () => {
     const r = run("pnpm", ["demo:near-ai"], 10 * 60_000);
     if (/SKIPPED: set NEAR_AI_API_KEY/.test(r.out)) return { status: "SKIPPED", detail: "no NEAR_AI_API_KEY in examples/near-ai-agent/.env" };

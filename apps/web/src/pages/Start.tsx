@@ -100,13 +100,14 @@ export function StartPage() {
             <Pill tone="neutral">Agent Economy</Pill>
           </div>
           <h1 id="hero-title" className="mt-5 text-4xl font-semibold leading-[1.08] tracking-tight sm:text-5xl">
-            <span className="text-gradient">Never pay twice</span>
+            <span className="text-ink">The RPC timed out.</span>
             <br />
-            <span className="text-ink">after an RPC timeout.</span>
+            <span className="text-gradient">Did the payment land?</span>
           </h1>
           <p className="mt-5 max-w-xl text-base leading-relaxed text-ink-2">
-            When a NEAR transaction times out, AI agents often sign a <em>new</em> one. If the first had already landed, the money moves twice. NEAR Sentinel
-            cross-checks independent RPC providers and tells the agent, with evidence, whether retrying is safe. Sentinel Guard enforces pay-once on-chain.
+            Sign again and an AI agent may pay twice; don&apos;t, and it may never pay. NEAR Sentinel answers with proof from independent RPC providers before the
+            agent signs anything new: <strong>landed</strong>, <strong>can still land</strong>, <strong>can never land</strong> (proven by its nonce or
+            validity window), or <strong>partly executed</strong>. It works on any NEAR transaction, guarded or not, with no contract to adopt.
           </p>
           <div className="mt-5 max-w-xl rounded-xl border border-line bg-surface-2/60 px-4 py-3 text-sm" aria-label="Proof on testnet with real money">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted">Proven on testnet with real money</p>
@@ -125,6 +126,15 @@ export function StartPage() {
                 Sentinel-guarded agent paid <strong className="text-good">once</strong>
               </span>
               <a className="font-mono text-xs text-link underline" href="https://testnet.nearblocks.io/txns/C59gttNUHCaVTHVi2GKCw6zu5C7QcmwPbUuw9NeaXnzS" target="_blank" rel="noreferrer">
+                tx
+              </a>
+            </p>
+            <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-ink-2">
+              <span>
+                Unsent payment: <strong className="text-warning">WAIT</strong>, then proven <strong className="text-good">SAFE to pay again</strong> once its nonce
+                was used
+              </span>
+              <a className="font-mono text-xs text-link underline" href="https://testnet.nearblocks.io/txns/6jM2toRMAb9KDNTSNHrCVSGEY5ttJenXnAiirBPE7wnj" target="_blank" rel="noreferrer">
                 tx
               </a>
             </p>
@@ -483,15 +493,23 @@ function FlowDiagram({ providers }: { providers?: Array<{ name: string; up: bool
   );
 }
 
-/** Runs the naive-vs-guarded demo on the server's local simulated chain and shows what each agent paid. */
+/** Runs the naive-vs-guarded demo on the server's local simulated chain: both failure modes, both agents, with the guarded agent's verdict path. */
 function LiveDemo() {
   const m = useMutation({ mutationFn: api.demoRun });
-  const delivered = m.data?.runs.filter((r) => r.scenario.includes("WAS delivered")) ?? [];
-  const row = (r: DemoRun["runs"][number]) => (
+  const runs = m.data?.runs ?? [];
+  const scenarios = [
+    { key: "WAS delivered", title: "The payment landed, but the reply was lost", lesson: "A duplicate-blocking contract would also stop the 2nd payment here." },
+    { key: "dropped", title: "The payment was lost before it landed", lesson: "Only an answer about the original can keep this safe: re-send the same bytes, never sign new ones." },
+  ];
+  const card = (r: DemoRun["runs"][number]) => (
     <div key={r.agent} className="rounded-xl border border-line bg-surface-2/60 p-4">
       <p className="text-sm font-semibold text-ink">{r.agent === "naive" ? "Naive agent" : "Agent guarded by Sentinel"}</p>
-      <p className={`mt-1 text-2xl font-semibold ${r.transfers > 1 ? "text-critical" : "text-good"}`}>
+      <p className={`mt-1 text-xl font-semibold ${r.transfers > 1 ? "text-critical" : "text-good"}`}>
         {r.transfers} {r.transfers === 1 ? "transfer" : "transfers"} · merchant got {r.receivedNear} NEAR
+      </p>
+      <p className="mt-1 text-xs text-ink-2">
+        {r.agent === "guarded" ? `Sentinel: ${r.decisions.join(" → ")}` : r.decisions.join(" → ")} · signed {r.signedTransactions}{" "}
+        {r.signedTransactions === 1 ? "transaction" : "transactions"}
       </p>
       <details className="mt-2 text-xs text-muted">
         <summary className="cursor-pointer">What the agent did</summary>
@@ -503,8 +521,8 @@ function LiveDemo() {
     <div className="mt-5 rounded-2xl border border-line bg-surface/70 p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="max-w-xl text-sm text-ink-2">
-          Don&apos;t take the cards above on trust: run the same agents now. The server uses a local simulated chain and a proxy that delivers the payment but
-          drops the reply. No real network, no funds, no wallet.
+          Don&apos;t take the cards above on trust: run the same agents now, in both failure modes. The server uses a local simulated chain and a fault-injection
+          proxy. No real network, no funds, no wallet.
         </p>
         <button
           type="button"
@@ -517,10 +535,19 @@ function LiveDemo() {
         </button>
       </div>
       {m.isError && <p className="mt-3 text-sm text-warning">The demo could not run right now ({String((m.error as Error)?.message ?? m.error)}). Try again in a minute.</p>}
-      {delivered.length > 0 && (
-        <div className="mt-4 animate-fade-up" aria-live="polite">
-          <div className="grid gap-4 md:grid-cols-2">{delivered.map(row)}</div>
-          <p className="mt-2 text-xs text-muted">Ran in {(m.data!.durationMs / 1000).toFixed(1)} s. {m.data!.note}</p>
+      {runs.length > 0 && (
+        <div className="mt-4 space-y-5 animate-fade-up" aria-live="polite">
+          {scenarios.map((sc) => {
+            const rows = runs.filter((r) => r.scenario.includes(sc.key));
+            return rows.length ? (
+              <div key={sc.key}>
+                <p className="text-sm font-semibold text-ink">{sc.title}</p>
+                <p className="mb-2 text-xs text-muted">{sc.lesson}</p>
+                <div className="grid gap-4 md:grid-cols-2">{rows.map(card)}</div>
+              </div>
+            ) : null;
+          })}
+          <p className="text-xs text-muted">Ran in {(m.data!.durationMs / 1000).toFixed(1)} s. {m.data!.note}</p>
         </div>
       )}
     </div>

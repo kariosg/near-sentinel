@@ -68,7 +68,10 @@ export class NearAiClient {
   }
 
   chat(model: string, messages: ChatMessage[], tools: ToolSpec[]): Promise<ChatResponse> {
-    return this.call("/chat/completions", { method: "POST", body: JSON.stringify({ model, messages, tools, tool_choice: "auto", temperature: 0 }) });
+    // max_tokens caps each answer so a verbose (reasoning) model can't run up cost; decisions are one short JSON line.
+    // Qwen3 models think out loud by default; the decision is a short JSON line, so thinking is switched off.
+    const extra = /qwen/i.test(model) ? { chat_template_kwargs: { enable_thinking: false } } : {};
+    return this.call("/chat/completions", { method: "POST", body: JSON.stringify({ model, messages, tools, tool_choice: "auto", temperature: 0, max_tokens: 1200, ...extra }) });
   }
 
   /** Signature over a chat completion, produced inside the TEE. */
