@@ -61,7 +61,7 @@ function ClipVideo({ clip, reduce }: { clip: DemoClip; reduce: boolean }) {
     <video
       ref={ref}
       className="aspect-[800/475] w-full rounded-lg border border-line bg-surface-2 object-cover"
-      poster={`/media/${clip.id}.jpg`}
+      poster={near ? `/media/${clip.id}.jpg` : undefined}
       src={near ? `/media/${clip.id}.mp4` : undefined}
       muted
       loop
