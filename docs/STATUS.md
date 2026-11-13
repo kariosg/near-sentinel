@@ -112,14 +112,16 @@ docker compose up -d --build
 - `pnpm contract:deploy` runs `pnpm --filter … run deploy` (plain `deploy` would hit pnpm's built-in command). `-- --i-confirm` forwarding verified.
 
 ## Uncommitted work
-- None. `master` = `ab17061` + this docs-only commit; code `ab17061` pushed and deployed 2026-11-13 ~15:55 UTC. Local = GitHub = live.
-  - `ab17061`: code-splitting (first-screen JS 490 → 309 KB), Overview lists each recent tx once, Start without the redundant event badge, test count 471.
-  - `1b62c34`: real-wallet test fixes, in-app "How it works" page, logo I (green), green main buttons only.
-  - Live after deploying `ab17061`: e2e 62/62; receiver checks 15/15; API checks 36/36; walkthrough 15/15; Lighthouse mobile 97 / desktop 97 (a11y, best practices, SEO 100).
-  - Rollback on the server: image `near-sentinel:previous` (= `1b62c34`), data backup `~/backups/sentinel-data-20261113T155309Z.tgz`.
+- None. `master` = this docs-only commit; app code `1bdee8b` pushed and deployed 2026-11-13 ~17:50 UTC. Local = GitHub = live.
+  - `1bdee8b`/`f823801`: short demo videos in the app (Start "See it in action", How it works "Watch it first"; 5 muted loops from the original GIFs, 0.75 MB MP4, loaded only near the screen, still frames lazy too, reduce-motion shows controls); README video icons.
+  - `ab17061`: code-splitting, Overview lists each tx once, Start without the event badge. `1b62c34`: real-wallet fixes, How it works page, logo I.
+  - Live after deploying `f823801`: e2e 63/63; receiver checks 15/15; API checks 36/36; walkthrough 15/15. After `1bdee8b` (poster fix only): video, Start, How it works and strict-CSP tests 7/7 live.
+  - Wallet restore after a real reload confirmed live (tester wallet stays connected; identity banner hidden).
+  - Lighthouse: accessibility, best practices, SEO 100. Mobile performance readings on this PC vary (79–97, the swing is all in throttled blocking time); a same-moment local A/B shows the clips cost about 1 point (86 vs 85, same blocking time).
+  - Rollback on the server: image `near-sentinel:previous` (= `f823801`), data backup `~/backups/sentinel-data-20261113T173902Z.tgz`.
 - `packages/sdk/t.cjs` is a local scratch file, deliberately untracked. `media/` is git-ignored.
 - GitHub also has two old branches, `feature/agent-security` and `feature/receiver-check`, both fully merged into `master` (deleting them is the owner's call).
-- The tag `hackathon-submission` still points to `cc2aa40`; moving it to the final commit is the owner's action.
+- The tag `hackathon-submission` must be moved to the final commit by the owner (it pointed to `39f4b23`).
 
 ## Blocked on the owner
 - Submitted 2026-11-11 (X post https://x.com/kariosgx/status/2120484078420169114). Results by 2026-11-18 23:59 UTC.
