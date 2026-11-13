@@ -14,6 +14,7 @@ export { createGuardedFetch, assertPublicRpcUrl, type GuardOptions } from "./ssr
 export { decideIntent, decodeViewResult, intentInputSchema, INTENT_ID_RE, privateIntentId, intentIdPrivacyWarning, type IntentInput, type IntentCheck, type IntentStatus, type GuardIntent, type IntentProviderAnswer } from "./intent.js";
 export {
   assessAllowanceSafety,
+  decideSpendAction,
   decideSpendPreflight,
   preflightInputSchema,
   PREFLIGHT_ADVISORY,
@@ -22,8 +23,10 @@ export {
   type PreflightCode,
   type PreflightInput,
   type PreflightSpend,
+  type SpendAction,
   type SpendPreflight,
 } from "./vault.js";
+export { guardedSpend, type GuardedSpendOptions, type GuardedSpendResult, type GuardedSpendLog } from "./spend-guard.js";
 export {
   addSpendKeyCommand,
   decideKeyAudit,

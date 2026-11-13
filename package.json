@@ -20,6 +20,7 @@
     "dev:api": "pnpm --filter @near-sentinel/api dev",
     "dev:web": "pnpm --filter @near-sentinel/web dev",
     "demo": "pnpm --filter @near-sentinel/agent-demo simulated",
+    "demo:injection": "pnpm --filter @near-sentinel/agent-demo injection",
     "demo:testnet": "pnpm --filter @near-sentinel/agent-demo testnet",
     "demo:critical": "pnpm --filter @near-sentinel/agent-demo critical",
     "demo:near-ai": "pnpm --filter @near-sentinel/near-ai-agent start",
@@ -31,7 +32,8 @@
     "contract:create-account": "pnpm --filter @near-sentinel/guard run create-account",
     "contract:deploy": "pnpm --filter @near-sentinel/guard run deploy",
     "contract:test:testnet": "pnpm --filter @near-sentinel/guard test:testnet",
-    "vault:testnet": "pnpm --filter @near-sentinel/guard vault:testnet"
+    "vault:testnet": "pnpm --filter @near-sentinel/guard vault:testnet",
+    "proof:testnet": "pnpm --filter @near-sentinel/guard proof:testnet"
   },
   "devDependencies": {
     "typescript": "5.9.3",

@@ -150,6 +150,13 @@ export function PreflightForm({ contract, owner, agent }: { contract: string; ow
             {r.code && <code className="font-mono text-xs text-muted">{r.code}</code>}
             <span className="text-sm text-ink">{r.reason}</span>
           </div>
+          {r.action && (
+            <p className="flex flex-wrap items-center gap-2 text-sm text-ink" data-testid="agent-action">
+              <span className="text-xs text-muted">What the agent does:</span>
+              <Pill tone={r.action === "SIGN" ? "good" : r.action === "REFUSE" ? "critical" : "serious"}>{r.action === "ASK_HUMAN" ? "ASK A HUMAN" : r.action}</Pill>
+              <span className="text-xs text-ink-2">{r.actionReason}</span>
+            </p>
+          )}
           {r.decision === "ALLOWED" && (
             <p className="text-xs text-ink-2">
               Cost from the vault: {nearOf(r.costYocto)} NEAR ({nearOf(r.amount)} + {RECORD_FEE_NEAR} fee).

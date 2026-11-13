@@ -27,7 +27,8 @@ const sentinel = new NearSentinel({
 | `subscribeToTransaction(input, { intervalMs, timeoutMs, signal })` | Async iterator; yields on state changes and stops when final |
 | `checkIntent({ contractId, payerId, intentId })` | What a Sentinel Guard recorded: `PAID / PENDING / NOT_RECORDED / CONFLICTING / UNKNOWN` |
 | `checkSpendAllowance({ contractId, ownerId, agentId })` | A Sentinel Vault allowance: `ACTIVE / EXHAUSTED / FROZEN / NO_POLICY / UNKNOWN`, the limits, and `availableNow` (the smallest any provider reports) |
-| `preflightSpend({ contractId, ownerId, agentId, receiverId, amountYocto, intentId? })` | Would the Vault accept this payment now? `ALLOWED / BLOCKED (code) / UNKNOWN`, checked in the contract's order on every provider; never ALLOWED above the smallest `availableNow`. Advisory |
+| `preflightSpend({ contractId, ownerId, agentId, receiverId, amountYocto, intentId? })` | Would the Vault accept this payment now? `decision`: `ALLOWED / BLOCKED (code) / UNKNOWN`, checked in the contract's order on every provider; never ALLOWED above the smallest `availableNow`. `action`: `SIGN / ASK_HUMAN / REFUSE`, which also folds in the receiver check (a lookalike is REFUSE even if the contract would accept it). Advisory |
+| `guardedSpend({ sentinel, spend, sign, confirm?, log? })` | Agent-side wrapper: runs `preflightSpend`, then calls your `sign` only on SIGN, asks `confirm` (a human) on ASK_HUMAN and refuses without one, never signs on REFUSE or on any error. Holds no key. See `pnpm demo:injection` |
 | `auditAgentKeys({ accountId, vaultContractId? })` | Can the agent's keys drain its account? `FULL_ACCESS_PRESENT / REVIEW_NEEDED / LEAST_PRIVILEGE / NO_KEYS / ACCOUNT_NOT_FOUND / UNKNOWN`, each key graded (riskiest answer wins when providers disagree) |
 | `checkReceiver({ receiverId, knownReceivers? })` | Receiver scam check on every provider: `OK / WARNING / DANGER / NOT_FOUND / UNKNOWN`, lookalike technique (homoglyph, omission, insertion, replacement, transposition, vowel-swap, hyphenation, subdomain, address-poisoning). Also included in `preflightSpend` as `receiverCheck` |
 | `privateIntentId(secret, reference)` / `intentIdPrivacyWarning(id)` | A stable, non-reversible intent id (HMAC) so no order number or email goes on-chain; a warning when an id looks like personal data |
@@ -62,6 +63,6 @@ Network failures are **not** thrown. They become observations and diagnostics (t
 ## Tests
 
 ```bash
-pnpm test        # 160 unit tests (mock RPCs, real fixtures)
+pnpm test        # 346 unit tests (mock RPCs, real fixtures)
 pnpm test:live   # 10 read-only tests against public testnet and mainnet RPCs
 ```

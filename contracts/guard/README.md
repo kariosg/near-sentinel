@@ -79,7 +79,7 @@ A second contract in this folder (`vault/`, crate `sentinel-vault`): **give an A
 | `on_spend(...)` | private callback | Transfer OK → `Paid`. Failed → record removed, balance and daily allowance restored, intent freed. |
 | `get_policy(owner_id, agent_id)`, `get_spend(owner_id, agent_id, intent_id)`, `record_fee()`, `version()` | view | `get_policy` includes `available_now` = min(per-payment limit, daily headroom, balance − fee); 0 when frozen. |
 
-Rules enforced on-chain: each `(owner, agent, intent_id)` pays at most once (`DUPLICATE_INTENT`); `OVER_PER_PAYMENT_LIMIT`, `OVER_DAILY_LIMIT` (rolling 24 h), `NOT_ALLOWED_RECEIVER`, `FROZEN`, `NO_POLICY`, `INSUFFICIENT_VAULT_BALANCE`; 0.006 NEAR per spend is kept from the balance for the record's storage; policies are keyed by `(owner, agent)`, so nobody can claim someone else's agent. NEP-297 events with standard `sentinel_vault`. No admin or upgrade method in the contract.
+Rules enforced on-chain: each `(owner, agent, intent_id)` pays at most once (`DUPLICATE_INTENT`); `OVER_PER_PAYMENT_LIMIT`, `OVER_DAILY_LIMIT` (a fixed 24 h window that restarts with the first spend after it expires), `NOT_ALLOWED_RECEIVER`, `FROZEN`, `NO_POLICY`, `INSUFFICIENT_VAULT_BALANCE`; 0.006 NEAR per spend is kept from the balance for the record's storage; policies are keyed by `(owner, agent)`, so nobody can claim someone else's agent. NEP-297 events with standard `sentinel_vault`. No admin or upgrade method in the contract.
 
 **The restricted key.** The owner gives the agent a key that can only call `spend` on the vault (run by the owner; the key never leaves their machine):
 

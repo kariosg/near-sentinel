@@ -518,6 +518,7 @@ test.describe("agent security and privacy", () => {
     await pre.getByLabel("Amount (NEAR)").fill("0.001");
     await pre.getByRole("button", { name: "Check payment" }).click();
     await expect(pre).toContainText("ALLOWED", { timeout: 30_000 });
+    await expect(pre.getByTestId("agent-action")).toContainText("SIGN");
     await expect(pre).toContainText("final judge");
     await pre.getByLabel("Amount (NEAR)").fill("5");
     await pre.getByRole("button", { name: "Check payment" }).click();
@@ -540,6 +541,7 @@ test.describe("agent security and privacy", () => {
     const pre = panel.locator("section", { hasText: "Would this payment be allowed?" });
     await pre.getByRole("button", { name: "Try a scam lookalike" }).click();
     await expect(pre).toContainText("NOT_ALLOWED_RECEIVER", { timeout: 30_000 });
+    await expect(pre.getByTestId("agent-action")).toContainText("REFUSE");
     const rc = pre.getByRole("region", { name: "Receiver check" });
     await expect(rc).toContainText("DANGER");
     await expect(rc).toContainText("homoglyph");

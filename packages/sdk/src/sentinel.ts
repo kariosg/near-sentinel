@@ -16,6 +16,7 @@ import { decideIntent, decodeViewResult, isGuardIntent, intentInputSchema, type 
 import {
   assessAllowanceSafety,
   decideAllowance,
+  decideSpendAction,
   decideSpendPreflight,
   preflightInputSchema,
   vaultAnswer,
@@ -665,7 +666,13 @@ export class NearSentinel {
       (rc.status === "DANGER" || rc.status === "NOT_FOUND" || (rc.status === "WARNING" && rc.findings.some((f) => f.title === PROVIDERS_DISAGREE_TITLE)))
         ? ` Warning: receiver check says ${rc.status}: ${rc.reason}`
         : "";
-    return { ...decided, reason: decided.reason + warn, ...(receiverCheck ? { receiverCheck } : {}), checkedAt: new Date().toISOString() };
+    return {
+      ...decided,
+      reason: decided.reason + warn,
+      ...(receiverCheck ? { receiverCheck } : {}),
+      ...decideSpendAction(decided.decision, receiverCheck),
+      checkedAt: new Date().toISOString(),
+    };
   }
 
   /** Receipt execution graph for a transaction (undefined when no provider has it). */

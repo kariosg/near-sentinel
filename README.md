@@ -46,7 +46,7 @@ A guard contract (including our own Sentinel Guard) only knows about calls that 
 | **Receipt model** (async, cross-contract) | Finds a failed downstream call hidden behind a top-level "success" → `MANUAL_REVIEW_REQUIRED` | Real tx [`EtpgCjJP…`](https://testnet.nearblocks.io/txns/EtpgCjJPA1WN9MxG17C88GtEU5kf6mx77YxhrWdjMuBd) |
 | **Smart contracts** (Rust, near-sdk 5) | **Sentinel Guard** (pay once per intent) and **Sentinel Vault** (agent allowance), both live on testnet | [`guard.karios.testnet`](https://testnet.nearblocks.io/address/guard.karios.testnet), [`vault.karios.testnet`](https://testnet.nearblocks.io/address/vault.karios.testnet); 33 Rust unit + 27 sandbox + 21 live checks |
 | **Function-call access keys** | An agent's key may only call `spend` on the Vault: it can pay within limits and do nothing else. The agent key check (`view_access_key_list`) flags agents that hold a full-access key instead | Sandbox: NEAR rejects any other use (`INVALID_TRANSACTION`); live: [Inspect → ④ Agent keys](https://64-177-60-105.sslip.io/#/inspect?tool=keys) |
-| **NEAR AI Cloud** (TEE-hosted model, signed answers, attestation) | An AI agent decides real payment situations with Sentinel as its tools; Sentinel's verdict is binding | [docs/near-ai-run.md](docs/near-ai-run.md): 4/4, every answer signed, attestation contains the signing address |
+| **NEAR AI Cloud** (TEE-hosted model, signed answers, attestation) | An AI agent decides real payment situations with Sentinel as its tools; Sentinel's verdict is binding | [docs/near-ai-run.md](docs/near-ai-run.md): 4/4. NEAR AI returned a signature for every answer and an attestation report naming the signing address. The run fetches both but does not verify them cryptographically; check a response at cloud.near.ai/verify |
 | **NEAR Connect** (`@hot-labs/near-connect`) | Vault owners fund, freeze or withdraw from the dashboard with their own wallet | Dashboard → Inspect → *Owner actions* |
 | **MCP for agents** + **Agent Skills** | 10 read-only MCP tools; an Agent Skill; designed to run next to NEAR's official MCP Server (`@nearai/near-mcp`), which has no status check | [skills/near-sentinel](skills/near-sentinel/SKILL.md), [docs/integrations/near-mcp.md](docs/integrations/near-mcp.md) |
 | **NEP-297 events, NEP-413 signed messages** | Contract events (`EVENT_JSON`); optional "verify your account" in the dashboard | Contract source; dashboard banner |
@@ -73,7 +73,7 @@ It ships as a TypeScript SDK, an **MCP server for AI agents**, a REST API and a 
 
 ## NEAR HACKATHON submission
 
-- **Tracks:** **AI Security & Defense** (primary): an agent that hits an RPC timeout never pays twice; Sentinel proves whether a payment executed, can still land, or can never land. Also Sentinel Vault: an allowance an agent spends with a function-call key, not your keys. **Agent Economy**: a payment-safety layer agents call through MCP or from NEAR AI Cloud, plus on-chain pay-once enforcement.
+- **Tracks:** **AI Security & Defense** (primary): an agent that hits an RPC timeout never pays twice; Sentinel proves whether a payment executed, can still land, or can never land. Before any payment, a receiver check catches lookalike, poisoned and missing payees, and the SDK's `guardedSpend` wrapper signs only on SIGN, asks a human on ASK_HUMAN and refuses on REFUSE, whatever a prompt-injected model says (`pnpm demo:injection`). Also Sentinel Vault: an allowance an agent spends with a function-call key, not your keys. **Agent Economy**: a payment-safety layer agents call through MCP or from NEAR AI Cloud, plus on-chain pay-once enforcement.
 - **Baseline:** none. All code was written during the hackathon window (from 2026-11-09). It is not a port of an existing product on any chain. Libraries and AI assistance are listed under [Built with](#built-with-and-ai-disclosure).
 - **Network:** everything that moves funds ran on testnet only. Read-only checks also run live on **mainnet** (`pnpm test:live`): mainnet providers, a real recent mainnet transaction → `DO_NOT_RETRY`, an unknown hash → `WAIT_AND_RECHECK`.
 - **NEAR integrations used:** NEAR JSON-RPC across several independent providers (`EXPERIMENTAL_tx_status`, `view_access_key`, `block`, protocol config, `call_function` views); two Rust contracts on testnet built with near-sdk 5 (Sentinel Guard `guard.karios.testnet`, Sentinel Vault `vault.karios.testnet`); NEAR **function-call access keys** (the agent's key can only call `spend` on the vault); NEP-297 `EVENT_JSON` events; NEP-413 signed messages for the optional account check; an MCP server for AI agents; **NEAR AI Cloud** (OpenAI-compatible API, TEE-hosted model, response signatures and attestation) for the example agent; **NEAR Connect** (`@hot-labs/near-connect`, NEAR's recommended wallet connector) so a vault owner funds, freezes or withdraws from the dashboard with their own wallet.
@@ -84,8 +84,9 @@ It ships as a TypeScript SDK, an **MCP server for AI agents**, a REST API and a 
 | Do | See |
 |---|---|
 | Open https://64-177-60-105.sslip.io (nothing to install) | The live dashboard on testnet: same tour, examples and benchmark as below |
-| `pnpm install && pnpm build && pnpm test` | Secrets check, then 444 tests pass (sdk 326, mcp 17, api 87, demo 7, NEAR AI agent 7) |
+| `pnpm install && pnpm build && pnpm test` | Secrets check, then 471 tests pass (sdk 346, mcp 17, api 87, demo 12, NEAR AI agent 9) |
 | `pnpm demo` | Naive agent: merchant receives 2 NEAR. Sentinel-guarded agent: 1 NEAR. |
+| `pnpm demo:injection` | Prompt-injected agent tries to pay two lookalikes and a brand-new account: naive signs 3/3, guarded 0/3 (refused, or a human declined) and still pays the real invoice |
 | `pnpm start`, then open http://127.0.0.1:8080 | Dashboard on live testnet. It opens on **Start here**: a 3-minute judge tour where every step is one click. Click **Skip** on the optional verify banner. Press **Ctrl K** to jump anywhere. |
 | Inspect page → paste a testnet tx hash | Verdict, per-provider evidence, receipt graph |
 | Benchmarks page → **Run simulated faults** (no key needed) | 12/12 fault scenarios classified correctly in a few seconds |
@@ -163,15 +164,15 @@ Requirements: **Node ≥ 22.16** (tested on 22.16.0 locally and 22.23.4 in Docke
 git clone https://github.com/kariosg/near-sentinel.git
 cd near-sentinel
 pnpm install
-pnpm build          # sdk, mcp, api, web, demo
-pnpm test           # secrets gate + sdk (160) + mcp e2e (13) + api (53) + simulated demo assertions (7) + NEAR AI agent (7, offline)
+pnpm build          # sdk, demo, mcp, api, web, NEAR AI agent, contract scripts
+pnpm test           # secrets gate + sdk (346) + mcp e2e (17) + api (87) + demo assertions (12) + NEAR AI agent (9, offline) = 471
 pnpm start          # API + dashboard on http://127.0.0.1:8080 (NEAR testnet, 4 public providers)
 ```
 
 - Open http://127.0.0.1:8080 for the dashboard (it opens on a **Start here** page with a guided judge tour), or http://127.0.0.1:8080/docs for interactive OpenAPI.
-- Other gates (all re-run on 2026-11-11, results in [docs/STATUS.md](docs/STATUS.md)):
+- Other gates (all re-run on 2026-11-13, results in [docs/STATUS.md](docs/STATUS.md)):
   - `pnpm test:live`: 10 read-only tests against real RPCs (7 testnet, 3 mainnet).
-  - `pnpm test:e2e`: 46 Playwright tests that drive the dashboard against the running API on testnet: functional flows, **axe accessibility (WCAG 2.1 AA, no serious/critical issues) on every page**, mobile/tablet/desktop layouts, keyboard navigation, the optional account verification (skip, cancel, forged callback), the judge tour, the Ctrl+K command palette, the mobile menu, the one-click benchmark and the live Guard and Vault panels, and every real demo example, the glossary and the Inspect jump links.
+  - `pnpm test:e2e`: 59 Playwright tests that drive the dashboard against the running API on testnet: functional flows, **axe accessibility (WCAG 2.1 AA, no serious/critical issues) on every page**, mobile/tablet/desktop layouts, keyboard navigation, the optional account verification (skip, cancel, forged callback), the judge tour, the Ctrl+K command palette, the mobile menu, the one-click benchmark and the live Guard and Vault panels, and every real demo example, the glossary and the Inspect jump links.
   - `pnpm test:contract`: 33 Rust unit tests (Guard 14 + Vault 19) + a 27-check on-chain suite on a local NEAR sandbox (Docker). See [contracts/guard](contracts/guard/README.md).
   - `pnpm test:load`: load and soak test of the built server against local mock RPCs (public RPCs are never load-tested). Zero errors, p99 budgets, no memory growth after warm-up.
 
@@ -281,7 +282,7 @@ Build, test, deploy and the full rule set: [contracts/guard/README.md](contracts
 
 ### On-chain: Sentinel Vault (agent allowance)
 
-**Give an AI agent money without giving it the keys.** The owner funds an allowance for an agent account and sets a policy: a per-payment limit, a rolling 24-hour limit and an optional receiver allowlist. The agent spends with `spend(owner_id, intent_id, receiver_id, amount)`, which takes **no deposit**, so the agent can hold nothing but a NEAR **function-call key limited to `spend` on the vault**. That key cannot transfer the agent's own NEAR, call any other method, or exceed the policy. Each `(owner, agent, intent_id)` pays at most once (`DUPLICATE_INTENT`), so a blind retry after an RPC timeout cannot double-pay; a failed transfer restores the balance and the allowance. Only the owner can top up, change the policy, freeze/unfreeze, or withdraw.
+**Give an AI agent money without giving it the keys.** The owner funds an allowance for an agent account and sets a policy: a per-payment limit, a 24-hour limit and an optional receiver allowlist. The 24-hour limit is a fixed window: it restarts with the first spend after 24 hours, so up to twice the limit can move in a short span around a reset (see [Known limitations](docs/KNOWN_LIMITATIONS.md)). The agent spends with `spend(owner_id, intent_id, receiver_id, amount)`, which takes **no deposit**, so the agent can hold nothing but a NEAR **function-call key limited to `spend` on the vault**. That key cannot transfer the agent's own NEAR, call any other method, or exceed the policy. Each `(owner, agent, intent_id)` pays at most once (`DUPLICATE_INTENT`), so a blind retry after an RPC timeout cannot double-pay; a failed transfer restores the balance and the allowance. Only the owner can top up, change the policy, freeze/unfreeze, or withdraw.
 
 **Live on testnet:** [`vault.karios.testnet`](https://testnet.nearblocks.io/address/vault.karios.testnet)
 
@@ -374,20 +375,30 @@ Give an agent money, not your keys, and keep its limits outside the AI. A prompt
 Mapped to the [OWASP Top 10 for Agentic Applications (2026)](https://genai.owasp.org/resource/owasp-top-10-for-agentic-applications-for-2026/) in [SECURITY.md](SECURITY.md#agent-security-owasp-top-10-for-agentic-applications-2026), including what is honestly not covered.
 
 ```ts
-import { NearSentinel, privateIntentId } from "@near-sentinel/sdk";
+import { guardedSpend, NearSentinel, privateIntentId } from "@near-sentinel/sdk";
 const sentinel = new NearSentinel({ network: "testnet" });
 const keys = await sentinel.auditAgentKeys({ accountId: "agent.alice.testnet", vaultContractId: "vault.alice.testnet" });
 const intentId = privateIntentId(process.env.INTENT_SECRET!, "order-7781"); // no order number on-chain
-const pre = await sentinel.preflightSpend({ contractId: "vault.alice.testnet", ownerId: "alice.testnet", agentId: "agent.alice.testnet", receiverId: "shop.testnet", amountYocto: "10000000000000000000000", intentId });
-if (pre.decision !== "ALLOWED") throw new Error(pre.reason); // stop before signing
+const r = await guardedSpend({
+  sentinel,
+  spend: { contractId: "vault.alice.testnet", ownerId: "alice.testnet", agentId: "agent.alice.testnet", receiverId: "shop.testnet", amountYocto: "10000000000000000000000", intentId },
+  sign: (pre) => callVaultSpend(pre),             // your code, holding the agent's function-call key
+  confirm: (pre) => askOnCall(pre.actionReason),  // optional: a human approves ASK_HUMAN; without it the guard refuses
+});
+// r.outcome: "SIGNED" only when the preflight said SIGN (or a human said yes); REFUSE never reaches sign()
 ```
+
+`preflightSpend` returns two fields. `decision` (ALLOWED / BLOCKED / UNKNOWN) mirrors the contract's rules exactly. `action` (SIGN / ASK_HUMAN / REFUSE) is what an agent should do: it also folds in the receiver check, so a lookalike payee is REFUSE even when the vault has no allowlist and the contract would accept it.
+
+**Attack demo (no setup):** `pnpm demo:injection`. A worst-case model obeys text planted in an invoice and tries to pay a lookalike of the shop, a lookalike of the owner, and a brand-new account. The naive agent signs all three. The guarded agent refuses the two lookalikes, sends the new account to a human who declines, and still pays the real invoice. The transcript is in [docs/injection-demo.md](docs/injection-demo.md).
 
 ## Demo
 
 | Command | What it needs | What it shows |
 |---|---|---|
 | `pnpm demo` | nothing | Simulated chain. Naive agent pays 2×; guarded pays 1× (and still completes when the first send was dropped). |
-| `pnpm --filter @near-sentinel/agent-demo test` | nothing | Same, with 7 pass/fail assertions. |
+| `pnpm --filter @near-sentinel/agent-demo test` | nothing | Same, with 7 pass/fail assertions, plus 5 for the attack demo. |
+| `pnpm demo:injection` | nothing | Simulated prompt-injection attack: the naive agent signs 3/3 attacker payments, the `guardedSpend` agent 0/3 and still pays the real invoice ([transcript](docs/injection-demo.md)). |
 | `pnpm demo:testnet` | `examples/agent-demo/.env` with **your** testnet sender (+ key) and receiver | Dry run: validates the config and prints the exact plan. |
 | `pnpm demo:testnet -- --i-confirm` | same | Real testnet transfers (≤ 0.1 NEAR each, at most 4 signed; normally 3 execute) with NearBlocks links. |
 | `pnpm demo:critical` / `-- --i-confirm` | same | The critical verdicts with freshly signed transactions (one 0.0011 NEAR transfer): signed-but-unsent → WAIT (never SAFE); its nonce used by another tx → SAFE_TO_RETRY; landed → DO_NOT_RETRY; garbage bytes → invalid input. |
@@ -462,10 +473,12 @@ Running costs stay low because the service is read-only, holds no keys and needs
   - React 19, Vite 8, Tailwind CSS 4, TanStack Query 5
   - Vitest 5, Playwright 1.65, @axe-core/playwright 4.14, autocannon 8
   - Contract: Rust 1.86, near-sdk 5.27 (built in Docker); tested on near-sandbox 0.3.5 (neard 2.14.0)
-  - Optional sign-in: MyNearWallet NEP-413 sign-message redirect (no wallet library bundled)
+  - Owner wallet actions: @hot-labs/near-connect 0.12.0 (NEAR Connect)
+  - Optional sign-in: MyNearWallet NEP-413 sign-message redirect
   - Full list with versions: each `package.json` and `pnpm-lock.yaml`.
 - **Public RPC providers used by default (testnet):** FastNEAR (regular + archival), dRPC and Intear: 4 endpoints, 3 independent operators (`rpc.*.near.org` is not used: it is a FastNEAR alias).
 - **AI-generated code:** this project was written with **Claude Code (Anthropic)** working with the author during the hackathon window (from 2026-11-09). That covers the research, design, code, tests and docs. Every behaviour claimed here was checked by running it: the test counts above are from real runs, and live tests hit public testnet RPCs.
+- **Other projects:** the author has no other NEAR HACKATHON submission.
 
 ## License
 

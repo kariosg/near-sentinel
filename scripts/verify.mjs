@@ -44,9 +44,12 @@ step("Build (7 packages)", () => {
 step("Unit + integration tests (secrets gate, SDK, MCP over stdio, API, demo assertions)", () => {
   const r = run("pnpm", ["test"], 15 * 60_000);
   const c = vitestCounts(r.out);
-  const demo = /7\/7|assertions passed|all assertions/i.test(r.out) || r.ok;
-  const total = c.reduce((a, b) => a + b, 0) + (r.ok ? 7 : 0);
-  return { status: r.ok && demo ? "PASS" : "FAIL", detail: r.ok ? `${total} passed (sdk ${c[0] ?? "?"}, mcp ${c[1] ?? "?"}, api ${c[2] ?? "?"}, demo 7, near-ai agent ${c[3] ?? "?"})` : r.out.trim().split("\n").slice(-6).join(" | ") };
+  // The demo assertions print one "PASS  <name>" / "FAIL  <name>" line each (retry demo + prompt-injection attack demo).
+  const plain = r.out.replace(/\x1b\[[0-9;]*m/g, "");
+  const demoPassed = (plain.match(/^PASS {2}/gm) ?? []).length;
+  const demo = demoPassed > 0 && !/^FAIL {2}/m.test(plain);
+  const total = c.reduce((a, b) => a + b, 0) + demoPassed;
+  return { status: r.ok && demo ? "PASS" : "FAIL", detail: r.ok ? `${total} passed (sdk ${c[0] ?? "?"}, mcp ${c[1] ?? "?"}, api ${c[2] ?? "?"}, demo ${demoPassed}, near-ai agent ${c[3] ?? "?"})` : r.out.trim().split("\n").slice(-6).join(" | ") };
 });
 
 step("Simulated demo: naive vs guarded agent", () => {

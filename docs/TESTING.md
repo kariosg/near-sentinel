@@ -59,13 +59,13 @@ Needs Node ≥ 22.16 and pnpm 8; Docker only for the contract suite.
 
 ```bash
 pnpm install
-pnpm verify            # one table: build, 444 unit/integration tests, demo, 10 live tests, 59 browser tests, contracts (if Docker)
+pnpm verify            # one table: build, 471 unit/integration tests, demo, 10 live tests, 59 browser tests, contracts (if Docker)
 pnpm verify --quick    # same without network, browser or Docker
 ```
 
 | Command | What it proves |
 |---|---|
-| `pnpm test` | Secrets gate + 444 tests: SDK 326, MCP server over real stdio 17, API 87, demo 7, NEAR AI agent 7 (offline) |
+| `pnpm test` | Secrets gate + 471 tests: SDK 346, MCP server over real stdio 17, API 87, demo 12 (retry demo 7 + prompt-injection attack demo 5), NEAR AI agent 9 (offline) |
 | `pnpm test:live` | 10 read-only tests against public testnet and mainnet RPCs |
 | `pnpm test:e2e` | 59 browser tests: every flow above, accessibility (WCAG 2.1 AA), phone/tablet/desktop, keyboard, the real demo data |
 | `pnpm test:contract` | Docker: Guard 14 + Vault 19 Rust unit tests, then 27 checks on a local NEAR node (incl. a function-call key that can only `spend`) |

@@ -10,6 +10,8 @@ Everything below was run against the **live** instance (https://64-177-60-105.ss
 
 ## 1. Real transactions on testnet
 
+This is the second run (2026-11-13) of the same script as the first run in [JUDGING.md](../JUDGING.md#proven-with-real-testnet-transactions-2026-11-12). The script is `contracts/guard/scripts/proof-testnet.ts`: `pnpm proof:testnet` is a dry run, and `pnpm proof:testnet -- --i-confirm` sends, with your own testnet accounts in `contracts/guard/.env`.
+
 Sentinel's payment check predicted each outcome before the real `spend` was sent to `vault.karios.testnet`. **10/10 predictions matched the contract.** Payments 2 and 3 were refused for the 24-hour limit because an earlier run had already used most of it, and Sentinel predicted that from the rolling window.
 
 | Case | Sentinel predicted | Contract did | Transaction |
@@ -20,9 +22,9 @@ Sentinel's payment check predicted each outcome before the real `spend` was sent
 | 0.02, over the per-payment limit | `OVER_PER_PAYMENT_LIMIT` | `OVER_PER_PAYMENT_LIMIT` | [`7EM8NG94…`](https://testnet.nearblocks.io/txns/7EM8NG94fRhNN3xowyTGn6h5sntuwF2EuMdZK7MMAWtq) |
 | pay the vault itself | `INVALID_RECEIVER` | `INVALID_RECEIVER` | [`BacmG4Bu…`](https://testnet.nearblocks.io/txns/BacmG4BuMRiQDDfrn8wRbhEcKW9b5gUmeNgnDoMTGgeC) |
 | amount 0 | `INVALID_AMOUNT` | `INVALID_AMOUNT` | [`7272c3DX…`](https://testnet.nearblocks.io/txns/7272c3DXBokzrtX3LmN24HGmkGWuB6FrLVUShZoQGdWi) |
-| pay 0.01 (2nd) | `OVER_DAILY_LIMIT` | `OVER_DAILY_LIMIT` | [`BB8ZfXKA…`](https://testnet.nearblocks.io/txns/BB8ZfXKADYFnvGgJyz1wPtPuWrtAYcanZygziRQBjEAa) |
-| pay 0.01 (3rd, day total 0.025) | `OVER_DAILY_LIMIT` | `OVER_DAILY_LIMIT` | [`HsTV5ymf…`](https://testnet.nearblocks.io/txns/HsTV5ymfkbK7ZJPXSe3DtaSuUhAJWuPAwBf46LdvuL5o) |
-| pay 0.01 more (day total 0.035) | `OVER_DAILY_LIMIT` | `OVER_DAILY_LIMIT` | [`4jPXMBba…`](https://testnet.nearblocks.io/txns/4jPXMBba1xg65p4Yhg2Ln5pCBzay6ZbxTzvDwmX2FbwW) |
+| pay 0.01 (new intent) | `OVER_DAILY_LIMIT` | `OVER_DAILY_LIMIT` | [`BB8ZfXKA…`](https://testnet.nearblocks.io/txns/BB8ZfXKADYFnvGgJyz1wPtPuWrtAYcanZygziRQBjEAa) |
+| pay 0.01 (new intent) | `OVER_DAILY_LIMIT` | `OVER_DAILY_LIMIT` | [`HsTV5ymf…`](https://testnet.nearblocks.io/txns/HsTV5ymfkbK7ZJPXSe3DtaSuUhAJWuPAwBf46LdvuL5o) |
+| pay 0.01 (new intent) | `OVER_DAILY_LIMIT` | `OVER_DAILY_LIMIT` | [`4jPXMBba…`](https://testnet.nearblocks.io/txns/4jPXMBba1xg65p4Yhg2Ln5pCBzay6ZbxTzvDwmX2FbwW) |
 | pay 0.001 while frozen | `FROZEN` | `FROZEN` | [`67nYeiTw…`](https://testnet.nearblocks.io/txns/67nYeiTwNwY3sN4VffNtkWEpjMbxBng8qM8JqdK4oNN7) |
 
 The real 0.005 NEAR payment then got `DO_NOT_RETRY` from the "did it land?" check. **Guard (pay once per intent), real money:**
@@ -89,4 +91,4 @@ All transactions were testnet only, between the owner's own accounts (`karios.te
 
 ## 5. Re-run it yourself
 
-`pnpm verify` runs the build, 444 unit and integration tests, 10 live tests, 59 browser tests and the contract suites. The real-transaction checks need the owner's testnet key and are not part of `pnpm verify`.
+`pnpm verify` runs the build, 471 unit and integration tests, 10 live tests, 59 browser tests and the contract suites. The real-transaction checks need the owner's testnet key and are not part of `pnpm verify`.

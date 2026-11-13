@@ -200,9 +200,12 @@ describe("near-sentinel MCP server (stdio, built)", () => {
     expect(ok.isError).toBeFalsy();
     expect(ok.structuredContent).toMatchObject({ decision: "ALLOWED", duplicate: false, costYocto: "106000000000000000000000" });
     expect(text(ok)).toMatch(/final judge/);
+    expect(ok.structuredContent.action).toMatch(/^(SIGN|ASK_HUMAN)$/);
+    expect(text(ok)).toMatch(/^Action: (SIGN|ASK_HUMAN)\./);
     const no: any = await client.callTool({ name: "preflight_spend", arguments: { ...base, amountYocto: "5000000000000000000000000" } });
     expect(no.structuredContent).toMatchObject({ decision: "BLOCKED", code: "OVER_PER_PAYMENT_LIMIT" });
     expect(text(no)).toMatch(/BLOCKED \(OVER_PER_PAYMENT_LIMIT\)/);
+    expect(no.structuredContent.action).toBe("REFUSE");
     const bad: any = await client.callTool({ name: "preflight_spend", arguments: { ...base, amountYocto: "0.1" } });
     expect(bad.isError).toBe(true);
   });

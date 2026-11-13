@@ -236,6 +236,7 @@ describe("preflightSpend receiver check (advisory; never changes the decision)",
     expect(r.decision).toBe("ALLOWED");
     expect(r.receiverCheck).toMatchObject({ receiverId: "shop.testnet", status: "OK", knownReceiver: true, exists: true });
     expect(r.reason).not.toMatch(/Warning/);
+    expect(r.action).toBe("SIGN");
     expect(seen.filter((s) => s.params.request_type === "view_account").map((s) => s.params)).toEqual([
       { request_type: "view_account", finality: "final", account_id: "shop.testnet" },
     ]);
@@ -247,14 +248,17 @@ describe("preflightSpend receiver check (advisory; never changes the decision)",
     expect(r.code).toBe("NOT_ALLOWED_RECEIVER");
     expect(r.reason).not.toMatch(/Warning/);
     expect(r.receiverCheck).toMatchObject({ status: "DANGER", lookalikeOf: "shop.testnet", knownReceiver: false });
+    expect(r.action).toBe("REFUSE");
   });
 
-  it("no allowlist: a lookalike of the owner stays ALLOWED but the reason warns", async () => {
+  it("no allowlist: a lookalike of the owner stays ALLOWED (contract mirror) but the agent action is REFUSE", async () => {
     const r = await S([await full(policy({ allowed_receivers: [] }), () => exists)]).preflightSpend(req({ receiverId: "a1ice.testnet" }));
     expect(r.decision).toBe("ALLOWED");
     expect(r.code).toBeUndefined();
     expect(r.receiverCheck).toMatchObject({ status: "DANGER", lookalikeOf: vault.ownerId });
     expect(r.reason).toMatch(/^Allowed: .* Warning: receiver check says DANGER: DANGER: a1ice\.testnet looks like alice\.testnet \(homoglyph\)/);
+    expect(r.action).toBe("REFUSE");
+    expect(r.actionReason).toMatch(/^Refuse: the receiver check says DANGER/);
   });
 
   it("no allowlist: a receiver that does not exist stays ALLOWED but the reason warns NOT_FOUND", async () => {
@@ -262,6 +266,7 @@ describe("preflightSpend receiver check (advisory; never changes the decision)",
     expect(r.decision).toBe("ALLOWED");
     expect(r.receiverCheck).toMatchObject({ status: "NOT_FOUND", exists: false });
     expect(r.reason).toMatch(/ Warning: receiver check says NOT_FOUND: /);
+    expect(r.action).toBe("ASK_HUMAN");
   });
 
   it("the receiver check failing (502) never changes the decision", async () => {
@@ -269,6 +274,8 @@ describe("preflightSpend receiver check (advisory; never changes the decision)",
     expect(r.decision).toBe("ALLOWED");
     expect(r.receiverCheck?.status).toBe("UNKNOWN");
     expect(r.reason).not.toMatch(/Warning/);
+    // shop.testnet is on the owner's allowlist, so an unanswered account lookup does not stop the payment.
+    expect(r.action).toBe("SIGN");
   });
 
   it("no policy yet: the owner is still a known receiver", async () => {

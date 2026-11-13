@@ -165,9 +165,44 @@ export interface SpendPreflight {
   duplicate?: boolean;
   advisory: typeof PREFLIGHT_ADVISORY;
   allowance: AllowanceCheck;
-  /** Receiver scam check (lookalike of the allowlist or owner, existence). Advisory: it never changes `decision`. */
+  /** Receiver scam check (lookalike of the allowlist or owner, existence). It never changes `decision` (that mirrors the contract); it feeds `action`. */
   receiverCheck?: ReceiverCheck;
+  /**
+   * What an agent should do, combining the contract rules (`decision`) and the receiver scam check:
+   * SIGN only when both are clean, ASK_HUMAN when either cannot vouch for the payment, REFUSE when either says no.
+   * Agents should act on this field (or use `guardedSpend`), not on `decision` alone.
+   */
+  action: SpendAction;
+  /** One sentence explaining `action`. */
+  actionReason: string;
   checkedAt: string;
+}
+
+export type SpendAction = "SIGN" | "ASK_HUMAN" | "REFUSE";
+
+/**
+ * PURE: the agent-side action for a preflight. Fail closed: a payment is only signable when the contract rules
+ * allow it AND the receiver check is OK (or the receiver is one the owner listed and nothing hard was found). A
+ * lookalike (DANGER) is refused even when the vault has no allowlist; a missing account, a warning, an unknown
+ * answer or a missing receiver check needs a human.
+ */
+/** "the receiver check says DANGER: …" without repeating the status when the reason already starts with it. */
+const says = (rc: ReceiverCheck) => `the receiver check says ${rc.reason.startsWith(`${rc.status}:`) ? rc.reason : `${rc.status}: ${rc.reason}`}`;
+
+export function decideSpendAction(decision: SpendPreflight["decision"], receiverCheck: ReceiverCheck | undefined): { action: SpendAction; actionReason: string } {
+  if (decision === "BLOCKED")
+    return {
+      action: "REFUSE",
+      actionReason: `Refuse: the vault contract would reject this payment${receiverCheck?.status === "DANGER" ? `, and ${says(receiverCheck)}` : "."}`,
+    };
+  if (receiverCheck?.status === "DANGER") return { action: "REFUSE", actionReason: `Refuse: ${says(receiverCheck)}` };
+  if (decision === "UNKNOWN") return { action: "ASK_HUMAN", actionReason: "Ask a human: Sentinel cannot tell yet whether the vault would accept this payment." };
+  if (!receiverCheck) return { action: "ASK_HUMAN", actionReason: "Ask a human: the receiver could not be checked." };
+  // The owner put this exact receiver on the vault's allowlist (enforced on-chain), so only a hard finding stops it.
+  if (receiverCheck.knownReceiver && receiverCheck.status !== "NOT_FOUND" && receiverCheck.status !== "OK")
+    return { action: "SIGN", actionReason: `Sign: the vault rules allow it and the receiver is one the owner listed (receiver check ${receiverCheck.status}).` };
+  if (receiverCheck.status !== "OK") return { action: "ASK_HUMAN", actionReason: `Ask a human: ${says(receiverCheck)}` };
+  return { action: "SIGN", actionReason: "Sign: the vault rules allow it and the receiver check is OK." };
 }
 
 export interface PreflightSpend {
@@ -185,7 +220,7 @@ export interface PreflightSpend {
  * against EVERY provider's policy, so a payment is only called ALLOWED if no provider's view would reject it
  * and it does not exceed the smallest `available_now` any provider reports. Advisory only.
  */
-export function decideSpendPreflight(allowance: AllowanceCheck, spend: PreflightSpend, now = Date.now()): Omit<SpendPreflight, "checkedAt"> {
+export function decideSpendPreflight(allowance: AllowanceCheck, spend: PreflightSpend, now = Date.now()): Omit<SpendPreflight, "checkedAt" | "action" | "actionReason" | "receiverCheck"> {
   const digits = DIGITS_RE.test(spend.amount);
   const amount = digits ? BigInt(spend.amount) : 0n;
   const fee = BigInt(VAULT_RECORD_FEE_YOCTO);

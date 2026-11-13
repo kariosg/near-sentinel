@@ -1,20 +1,22 @@
 # STATUS (resume point)
 
-_Last updated: 2026-11-12. Everything is done, verified and pushed: product, Guard (`guard.karios.testnet`, live 11/11) and Vault (`vault.karios.testnet`, live 10/10) on testnet, NEAR AI agent (4/4 live), live dashboard https://64-177-60-105.sslip.io (live e2e 46/46 and the docs/TESTING.md walkthrough 20/20 at `3b1cda0`). Submitted 2026-11-11; the owner sent a change request (name, Open Innovation track, description). Hackathon deadline: **2026-11-14 23:59 UTC**; no code changes after it._
+_Last updated: 2026-11-13. Product, Guard (`guard.karios.testnet`) and Vault (`vault.karios.testnet`) on testnet, NEAR AI agent (4/4 live) and the live dashboard https://64-177-60-105.sslip.io are done and verified. Branch `feature/agent-spend-guard` adds the fixes from an independent AI-judge screening (see Uncommitted work). Hackathon deadline: **2026-11-14 23:59 UTC**; no code changes after it._
 
 ## How to resume
 ```bash
 pnpm install
 pnpm build              # sdk → agent-demo → mcp → api → web → near-ai-agent → guard scripts (7 packages; tsc / vite)
 pnpm typecheck
-pnpm test               # secrets gate + sdk 160 + mcp 13 (stdio e2e) + api 53 + demo 7 assertions + NEAR AI agent 7 (= 240)
+pnpm test               # secrets gate + sdk 346 + mcp 17 (stdio e2e) + api 87 + demo 12 assertions + NEAR AI agent 9 (= 471)
 pnpm test:live          # 10 read-only tests against public NEAR RPCs (7 testnet + 3 mainnet)
-pnpm test:e2e           # 46 Playwright tests (functional + axe a11y + responsive + keyboard + optional sign-in + judge tour)
+pnpm test:e2e           # 59 Playwright tests (functional + axe a11y + responsive + keyboard + headers/CSP + judge tour)
 pnpm test:contract      # guard 14 + vault 19 Rust unit tests + 27-check on-chain suite on a local neard sandbox (Docker)
 pnpm verify             # every check above in one summary table (`--quick`: no network/browser/Docker)
 pnpm test:load          # load + soak of the built server against local mock RPCs (17 gates)
 pnpm start              # http://127.0.0.1:8080 (dashboard), /docs (OpenAPI)
 pnpm demo               # simulated naive-vs-guarded demo (no wallet)
+pnpm demo:injection     # simulated prompt-injection attack: naive signs 3/3 attacker payments, guardedSpend 0/3
+pnpm proof:testnet      # real-transaction proof (dry run; `-- --i-confirm` sends with your own testnet accounts)
 pnpm contract:build     # guard + vault wasm (Docker, Rust 1.86, --cfg near)
 pnpm contract:create-account  # optional: contract sub-account with the payer's existing key (dry run; `-- --i-confirm`)
 pnpm contract:deploy    # testnet deploy: dry run; add `-- --i-confirm` to send (keys from contracts/guard/.env)
@@ -23,18 +25,19 @@ docker compose up -d --build
 ```
 - Plan: `docs/IMPLEMENTATION_PLAN.md`. Analysis: `docs/VERDICT.md`. Evidence: `docs/COMPETITOR_RESEARCH.md`. Contract: `contracts/guard/README.md`.
 
-## Current state: every gate actually run (2026-11-11)
+## Current state: gates actually run (2026-11-11, counts refreshed 2026-11-13)
 | Gate | Result |
 |---|---|
 | `pnpm build` / `pnpm typecheck` (7 packages) | pass / pass |
 | Secrets gate (`scripts/check-secrets.mjs`, all tracked files) | pass; self-tested with a planted fake key + seed line (caught) |
-| SDK unit | **160/160** (incl. retry-safety hardening, load-balancer re-check, default-provider independence, `checkIntent`, `checkSpendAllowance`, text helpers) |
+| SDK unit | **346/346** (incl. retry safety, intents, vault allowance and payment check with `action`, `guardedSpend`, receiver scam check, key audit, privacy helpers) |
 | MCP e2e (built server over stdio, official client) | **17/17** (10 tools) |
-| API | **53/53** (incl. vault allowance route, security headers, public simulated benchmark vs key-protected real one, NEP-413 forgery cases, intents, SSE per-IP cap, 413 body limit, rate limits) |
-| Demo `--assert` | **7/7** |
+| API | **87/87** (incl. vault allowance route, security headers, public simulated benchmark vs key-protected real one, NEP-413 forgery cases, intents, SSE per-IP cap, 413 body limit, rate limits) |
+| Demo `--assert` | **12/12** (retry demo 7 + prompt-injection attack demo 5) |
+| NEAR AI agent (offline) | **9/9** |
 | Live testnet | **7/7** (aging-proof: the old failed tx now only lives on the archival operator → honest WAIT) |
 | Live mainnet (read-only) | **3/3**: providers chain_id mainnet (≥ 2 operators), a real recent successful tx picked live → DO_NOT_RETRY, unknown hash → WAIT |
-| Dashboard E2E (installed Chrome, or bundled Chromium) | **46/46** (incl. the live Vault panel): 7 functional, 8 axe (WCAG 2.1 AA, 0 serious/critical), 3 viewports × 8 pages (no overflow, no console errors), keyboard, 4 optional-sign-in, guard panel (incl. the live testnet deployment), start-page tour, command palette, mobile drawer, one-click benchmark, modal focus trap, reduced motion |
+| Dashboard E2E (installed Chrome, or bundled Chromium) | **59/59** (functional, axe WCAG 2.1 AA on every page, 3 viewports, keyboard, judge tour, security headers and 0 strict-CSP violations) |
 | Contract unit (Rust, Docker) | **33/33** (guard 14 + vault 19) |
 | On-chain sandbox suite (local neard 2.14.0, protocol 88) | **27/27** = vault 14 (a function-call key pays within the policy and is rejected for a direct transfer or any other method; limits, allowlist, duplicates, freeze, owner-only withdraw, failed transfer restored) + guard **13/13** (incl. a failed payment larger than the contract balance, refunded in full) + deploy code-hash match; true concurrent race credits the receiver exactly once |
 | Guard on TESTNET (`guard.karios.testnet`) | deployed (tx `Gmym6RR6cCkTYedYMD1KJQ7xiqkXDk3MBaC69LV7ZSbN`, code_hash matches local build); live suite **11/11**; Sentinel `checkIntent` PAID on all 4 providers for intent `tmwbtoqi6-a` |
@@ -104,25 +107,27 @@ docker compose up -d --build
 5. Hackathon submission (owner): video post on X and the form. Rules were checked on 2026-11-11: public repo with a LICENSE (MIT, present), a README "NEAR HACKATHON submission" section (present), and a demo video because the demo runs locally.
 
 ## Git setup
-- `origin` = `https://github.com/kariosg/near-sentinel.git`.
+- `origin` = `git@github.com:kariosg/near-sentinel.git` (public).
 - History starts with a single fresh root commit authored as `kariosg` with the GitHub noreply email; the repo config keeps no identity.
 - `pnpm contract:deploy` runs `pnpm --filter … run deploy` (plain `deploy` would hit pnpm's built-in command). `-- --i-confirm` forwarding verified.
 
 ## Uncommitted work
-- None. `master` = the audit commit `582bec3` plus this docs-only note; both are pushed.
-- **Deployed and verified live** (2026-11-13; app image and Caddyfile):
-  - tests: e2e 58/59 on the full run, and the 1 transient passed on re-run; receiver 15/15; API 36/36; walkthrough 15/15;
-  - Lighthouse: mobile 89, desktop 95, a11y/BP/SEO 100, CLS 0;
-  - ZAP: 0 failures.
-- **Rollback:** image `near-sentinel:previous` = `da0e6e6`, `Caddyfile.previous`, data backup `~/backups/sentinel-data-20261113T031233Z.tgz`.
-- Real testnet proof (2026-11-12): 10/10 Sentinel predictions matched the Vault contract; tx list in JUDGING.md.
+- **Branch `feature/agent-spend-guard` (not yet committed; awaiting the owner's OK).** Fixes from an independent AI-judge screening:
+  - `preflightSpend` now returns `action` (SIGN / ASK_HUMAN / REFUSE), which folds in the receiver check: a lookalike payee is REFUSE even when the contract would accept it. `decision` is unchanged.
+  - SDK `guardedSpend`: an agent-side wrapper that signs only on SIGN, asks a human on ASK_HUMAN and never signs on REFUSE or on error.
+  - `pnpm demo:injection`: simulated prompt-injection attack with a committed transcript (`docs/injection-demo.md`).
+  - NEAR AI agent gets the `preflight_spend` tool; MCP `preflight_spend` and the dashboard show the action.
+  - `pnpm proof:testnet`: the real-transaction proof as a committed script (dry run by default).
+  - Docs: test counts, "fixed 24-hour window" wording, signing and NEAR AI signature claims, other-projects disclosure.
+  - Gates on the branch: build, typecheck, `pnpm test` 471/471. E2E and live re-run before commit.
+- `master` = `6cb0787`, pushed and deployed (live re-audit 2026-11-13: e2e 59/59 incl. one re-run, Lighthouse a11y/BP/SEO 100, ZAP 0 failures). Rollback on the server: image `near-sentinel:previous`, `Caddyfile.previous`, a data backup.
 - `packages/sdk/t.cjs` is a local scratch file, deliberately untracked. `media/` is git-ignored.
-- The tag `hackathon-submission` still points to `cc2aa40`; moving it needs a force tag push (owner's action).
-- Git push identity: SSH must greet `kariosg`. On 2026-11-13 it briefly greeted another account until the owner reloaded the key.
+- The tag `hackathon-submission` still points to `cc2aa40`; moving it to the final commit is the owner's action.
 
 ## Blocked on the owner
-- Nothing blocking. Submitted 2026-11-11 (X post https://x.com/kariosgx/status/2120484078420169114). Results by 2026-11-18 23:59 UTC.
-- Before 2026-11-14 23:59 UTC: tag the final commit `hackathon-submission`. No code changes after the deadline.
+- Submitted 2026-11-11 (X post https://x.com/kariosgx/status/2120484078420169114). Results by 2026-11-18 23:59 UTC.
+- Before 2026-11-14 23:59 UTC: approve and push `feature/agent-spend-guard`, then move the tag `hackathon-submission` to the final commit. No code changes after the deadline.
+- Optional: owner wallet hand test (docs/TESTING.md section B).
 - After results: destroy the Vultr instance to stop billing.
 - The X post (with the demo video) and the submission form (mainnet payout account).
 

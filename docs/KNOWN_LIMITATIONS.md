@@ -27,6 +27,8 @@ Honest list. Nothing here is claimed as working elsewhere.
 - **Record fee:** 0.006 NEAR per spend is kept from the vault balance for the record's storage.
 
 ## Agent security checks (key check, payment preflight, safety score)
+- **The Vault's 24-hour limit is a fixed window, not a sliding one.** It restarts with the first spend after 24 hours, so an agent could spend the limit just before a reset and again just after it: up to twice the limit within a short span. The per-payment limit and the balance still cap every payment. A sliding window needs a contract upgrade, which was not deployed before the deadline.
+- **NEAR AI signatures are fetched, not verified locally.** The NEAR AI run stores each response signature and checks that the attestation report names the signing address. It does not run the ECDSA recovery itself; verify a response at cloud.near.ai/verify.
 - **The payment check is advisory.** It mirrors `spend()` on the views it read; the contract re-checks on-chain. A view older than a 24-hour window reset can only make it say UNKNOWN, never a wrong ALLOWED (differential test: 50,000 random cases, 0 false ALLOWED).
 - **The key check sees keys, not where they are stored.** It cannot tell a full-access key kept offline by the owner from one on the agent's machine, so any full-access key is flagged.
 - **Function-call keys for other contracts are graded "review", not proven safe.** A function-call key cannot transfer NEAR itself, but Sentinel does not analyse what the target contract's methods can do.

@@ -4,6 +4,15 @@
 
 First release, built for NEAR HACKATHON (Nov 2026).
 
+### Agent-side enforcement and judge-screening fixes (2026-11-13)
+- **`preflightSpend` gains `action`** (SIGN / ASK_HUMAN / REFUSE) with `actionReason`. It folds the receiver check into one fail-closed answer: a lookalike payee is REFUSE even when the vault has no allowlist and the contract would accept it. `decision` still mirrors the contract and is unchanged.
+- **SDK `guardedSpend`:** an agent-side wrapper that calls the agent's `sign` only on SIGN, asks a human on ASK_HUMAN (refuses without one), and never signs on REFUSE or on any error.
+- **Attack demo `pnpm demo:injection`:** a worst-case model obeys text planted in invoices; the naive agent signs 3/3 attacker payments, the guarded agent 0/3 and still pays the real invoice. Transcript in `docs/injection-demo.md`; 5 assertions in `pnpm test`.
+- **NEAR AI agent:** new `preflight_spend` tool; a model that wants to pay after REFUSE or ASK_HUMAN is overruled. MCP `preflight_spend` and the dashboard show the action.
+- **`pnpm proof:testnet`:** the real-transaction proof is now a committed script (dry run by default, `--i-confirm` sends, testnet only).
+- **Docs:** test counts aligned everywhere; the Vault's 24-hour limit is described as a fixed window (with the 2× edge in Known limitations); signing and NEAR AI signature claims made exact; other-projects disclosure.
+- **Tests:** 471 (SDK 346, MCP 17, API 87, demo 12, NEAR AI agent 9).
+
 ### Full audit and fixes (2026-11-13)
 - **New `docs/AUDIT.md`:**
   - real testnet transactions: Vault 10/10 predictions matched, Guard paid once with the repeat refused and refunded;

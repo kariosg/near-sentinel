@@ -14,7 +14,8 @@
     "test:testnet": "pnpm build && node dist/integration-testnet.js",
     "create-account": "pnpm build && node dist/create-contract-account.js",
     "deploy": "pnpm build && node dist/deploy.js",
-    "vault:testnet": "pnpm build && node dist/vault-testnet.js"
+    "vault:testnet": "pnpm build && node dist/vault-testnet.js",
+    "proof:testnet": "pnpm build && node dist/proof-testnet.js"
   },
   "dependencies": {
     "@near-sentinel/sdk": "workspace:*",

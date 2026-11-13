@@ -11,11 +11,11 @@ For human judges and AI reviewers. Each claim below links to the command, transa
 | Time | Do | Expect |
 |---|---|---|
 | 1 min | Open **https://64-177-60-105.sslip.io** | The live dashboard on NEAR testnet. Start page → "Start the 3-minute tour". |
-| 10 min | `npm install -g pnpm@8` (if needed), `pnpm install`, then **`pnpm verify`** | One summary table: build, 444 tests, demo, live testnet, 59 browser tests, contracts (if Docker). Exit code 0. |
+| 10 min | `npm install -g pnpm@8` (if needed), `pnpm install`, then **`pnpm verify`** | One summary table: build, 471 tests, demo, live testnet, 59 browser tests, contracts (if Docker). Exit code 0. |
 | 3 min | `pnpm install && pnpm verify --quick` | Same, without network, browser or Docker. |
 | 1 min | Agent security: [Inspect → ④ Agent keys](https://64-177-60-105.sslip.io/#/inspect?tool=keys) → *Live demo agent keys*, then ③ Vault → *Live agent allowance* → *Would this payment be allowed?* to `attacker.testnet` | `FULL_ACCESS_PRESENT` with the safe spend-only setup; the payment is `BLOCKED · NOT_ALLOWED_RECEIVER` before anything is signed. Mapping to the OWASP agentic top 10: Integrate → *Security & privacy for AI agents*. |
 
-Verified on 2026-11-11 on Windows (Node 22.16, Chrome) and in a clean Linux container (`mcr.microsoft.com/playwright:v1.65.0-noble`: Node 26, no git checkout, no Chrome; the browser tests used Playwright's bundled Chromium).
+Verified on 2026-11-13 on Windows (Node 22.16, Chrome) and in a clean Linux container (`mcr.microsoft.com/playwright:v1.65.0-noble`: Node 26, no git checkout, no Chrome; the browser tests used Playwright's bundled Chromium).
 
 Integration and sustainability: any project can integrate it today (MCP, Agent Skill, SDK, REST/Docker, contracts); open source (MIT). **Revenue: none today, but a clear model exists** (hosted API plans, enterprise support, optional on-chain fee, grants): [README → Integration, sustainability and business model](README.md#integration-sustainability-and-business-model).
 
@@ -78,7 +78,7 @@ Demo accounts: `karios.testnet` (payer, Vault owner), `kariosr.testnet` (receive
 ### Sentinel Vault: give an AI agent money without giving it the keys
 | Claim | Check |
 |---|---|
-| Owner-funded allowance with per-payment and rolling 24-hour limits, a receiver allowlist, freeze and owner-only withdraw; pay-once per intent | `contracts/guard/vault/src/lib.rs`; 19 Rust unit tests (`pnpm test:contract`) |
+| Owner-funded allowance with per-payment and 24-hour limits (a fixed window), a receiver allowlist, freeze and owner-only withdraw; pay-once per intent | `contracts/guard/vault/src/lib.rs`; 19 Rust unit tests (`pnpm test:contract`) |
 | The agent can hold only a function-call key limited to `spend`: it pays within the policy, and NEAR rejects it (`INVALID_TRANSACTION`) for a direct transfer or any other method | Local sandbox suite, 14 vault checks (`contracts/guard/scripts/vault-suite.ts`, run by `pnpm test:contract`, 27/27 with the Guard) |
 | Live on testnet, code matches the build | [`vault.karios.testnet`](https://testnet.nearblocks.io/address/vault.karios.testnet), code hash `7u8KGfkdn4gJCuTBNeqwMfVB2pDR8w2PvXxthMvQuLp9`; live suite 10/10 (`pnpm vault:testnet`), e.g. duplicate rejected [`3hw9fHjb…`](https://testnet.nearblocks.io/txns/3hw9fHjbRJECXuwaW5F4yUGqA4uq2SgjBf2qoJ3VLfEB), over the limit [`2niwBM9n…`](https://testnet.nearblocks.io/txns/2niwBM9nnEUb8DuMWga1bcwLJotjkBExd8ACxPQrAMpt), outside the allowlist [`76yZB8gS…`](https://testnet.nearblocks.io/txns/76yZB8gSxKdTcjLJRmkoqoV7DZ5K8HAgSNqgfqbQN6c). On testnet the suite uses a full-access key (no key is generated there). |
 | Owners manage the allowance with their own wallet through **NEAR Connect** (NEAR's recommended connector); each action shows a preview of exactly what will be signed | `apps/web/src/wallet.ts`, `apps/web/src/components/VaultOwnerActions.tsx`; browser test "owner actions" checks the preview args and deposit (real signing needs your testnet wallet) |
@@ -104,6 +104,8 @@ Demo accounts: `karios.testnet` (payer, Vault owner), `kariosr.testnet` (receive
 
 ### Proven with real testnet transactions (2026-11-12)
 
+Reproduce with your own testnet accounts: `pnpm proof:testnet` prints the plan (dry run), `pnpm proof:testnet -- --i-confirm` sends (script: `contracts/guard/scripts/proof-testnet.ts`; testnet only). A second run on 2026-11-13 is in [docs/AUDIT.md](docs/AUDIT.md#1-real-transactions-on-testnet).
+
 Before every transaction, Sentinel's payment check (`preflightSpend`, with the receiver check) predicted the outcome. Then the real `spend` was sent to `vault.karios.testnet`. **10/10 predictions matched the contract.** The real 0.005 NEAR payment then got `DO_NOT_RETRY` from the "did it land?" check, and its on-chain record says `Paid`.
 
 | Case | Sentinel predicted | Contract did | Receiver check | Transaction |
@@ -114,9 +116,9 @@ Before every transaction, Sentinel's payment check (`preflightSpend`, with the r
 | 0.02, over the per-payment limit | `OVER_PER_PAYMENT_LIMIT` | `OVER_PER_PAYMENT_LIMIT` | OK | [`6XMGgd73…`](https://testnet.nearblocks.io/txns/6XMGgd73X7qbrKwHCJvNiMUf3iWDNGF97doHD4YByyNg) |
 | pay the vault itself | `INVALID_RECEIVER` | `INVALID_RECEIVER` | OK | [`E3hqTmxb…`](https://testnet.nearblocks.io/txns/E3hqTmxbujvVLSsGNyJ2yLDSi3fijVkpKNFwCpZfcamz) |
 | amount 0 | `INVALID_AMOUNT` | `INVALID_AMOUNT` | OK | [`8T5g4jdi…`](https://testnet.nearblocks.io/txns/8T5g4jdiwJD3qpXPUNZabAbwc92HFVia8pg3wmnenwSY) |
-| pay 0.01 (2nd) | `ALLOWED` | `PAID` | OK | [`9uoYaaWz…`](https://testnet.nearblocks.io/txns/9uoYaaWzTeN59gnWqogte8Xhxhhbdnw3CG2fvDxDccJb) |
-| pay 0.01 (3rd, day total 0.025) | `ALLOWED` | `PAID` | OK | [`3qfaLP6Y…`](https://testnet.nearblocks.io/txns/3qfaLP6YhdybSHB1ZdPvpLFAwo9Msyf3TpAzwKsE7ksc) |
-| pay 0.01 more (day total 0.035) | `OVER_DAILY_LIMIT` | `OVER_DAILY_LIMIT` | OK | [`EyXk3Qva…`](https://testnet.nearblocks.io/txns/EyXk3QvahPXM36Dzj8L8ogbHKgTqHxDWJ938bLNgnsL) |
+| pay 0.01 (new intent) | `ALLOWED` | `PAID` | OK | [`9uoYaaWz…`](https://testnet.nearblocks.io/txns/9uoYaaWzTeN59gnWqogte8Xhxhhbdnw3CG2fvDxDccJb) |
+| pay 0.01 (new intent; 0.025 of the 0.03 day limit now used) | `ALLOWED` | `PAID` | OK | [`3qfaLP6Y…`](https://testnet.nearblocks.io/txns/3qfaLP6YhdybSHB1ZdPvpLFAwo9Msyf3TpAzwKsE7ksc) |
+| pay 0.01 (new intent; would make 0.035) | `OVER_DAILY_LIMIT` | `OVER_DAILY_LIMIT` | OK | [`EyXk3Qva…`](https://testnet.nearblocks.io/txns/EyXk3QvahPXM36Dzj8L8ogbHKgTqHxDWJ938bLNgnsL) |
 | pay 0.001 while frozen | `FROZEN` | `FROZEN` | OK | [`65a5jPyR…`](https://testnet.nearblocks.io/txns/65a5jPyRYQZBqPvi3NuV14PDmnYhj51zLrVcEHkbVnXB) |
 
 Test allowance: owner = agent = `karios.testnet`, at most 0.01 NEAR per payment and 0.03 NEAR per 24 h, paying only `kariosr.testnet`. The owner withdrew the rest afterwards ([`XZqkCji9…`](https://testnet.nearblocks.io/txns/XZqkCji9Cwdgqtu5RUJZJh9XgtxqwsAgGLfhtqp7Wez)).
@@ -125,7 +127,7 @@ Test allowance: owner = agent = `karios.testnet`, at most 0.01 NEAR per payment 
 | Claim | Check |
 |---|---|
 | Works on mainnet too (read-only) | `pnpm test:live` → `packages/sdk/test/live-mainnet.test.ts`: mainnet providers answer with chain_id mainnet from ≥ 2 independent operators; a real recent successful mainnet transaction, picked live from a final block, is `DO_NOT_RETRY`; an unknown hash is `WAIT_AND_RECHECK`. Nothing is signed. |
-| Read-only: Sentinel never signs or submits | The SDK, MCP server and API contain no signing code. Only the demo agents (`examples/agent-demo`) and the guard's deploy/test scripts sign, with keys from git-ignored `.env` files. |
+| Read-only: Sentinel never signs or submits real transactions | The SDK and MCP server contain no signing code; `guardedSpend` calls the agent's own `sign` callback and holds no key. The API signs nothing on a real network: its `/api/v1/demo/run` route runs the simulated demo, which signs with a throwaway in-memory key against a local mock chain. Real signing happens only in the demo agents (`examples/agent-demo`) and the guard's deploy, test and proof scripts, with keys from git-ignored `.env` files. |
 | SSRF-guarded custom providers, rate limits, body limit, anti-framing headers | `packages/sdk/src/ssrf.ts`, `packages/sdk/test/ssrf.test.ts`, `apps/api/test/api.test.ts` |
 | No keys or seed phrases in the repo | `node scripts/check-secrets.mjs` (runs first in `pnpm test`) |
 | Fault injection: timeouts, resets, malformed/oversized replies, lying and lagging providers | Live site → Benchmarks → "Run simulated faults" (12/12); `apps/api/src/benchmarks.ts` |
