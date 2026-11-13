@@ -10,6 +10,7 @@ First release, built for NEAR HACKATHON (Nov 2026).
 - **Vault panels refresh themselves** after an owner transaction; reset times are unambiguous (`14 Nov 2026, 18:46 (13:16 UTC)`), also on Incidents.
 - **Honest example hints:** old example transactions are held by one archival operator only, so a slow answer can give the safe `MANUAL_REVIEW_REQUIRED`.
 - **Logo I:** the Shield S now ends in a mint check (safe, and it landed) on a single dark green (`#065f46`) with a thin rim, centred and slightly larger in the tile; main action buttons use the same dark emerald, everything else keeps its colours; the name beside the logo is mint NEAR, a white-to-mint "Sentinel" and the tagline "did it land?"; app, favicon, iPhone icon, share image and README. `scripts/render-brand.mjs` re-renders the PNGs.
+- **Faster first screen:** every page except Start now loads on first visit (code-splitting); the first-screen JavaScript drops from 490 KB to 309 KB (about 140 → 95 KB compressed). Overview lists each recent transaction once; Start drops the redundant event badge and shows the current test count (471).
 - **"How it works" page** (`#/how`, in the dashboard with the sidebar and search): one page for judges with the problem, the layer that solves it, the proof, NEAR vs EVM and the wallet test. Linked from Start, README and JUDGING.
 
 ### Agent-side enforcement and judge-screening fixes (2026-11-13)

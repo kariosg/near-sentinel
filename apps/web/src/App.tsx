@@ -1,19 +1,21 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { api, type HealthSnapshot } from "./api";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Icon, Logo, type IconName } from "./components/icons";
 import { IdentityBanner, IdentityStatus, useWalletCallback } from "./components/Identity";
-import { Kbd, LiveDot, Pill, useFocusTrap } from "./components/ui";
-import { BenchmarksPage } from "./pages/Benchmarks";
-import { HowItWorksPage } from "./pages/HowItWorks";
-import { IncidentsPage } from "./pages/Incidents";
-import { InspectPage } from "./pages/Inspect";
-import { IntegratePage } from "./pages/Integrate";
-import { OverviewPage } from "./pages/Overview";
-import { ProvidersPage } from "./pages/Providers";
-import { SettingsPage } from "./pages/Settings";
+import { Kbd, LiveDot, Loading, Pill, useFocusTrap } from "./components/ui";
 import { StartPage } from "./pages/Start";
+
+// The landing page ships in the main bundle; every other page loads on first visit, so the first screen downloads less.
+const BenchmarksPage = lazy(() => import("./pages/Benchmarks").then((m) => ({ default: m.BenchmarksPage })));
+const HowItWorksPage = lazy(() => import("./pages/HowItWorks").then((m) => ({ default: m.HowItWorksPage })));
+const IncidentsPage = lazy(() => import("./pages/Incidents").then((m) => ({ default: m.IncidentsPage })));
+const InspectPage = lazy(() => import("./pages/Inspect").then((m) => ({ default: m.InspectPage })));
+const IntegratePage = lazy(() => import("./pages/Integrate").then((m) => ({ default: m.IntegratePage })));
+const OverviewPage = lazy(() => import("./pages/Overview").then((m) => ({ default: m.OverviewPage })));
+const ProvidersPage = lazy(() => import("./pages/Providers").then((m) => ({ default: m.ProvidersPage })));
+const SettingsPage = lazy(() => import("./pages/Settings").then((m) => ({ default: m.SettingsPage })));
 
 type Route = { path: string; label: string; icon: IconName; group: string; description: string; render: () => ReactNode };
 
@@ -360,7 +362,9 @@ export function App() {
           )}
 
           <div key={route} className="animate-fade-up">
-            <ErrorBoundary key={route}>{current.render()}</ErrorBoundary>
+            <ErrorBoundary key={route}>
+              <Suspense fallback={<Loading label="Loading page…" />}>{current.render()}</Suspense>
+            </ErrorBoundary>
           </div>
 
           <footer className="mt-12 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5 text-xs text-muted">

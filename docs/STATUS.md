@@ -112,27 +112,17 @@ docker compose up -d --build
 - `pnpm contract:deploy` runs `pnpm --filter … run deploy` (plain `deploy` would hit pnpm's built-in command). `-- --i-confirm` forwarding verified.
 
 ## Uncommitted work
-- Code: none. `master` = `e6efc5b` (agent spend guard), pushed and deployed 2026-11-13.
-  - What it added: `preflightSpend` `action` (SIGN / ASK_HUMAN / REFUSE, folds in the receiver check), SDK `guardedSpend`, `pnpm demo:injection` (transcript `docs/injection-demo.md`), `preflight_spend` for the NEAR AI agent, action shown in MCP and the dashboard, `pnpm proof:testnet`, docs aligned (471 tests, fixed 24-hour window, exact signing claims).
-  - Gates before the commit: `pnpm verify` all PASS (471 tests, live 10/10, e2e 59/59, contracts 14 + 19 Rust + 27/27 sandbox). A clean Linux container ran the README from a fresh clone: all steps pass.
-  - Live after deploying: e2e 59/59; receiver checks 15/15; API checks 36/36; walkthrough 15/15; `/api/v1/spend-preflight` returns SIGN for the real payee and REFUSE for `kari0s.testnet`.
-  - Final browser audit, live: Lighthouse mobile 93 / desktop 96 (a11y, best practices, SEO 100; CLS 0); OWASP ZAP 0 failures, 62 passed, only the 6 documented low notes (`docs/AUDIT.md` section 4). Nothing to fix.
-- **Working tree is dirty (finished, not committed, not deployed): real-wallet test fixes + logo I + chart page.** Waiting for the owner to check it on localhost, then OK commit → push → deploy.
-  - Real-wallet test passed on the live site (report `docs/manual-wallet-test-2026-11-13.md`; 4 testnet txs by a team tester's wallet).
-  - Fixes: wallet restored after reload (`restoreWallet` in `apps/web/src/wallet.ts`); identity banner hidden while a wallet is connected; vault panels refresh after an owner tx (`onTxSent`); unambiguous dates (`fmtDateTime` in `components/ui.tsx`); honest hints for old example txs.
-  - Brand: logo I on dark green `#065f46` with a thin rim, mark centred (icons.tsx, favicon.svg, docs/media/logo.svg, apple-touch-icon.png, og.png via `scripts/render-brand.mjs`).
-  - New "How it works" page in the dashboard (`#/how`, `apps/web/src/pages/HowItWorks.tsx`; replaces the standalone `/how-it-works.html`, whose source copy stays in git-ignored `media/how-sentinel-works.html`), linked from Start, README, JUDGING.
-  - Local gates (final: green logo + green main buttons, everything else multicolour as before): `pnpm verify` all PASS: 471 tests, live 10/10, e2e 62/62 (axe contrast covers the green), contracts 14 + 19 Rust + 27/27 sandbox. README screenshots retaken with the new look; the 5 README GIFs are kept as the submission-time originals (owner's choice).
-  - Still to check with the owner's wallet: restore after reload (on localhost or live after deploy).
-  - Also uncommitted: the earlier docs-only STATUS/AUDIT live-results edits.
-- Rollback on the server: image `near-sentinel:previous` (= `6cb0787`), data backup `~/backups/sentinel-data-20261113T071554Z.tgz`. The Caddyfile is unchanged.
+- `master` = `1b62c34` (real-wallet test fixes, How it works page, logo I), pushed and deployed 2026-11-13 ~15:10 UTC.
+  - Live after deploying `1b62c34`: e2e 62/62; receiver checks 15/15; API checks 36/36; walkthrough 15/15; local = GitHub = live.
+  - Rollback on the server: image `near-sentinel:previous` (= `e6efc5b`), data backup `~/backups/sentinel-data-20261113T150817Z.tgz`.
+- **Working tree (finished, being shipped as one more commit):** code-splitting (first-screen JS 490 → 309 KB), Overview shows each recent tx once, Start without the redundant event badge and with the current test count. Full `pnpm verify` all PASS (471, live 10/10, e2e 62/62, contracts).
 - `packages/sdk/t.cjs` is a local scratch file, deliberately untracked. `media/` is git-ignored.
 - The tag `hackathon-submission` still points to `cc2aa40`; moving it to the final commit is the owner's action.
 
 ## Blocked on the owner
 - Submitted 2026-11-11 (X post https://x.com/kariosgx/status/2120484078420169114). Results by 2026-11-18 23:59 UTC.
 - Before 2026-11-14 23:59 UTC: move the tag `hackathon-submission` to the final commit. No code changes after the deadline.
-- Done 2026-11-13: owner-wallet hand test (docs/TESTING.md section B), all steps pass.
+- Done 2026-11-13: owner-wallet hand test (docs/TESTING.md section B), all steps pass. Still to do once on live: connect, reload (F5), confirm the wallet stays connected.
 - After results: destroy the Vultr instance to stop billing.
 - The X post (with the demo video) and the submission form (mainnet payout account).
 

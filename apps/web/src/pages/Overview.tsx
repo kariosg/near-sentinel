@@ -127,7 +127,8 @@ export function OverviewPage() {
               </tr>
             </thead>
             <tbody>
-              {reports.data.items.map((r) => (
+              {/* One row per transaction (its latest inspection): repeated checks of the same tx would only repeat the row. */}
+              {reports.data.items.filter((r, i, all) => all.findIndex((x) => x.txHash === r.txHash) === i).map((r) => (
                 <tr key={r.id} className="border-t border-line">
                   <td className="py-2.5 text-xs text-muted">{timeAgo(r.createdAt)}</td>
                   <td className="py-2.5">

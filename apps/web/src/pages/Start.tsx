@@ -118,7 +118,6 @@ export function StartPage() {
       <section aria-labelledby="hero-title" className="grid items-center gap-10 pt-2 lg:grid-cols-[1.05fr_1fr]">
         <div className="stagger">
           <div className="flex flex-wrap gap-2">
-            <Pill tone="info">NEAR HACKATHON</Pill>
             <Pill tone="neutral">AI Security &amp; Defense</Pill>
             <Pill tone="neutral">Agent Economy</Pill>
           </div>
@@ -391,7 +390,7 @@ export function StartPage() {
           <SectionTitle id="verify-title" eyebrow="Reproduce it" title="Verify from your terminal" sub="Node ≥ 22.16 and pnpm 8. Docker only for the contract suite." />
           <ul className="space-y-3 text-sm text-ink-2">
             {[
-              ["444 unit and integration tests", "SDK, MCP server (real stdio), API, demo, NEAR AI agent"],
+              ["471 unit and integration tests", "SDK, MCP server (real stdio), API, demo, NEAR AI agent"],
               ["10 live tests", "read-only, against public testnet and mainnet RPCs"],
               ["62 browser tests", "flows, accessibility, phone/tablet/desktop, keyboard, this tour, the demo data, agent security"],
               ["33 + 27 + 21 contract checks", "Guard and Vault: Rust unit tests, a local NEAR node, then live on testnet"],
@@ -408,7 +407,7 @@ export function StartPage() {
           </ul>
         </div>
         <CodeBlock title="bash">{`pnpm install && pnpm build
-pnpm test            # secrets check + 444 tests
+pnpm test            # secrets check + 471 tests
 pnpm demo            # naive agent pays 2 NEAR, guarded pays 1
 pnpm start           # this dashboard on http://127.0.0.1:8080
 pnpm test:contract   # Docker: 33 Rust tests + 27 on-chain checks`}</CodeBlock>
