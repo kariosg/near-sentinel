@@ -2,6 +2,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { api, type DemoRun } from "../api";
 import { Icon, type IconName } from "../components/icons";
+import { DemoClips } from "../components/DemoClips";
 import { GLOSSARY, Term } from "../components/Term";
 import { CodeBlock, CountUp, LiveDot, Pill, toneText, VERDICTS, verdictTone } from "../components/ui";
 import { VerdictTree } from "../components/VerdictTree";
@@ -245,6 +246,9 @@ export function StartPage() {
         <LiveDemo />
       </section>
 
+      {/* ------------------------------------------------------------ short videos */}
+      <DemoClips />
+
       {/* ------------------------------------------------------------ tour */}
       <section id="tour" aria-labelledby="tour-title" className="scroll-mt-24">
         <SectionTitle id="tour-title" eyebrow="For judges" title="The 3-minute tour" sub="Each step is one click and works without a wallet. Your progress is saved in this browser." />
@@ -392,7 +396,7 @@ export function StartPage() {
             {[
               ["471 unit and integration tests", "SDK, MCP server (real stdio), API, demo, NEAR AI agent"],
               ["10 live tests", "read-only, against public testnet and mainnet RPCs"],
-              ["62 browser tests", "flows, accessibility, phone/tablet/desktop, keyboard, this tour, the demo data, agent security"],
+              ["63 browser tests", "flows, accessibility, phone/tablet/desktop, keyboard, this tour, the demo data, agent security"],
               ["33 + 27 + 21 contract checks", "Guard and Vault: Rust unit tests, a local NEAR node, then live on testnet"],
             ].map(([a, b]) => (
               <li key={a} className="flex gap-3">

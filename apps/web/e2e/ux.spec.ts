@@ -504,6 +504,23 @@ test("'How it works, in charts' is linked from Start and opens the in-app How it
   expect(errors).toEqual([]);
 });
 
+test("short videos: Start shows 5 muted, looping clips that play on their own, and every clip file is served", async ({ page, request }) => {
+  const errors = trackErrors(page);
+  await skipIdentity(page);
+  await page.goto("/#/start");
+  const section = page.getByRole("region", { name: /See it in action/ });
+  await section.scrollIntoViewIfNeeded();
+  const videos = section.locator("video");
+  await expect(videos).toHaveCount(5);
+  await expect.poll(() => videos.evaluateAll((vs) => (vs as HTMLVideoElement[]).filter((v) => v.muted && v.loop && !v.paused).length), { timeout: 15_000 }).toBe(5);
+  for (const id of ["run-it-live", "inspect-verdict", "guard-duplicate", "vault-allowance", "agent-security"]) {
+    const r = await request.get(`/media/${id}.mp4`);
+    expect(r.status(), id).toBe(200);
+    expect(r.headers()["content-type"]).toContain("video/mp4");
+  }
+  expect(errors).toEqual([]);
+});
+
 test("integrate page: how to use it in your project, open source, and the revenue model", async ({ page }) => {
   await skipIdentity(page);
   await page.goto("/#/integrate");

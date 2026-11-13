@@ -95,4 +95,4 @@ All transactions were testnet only, between the owner's own accounts (`karios.te
 
 ## 5. Re-run it yourself
 
-`pnpm verify` runs the build, 471 unit and integration tests, 10 live tests, 62 browser tests and the contract suites. The real-transaction checks need the owner's testnet key and are not part of `pnpm verify`.
+`pnpm verify` runs the build, 471 unit and integration tests, 10 live tests, 63 browser tests and the contract suites. The real-transaction checks need the owner's testnet key and are not part of `pnpm verify`.

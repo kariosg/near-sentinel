@@ -9,7 +9,7 @@ pnpm build              # sdk → agent-demo → mcp → api → web → near-ai
 pnpm typecheck
 pnpm test               # secrets gate + sdk 346 + mcp 17 (stdio e2e) + api 87 + demo 12 assertions + NEAR AI agent 9 (= 471)
 pnpm test:live          # 10 read-only tests against public NEAR RPCs (7 testnet + 3 mainnet)
-pnpm test:e2e           # 62 Playwright tests (functional + axe a11y + responsive + keyboard + headers/CSP + judge tour)
+pnpm test:e2e           # 63 Playwright tests (functional + axe a11y + responsive + keyboard + headers/CSP + judge tour)
 pnpm test:contract      # guard 14 + vault 19 Rust unit tests + 27-check on-chain suite on a local neard sandbox (Docker)
 pnpm verify             # every check above in one summary table (`--quick`: no network/browser/Docker)
 pnpm test:load          # load + soak of the built server against local mock RPCs (17 gates)

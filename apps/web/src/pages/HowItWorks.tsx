@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { DemoClips } from "../components/DemoClips";
 import { Icon, type IconName } from "../components/icons";
 import { linkClass, Pill, toneText, verdictTone, type Tone } from "../components/ui";
 
@@ -275,7 +276,7 @@ const FAULTS = [
 const TEST_SUITES: Bar[] = [
   { name: "SDK unit", value: 346, display: "346" },
   { name: "API", value: 87, display: "87" },
-  { name: "Browser (Playwright)", value: 62, display: "62" },
+  { name: "Browser (Playwright)", value: 63, display: "63" },
   { name: "Contract unit (Rust)", value: 33, display: "33", detail: "Rust unit: 33 (Guard 14 + Vault 19)" },
   { name: "On-chain sandbox", value: 27, display: "27", detail: "Sandbox: 27 (Vault 14 + Guard 13)" },
   { name: "Live testnet contracts", value: 21, display: "21", detail: "Live testnet: 21 (Guard 11 + Vault 10)" },
@@ -428,6 +429,8 @@ export function HowItWorksPage() {
           ))}
         </ul>
       </section>
+
+      <DemoClips title="Watch it first" intro="Five short clips of the real dashboard on testnet. Each plays on its own, without sound; the steps below explain what you see." />
 
       {/* ------------------------------------------------------------ 1. problem */}
       <Step
@@ -772,7 +775,7 @@ export function HowItWorksPage() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <StatTile value="12/12" tone="good" label="fault scenarios classified correctly (simulated benchmark)" />
           <StatTile value="471" label={<>unit and integration tests (<Code>pnpm test</Code>)</>} />
-          <StatTile value="62" label="browser tests, with axe accessibility checks" />
+          <StatTile value="63" label="browser tests, with axe accessibility checks" />
           <StatTile value="10/10" tone="good" label="real testnet payment predictions matched the contract, on 2 separate runs" />
         </div>
 

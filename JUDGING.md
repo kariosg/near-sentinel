@@ -13,7 +13,7 @@ For human judges and AI reviewers. Each claim below links to the command, transa
 | Time | Do | Expect |
 |---|---|---|
 | 1 min | Open **https://64-177-60-105.sslip.io** | The live dashboard on NEAR testnet. Start page → "Start the 3-minute tour". |
-| 10 min | `npm install -g pnpm@8` (if needed), `pnpm install`, then **`pnpm verify`** | One summary table: build, 471 tests, demo, live testnet, 62 browser tests, contracts (if Docker). Exit code 0. |
+| 10 min | `npm install -g pnpm@8` (if needed), `pnpm install`, then **`pnpm verify`** | One summary table: build, 471 tests, demo, live testnet, 63 browser tests, contracts (if Docker). Exit code 0. |
 | 3 min | `pnpm install && pnpm verify --quick` | Same, without network, browser or Docker. |
 | 1 min | Agent security: [Inspect → ④ Agent keys](https://64-177-60-105.sslip.io/#/inspect?tool=keys) → *Live demo agent keys*, then ③ Vault → *Live agent allowance* → *Would this payment be allowed?* to `attacker.testnet` | `FULL_ACCESS_PRESENT` with the safe spend-only setup; the payment is `BLOCKED · NOT_ALLOWED_RECEIVER` before anything is signed. Mapping to the OWASP agentic top 10: Integrate → *Security & privacy for AI agents*. |
 

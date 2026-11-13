@@ -23,15 +23,17 @@ A guard contract (including our own Sentinel Guard) only knows about calls that 
 3. **10 minutes, from source:** `pnpm install && pnpm verify` prints one pass/fail table of every check. [JUDGING.md](JUDGING.md) maps each claim to its proof.
 4. **Step-by-step testing** (browser, your own testnet wallet, or source), each step with its expected result: [docs/TESTING.md](docs/TESTING.md).
 
+🎬 **Run it live, in 15 seconds:** the naive agent pays twice, the Sentinel-guarded agent once.
+
 ![Run it live: the naive agent pays twice, the Sentinel-guarded agent once](docs/media/run-it-live.gif)
 
-**See each part in 10 seconds** (recorded from the dashboard, real testnet data):
+🎬 **See each part in 10 seconds** (short clips that play on their own, recorded from the dashboard with real testnet data):
 
-| Did it land? | Guard: pay once per intent | Vault: an allowance, not keys |
+| ▶️ Did it land? | ▶️ Guard: pay once per intent | ▶️ Vault: an allowance, not keys |
 |---|---|---|
 | ![One click on the real-money payment: DO_NOT_RETRY](docs/media/inspect-verdict.gif) | ![Guard contract: a paid intent is PAID, a retry is refused](docs/media/guard-duplicate.gif) | ![Vault: how much the agent may spend now](docs/media/vault-allowance.gif) |
 
-**Agent security, in 15 seconds:** the key check finds a full-access key on the demo agent and shows the safe setup; a prompt-injected payment to `attacker.testnet` is BLOCKED before anything is signed.
+🎬 **Agent security, in 15 seconds:** the key check finds a full-access key on the demo agent and shows the safe setup; a prompt-injected payment to `attacker.testnet` is BLOCKED before anything is signed.
 
 ![Agent security: key check, then a prompt-injected payment blocked before signing](docs/media/agent-security.gif)
 
@@ -92,7 +94,7 @@ It ships as a TypeScript SDK, an **MCP server for AI agents**, a REST API and a 
 | Benchmarks page → **Run simulated faults** (no key needed) | 12/12 fault scenarios classified correctly in a few seconds |
 | `pnpm test:live` | 10 read-only tests against public RPCs: 7 on testnet, 3 on mainnet (a real recent mainnet transaction picked live) |
 | `pnpm test:contract` (Docker) | 33 Rust unit tests (Guard 14 + Vault 19) + 27 on-chain checks on a local NEAR sandbox, including a duplicate payment rejected with `DUPLICATE_INTENT` and an agent whose function-call key can only `spend` within its allowance |
-| `pnpm test:e2e` (starts the built API itself; uses Google Chrome if installed, otherwise run `pnpm --filter @near-sentinel/web exec playwright install chromium` once) | 62 browser tests: flows, accessibility, mobile, keyboard, judge tour, command palette, modal focus, reduced motion |
+| `pnpm test:e2e` (starts the built API itself; uses Google Chrome if installed, otherwise run `pnpm --filter @near-sentinel/web exec playwright install chromium` once) | 63 browser tests: flows, accessibility, mobile, keyboard, judge tour, command palette, modal focus, reduced motion |
 | Inspect page → ④ **Agent keys** → *Live demo agent keys*; ③ Vault → *Would this payment be allowed?* | Agent security: a full-access key flagged with the safe setup; a payment to an unlisted receiver BLOCKED before signing |
 | MCP: see [From an AI agent](#from-an-ai-agent-mcp) | `check_retry_safety`, `check_intent`, `check_spend_allowance`, `preflight_spend`, `check_receiver`, `audit_agent_keys` and 4 more read-only tools |
 
@@ -172,7 +174,7 @@ pnpm start          # API + dashboard on http://127.0.0.1:8080 (NEAR testnet, 4 
 - Open http://127.0.0.1:8080 for the dashboard (it opens on a **Start here** page with a guided judge tour), or http://127.0.0.1:8080/docs for interactive OpenAPI.
 - Other gates (all re-run on 2026-11-13, results in [docs/STATUS.md](docs/STATUS.md)):
   - `pnpm test:live`: 10 read-only tests against real RPCs (7 testnet, 3 mainnet).
-  - `pnpm test:e2e`: 62 Playwright tests that drive the dashboard against the running API on testnet: functional flows, **axe accessibility (WCAG 2.1 AA, no serious/critical issues) on every page**, mobile/tablet/desktop layouts, keyboard navigation, the optional account verification (skip, cancel, forged callback), the judge tour, the Ctrl+K command palette, the mobile menu, the one-click benchmark and the live Guard and Vault panels, and every real demo example, the glossary and the Inspect jump links.
+  - `pnpm test:e2e`: 63 Playwright tests that drive the dashboard against the running API on testnet: functional flows, **axe accessibility (WCAG 2.1 AA, no serious/critical issues) on every page**, mobile/tablet/desktop layouts, keyboard navigation, the optional account verification (skip, cancel, forged callback), the judge tour, the Ctrl+K command palette, the mobile menu, the one-click benchmark and the live Guard and Vault panels, and every real demo example, the glossary and the Inspect jump links.
   - `pnpm test:contract`: 33 Rust unit tests (Guard 14 + Vault 19) + a 27-check on-chain suite on a local NEAR sandbox (Docker). See [contracts/guard](contracts/guard/README.md).
   - `pnpm test:load`: load and soak test of the built server against local mock RPCs (public RPCs are never load-tested). Zero errors, p99 budgets, no memory growth after warm-up.
 
