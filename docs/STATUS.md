@@ -109,33 +109,14 @@ docker compose up -d --build
 - `pnpm contract:deploy` runs `pnpm --filter … run deploy` (plain `deploy` would hit pnpm's built-in command). `-- --i-confirm` forwarding verified.
 
 ## Uncommitted work
-- **Branch `feature/receiver-check`** (from `62997e0`, not committed yet, 2026-11-12): receiver scam check.
-  - What it covers: SDK `checkReceiver`, `GET /api/v1/receiver-check`, MCP `check_receiver` (10 tools), `receiverCheck` inside every payment check, the Vault UI "Receiver check" block with a side-by-side diff, the "Try a scam lookalike" demo, and the docs.
-  - Independent review: every finding fixed (sub-account payees, network-TLD-only stripping, worst-case consensus, diff highlight, accessibility, the `known` param).
-  - Gates (2026-11-12):
-    - `pnpm verify` all PASS: 440 unit/integration (sdk 326, mcp 17, api 83), live 10, e2e 52/52, contracts;
-    - two independent reviews, every finding fixed; 20,000 randomized detector cases with 0 false alarms or misses;
-    - **real testnet transactions:** 10/10 Sentinel predictions matched the Vault contract (3 paid, 7 refused with the predicted code), and the real payment got DO_NOT_RETRY (tx list in JUDGING.md);
-    - receiver checks on real testnet: 15/15 locally and in the production Docker image;
-    - original API checks 36/36;
-    - MCP `check_receiver` live: DANGER;
-    - `pnpm audit` clean.
-  - **Merge gate passed:** waiting for the owner's OK to commit, merge, push and deploy.
-- `master` = `62997e0`: agent security shown everywhere (tour step 7, Start card, `?tool=` deep links, GIF, docs). Pushed.
-- **Redeployed** (app image only; Caddy and database unchanged):
-  - live e2e 51/51, API checks 36/36, walkthrough 14/14;
-  - rollback image `near-sentinel:previous` = `ed1fbb0`.
-- **Deployed and verified live** at https://64-177-60-105.sslip.io (2026-11-12 ~15:30 UTC):
-  - containers: sentinel healthy, Caddy recreated with the new log filter;
-  - database: migrations 1+2 applied, all 18 audit rows hashed (0 raw IPs), 86 reports and 13,492 samples kept;
-  - tests: live e2e 50/50, API edge cases 36/36, TESTING.md walkthrough 14/14 (steps 1-13);
-  - logs: no client IPs in the Caddy or sentinel logs;
-  - spot checks: retry-check `C59gttNU…` gives DO_NOT_RETRY, 4/4 providers reachable.
-- **Rollback on the server:**
-  - image `near-sentinel:previous` (= `58bcec4`), `deploy/vultr/Caddyfile.previous`, data backup in `~/backups/sentinel-data-20261112T152902Z.tgz`;
-  - to roll back: re-tag previous as prod, restore the Caddyfile, then `up -d --no-build --force-recreate`.
+- Only this STATUS note. `master` = `1d0cd80` (2026-11-13): receiver scam check, merged fast-forward from `feature/receiver-check`. Both branches are pushed; the branch is kept.
+- **Deployed and verified live** at https://64-177-60-105.sslip.io (app image only; Caddy and database unchanged):
+  - live e2e 52/52, receiver checks 15/15, API checks 36/36, walkthrough 15/15 (incl. step 12a lookalike);
+  - rollback image `near-sentinel:previous` = `62997e0`.
+- Real testnet proof (2026-11-12): 10/10 Sentinel predictions matched the Vault contract; tx list in JUDGING.md.
 - `packages/sdk/t.cjs` is a local scratch file, deliberately untracked. `media/` is git-ignored.
-- The tag `hackathon-submission` still points to `cc2aa40`; moving it needs a force tag push, which only the owner approves.
+- The tag `hackathon-submission` still points to `cc2aa40`; moving it needs a force tag push (owner's action).
+- Git push identity: SSH must greet `kariosg`. On 2026-11-13 it briefly greeted another account until the owner reloaded the key.
 
 ## Blocked on the owner
 - Nothing blocking. Submitted 2026-11-11 (X post https://x.com/kariosgx/status/2120484078420169114). Results by 2026-11-18 23:59 UTC.
