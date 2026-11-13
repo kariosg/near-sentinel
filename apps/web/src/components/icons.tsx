@@ -1,5 +1,5 @@
 /** Small inline icon set (24×24, stroke). Decorative by default (aria-hidden). No icon font, no dependency. */
-import { useId, type SVGProps } from "react";
+import type { SVGProps } from "react";
 
 const PATHS = {
   rocket: "M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09zM12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2zM9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5",
@@ -67,21 +67,17 @@ export function Icon({ name, size = 18, className = "", label, ...rest }: { name
 
 /** Product mark: a shield with a check, drawn with the brand gradient. */
 export function Logo({ size = 32 }: { size?: number }) {
-  // Unique gradient id per instance: a shared id breaks when the first copy is hidden (e.g. the desktop sidebar on phones).
-  const gid = `logo-g-${useId().replace(/:/g, "")}`;
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true" focusable="false">
-      <defs>
-        <linearGradient id={gid} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#2563eb" />
-          <stop offset="1" stopColor="#34e0a1" />
-        </linearGradient>
-      </defs>
-      <rect width="32" height="32" rx="9" fill={`url(#${gid})`} />
-      {/* Shield S: a shield (safety) holding the S of Sentinel, ending in a mint dot where the payment lands. */}
+      <rect width="32" height="32" rx="9" fill="#065f46" />
+      {/* A thin light rim keeps the dark-green tile crisp on the dark sidebar. */}
+      <rect x="0.5" y="0.5" width="31" height="31" rx="8.5" fill="none" stroke="#fff" strokeOpacity="0.18" />
+      {/* Shield S: a shield (safety) holding the S of Sentinel, ending in a mint check where the payment lands. Centred and enlarged in the tile. */}
+      <g transform="translate(16 16) scale(1.12) translate(-16 -15.35)">
       <path d="M16 5l8 3v6.6c0 5.7-4.1 9.4-8 11.1-3.9-1.7-8-5.4-8-11.1V8l8-3z" fill="rgb(7 9 13 / 0.35)" stroke="#fff" strokeWidth="1.6" strokeLinejoin="round" />
-      <path d="M19.4 10.4c-1.6-1.2-5.6-1.3-6.2 1.1-.8 3 6.7 2.7 6.1 6.1-.4 2.3-3.5 2.9-6 1.8" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
-      <circle cx="12.6" cy="20.5" r="1.5" fill="#34e0a1" />
+      <path d="M19.4 10.5c-1.6-1.2-5.6-1.3-6.2 1.1-.8 3 6.7 2.7 6.1 6.1-.2 1.2-1.1 2-2.3 2.3" fill="none" stroke="#fff" strokeWidth="2.1" strokeLinecap="round" />
+      <path d="M11.4 18.6l1.8 1.8 2.6-2.6" fill="none" stroke="#34e0a1" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" />
+      </g>
     </svg>
   );
 }

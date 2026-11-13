@@ -5,7 +5,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useState, type FormEvent } from "react";
 import { api, type AllowanceCheck } from "../api";
 import { Icon } from "./icons";
-import { Button, Card, ErrorBox, Field, Loading, Pill, toneText, type Tone } from "./ui";
+import { Button, Card, ErrorBox, Field, fmtDateTime, Loading, Pill, toneText, type Tone } from "./ui";
 import { PreflightForm, SafetyBlock } from "./SpendSafety";
 import { VaultOwnerActions } from "./VaultOwnerActions";
 
@@ -33,6 +33,14 @@ export function VaultPanel() {
   };
   const r = m.data;
   const p = r?.policy;
+  // After the owner signs a change for the allowance shown here, re-read it so the panel and the payment check never show stale state.
+  const [refreshes, setRefreshes] = useState(0);
+  const onTxSent = (txVault: string, txOwner: string, txAgent: string) => {
+    const shown = m.variables;
+    if (!shown || shown.contract !== txVault || shown.owner !== txOwner || shown.agent !== txAgent) return;
+    m.mutate(shown);
+    setRefreshes((n) => n + 1);
+  };
 
   return (
     <Card title="Agent allowance — how much may this agent spend now?" icon="wallet" subtitle="Read-only lookup on the Sentinel Vault contract, cross-checked on every provider">
@@ -118,7 +126,7 @@ export function VaultPanel() {
               </dt>
               <dd className="text-ink-2">
                 {nearOf(subYocto(p.daily_max, p.spent_in_window))} NEAR
-                {p.window_resets_at_ms > Date.now() && <span className="text-muted"> · resets {new Date(p.window_resets_at_ms).toLocaleString()}</span>}
+                {p.window_resets_at_ms > Date.now() && <span className="text-muted"> · resets {fmtDateTime(p.window_resets_at_ms)}</span>}
               </dd>
               <dt className="text-muted">
                 Fee per payment<Help label="fee per payment">Each payment also takes {RECORD_FEE_NEAR} NEAR from the vault balance to store its pay-once record on-chain, so the same intent can never be paid twice.</Help>
@@ -158,10 +166,10 @@ export function VaultPanel() {
               ))}
             </tbody>
           </table>
-          {p && <PreflightForm key={`${r.contractId}|${r.ownerId}|${r.agentId}`} contract={r.contractId} owner={r.ownerId} agent={r.agentId} />}
+          {p && <PreflightForm key={`${r.contractId}|${r.ownerId}|${r.agentId}|${refreshes}`} contract={r.contractId} owner={r.ownerId} agent={r.agentId} />}
         </div>
       )}
-      <VaultOwnerActions contract={contract} />
+      <VaultOwnerActions contract={contract} onTxSent={onTxSent} />
     </Card>
   );
 }

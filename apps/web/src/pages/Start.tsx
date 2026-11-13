@@ -172,7 +172,7 @@ export function StartPage() {
             <button
               type="button"
               onClick={scrollToTour}
-              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-b from-accent to-accent-2 px-5 py-3 text-sm font-semibold text-white shadow-[0_12px_32px_-12px_rgb(37_99_235/0.9)] transition hover:brightness-110 active:scale-[0.98]"
+              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-b from-primary to-primary-2 px-5 py-3 text-sm font-semibold text-white shadow-[0_12px_32px_-12px_rgb(4_120_87/0.9)] transition hover:brightness-110 active:scale-[0.98]"
             >
               <Icon name="rocket" size={17} />
               Start the 3-minute tour
@@ -184,6 +184,13 @@ export function StartPage() {
             >
               <Icon name="play" size={15} />
               Try a real transaction
+            </a>
+            <a
+              href="#/how"
+              className="inline-flex items-center gap-2 rounded-xl border border-line-strong px-5 py-3 text-sm font-semibold text-ink transition hover:border-link/60 hover:bg-surface-2"
+            >
+              <Icon name="chart" size={15} />
+              How it works, in charts
             </a>
           </div>
           <dl className="mt-8 grid max-w-lg grid-cols-3 gap-4 border-t border-line pt-5">
@@ -386,7 +393,7 @@ export function StartPage() {
             {[
               ["444 unit and integration tests", "SDK, MCP server (real stdio), API, demo, NEAR AI agent"],
               ["10 live tests", "read-only, against public testnet and mainnet RPCs"],
-              ["59 browser tests", "flows, accessibility, phone/tablet/desktop, keyboard, this tour, the demo data, agent security"],
+              ["62 browser tests", "flows, accessibility, phone/tablet/desktop, keyboard, this tour, the demo data, agent security"],
               ["33 + 27 + 21 contract checks", "Guard and Vault: Rust unit tests, a local NEAR node, then live on testnet"],
             ].map(([a, b]) => (
               <li key={a} className="flex gap-3">
@@ -635,7 +642,7 @@ function LiveDemo() {
           type="button"
           onClick={() => m.mutate()}
           disabled={m.isPending}
-          className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-b from-accent to-accent-2 px-5 py-3 text-sm font-semibold text-white transition hover:brightness-110 disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-b from-primary to-primary-2 px-5 py-3 text-sm font-semibold text-white transition hover:brightness-110 disabled:opacity-60"
         >
           <Icon name="play" size={15} />
           {m.isPending ? "Running both agents…" : "Run it live (about 15 s)"}

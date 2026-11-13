@@ -84,7 +84,7 @@ export const DEMO_TXS: DemoTx[] = [
   {
     key: "panic",
     label: "Contract panic",
-    expect: "an explained failure",
+    expect: "an explained failure (it asks for review until 2 operators confirm it)",
     story: "The contract panicked; Sentinel explains why.",
     icon: "x",
     hash: "8mSLr4P4p576mKVyLwMEKMmaqGLmW7NwLqDd28s5zeiK",

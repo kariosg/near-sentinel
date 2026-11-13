@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { api } from "../api";
 import { friendlyVaultError, nearExact, nearOf, RECORD_FEE_NEAR } from "../vaultInfo";
-import { accountBalance, connectWallet, disconnectWallet, nearToYocto, signAndSendFunctionCall, type Connected } from "../wallet";
+import { accountBalance, connectWallet, disconnectWallet, nearToYocto, restoreWallet, signAndSendFunctionCall, type Connected } from "../wallet";
 import { Icon } from "./icons";
 import { Help } from "./Term";
 import { Button, Field } from "./ui";
@@ -25,11 +25,14 @@ const ACCOUNT_RE = /^(?=.{2,64}$)(([a-z\d]+[-_])*[a-z\d]+\.)*([a-z\d]+[-_])*[a-z
 /** NEAR keeps a little in the wallet for gas; warn before a deposit would leave less than this. */
 const GAS_MARGIN_YOCTO = 10n ** 22n; // 0.01 NEAR
 
+/** Tells the identity banner (and anything else listening) that the wallet connection changed. */
+const walletChanged = () => window.dispatchEvent(new Event("sentinel-identity"));
+
 /**
  * Owner actions on a Sentinel Vault, signed by the owner's own wallet through NEAR Connect.
  * Every action is checked against the live state, previewed exactly as it will be signed, and needs a second, explicit click.
  */
-export function VaultOwnerActions({ contract }: { contract: string }) {
+export function VaultOwnerActions({ contract, onTxSent }: { contract: string; onTxSent?: (vault: string, owner: string, agent: string) => void }) {
   const vault = contract.trim() || "vault.karios.testnet";
   const [conn, setConn] = useState<Connected>();
   const [busy, setBusy] = useState(false);
@@ -72,11 +75,23 @@ export function VaultOwnerActions({ contract }: { contract: string }) {
   const refreshTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   useEffect(() => () => clearTimeout(refreshTimer.current), []);
 
+  // Reconnect the wallet chosen on an earlier visit, so a page reload does not log the owner out.
+  useEffect(() => {
+    let live = true;
+    void restoreWallet().then((c) => {
+      if (live && c) setConn((prev) => prev ?? c);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+
   const connect = async () => {
     setMsg(undefined);
     setBusy(true);
     try {
       setConn(await connectWallet());
+      walletChanged();
     } catch (e) {
       const raw = (e as Error).message || "cancelled";
       setMsg({ kind: "err", text: `Wallet not connected: ${friendlyVaultError(raw)}`, raw });
@@ -142,6 +157,7 @@ export function VaultOwnerActions({ contract }: { contract: string }) {
       refreshTimer.current = setTimeout(() => {
         void current.refetch();
         void wallet.refetch();
+        if (typeof pending.args.agent_id === "string") onTxSent?.(vault, conn.accountId, pending.args.agent_id);
       }, 3_000);
     } catch (e) {
       const raw = (e as Error).message || "cancelled in the wallet";
@@ -169,7 +185,7 @@ export function VaultOwnerActions({ contract }: { contract: string }) {
               size="sm"
               variant="ghost"
               onClick={() => {
-                void disconnectWallet(conn.wallet);
+                void disconnectWallet(conn.wallet).finally(walletChanged);
                 clearTimeout(refreshTimer.current);
                 setConn(undefined);
                 setPending(undefined);

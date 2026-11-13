@@ -175,6 +175,10 @@ export function InspectPage() {
                 onPick={pick}
               />
               <ExampleGroup title="Edge cases from real testnet" items={EXAMPLES.filter((x) => x.group === "edge-case")} onPick={pick} />
+              <p className="text-xs text-muted">
+                These transactions are a few days old, so only archival nodes still keep them, and only one independent operator runs a public testnet archival node. If it answers
+                slowly, Sentinel says MANUAL_REVIEW_REQUIRED, its safe default when the evidence is thin. Click again to re-check.
+              </p>
             </div>
           )}
         </form>

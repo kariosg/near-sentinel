@@ -29,6 +29,8 @@
   --color-info: #5aa2f0;
   --color-accent: #2563eb; /* primary buttons: 5.2:1 with white text */
   --color-accent-2: #1d4ed8;
+  --color-primary: #047857; /* main action buttons only (dark emerald, matches the logo): 5.5:1 with white text */
+  --color-primary-2: #065f46;
   --color-mint: #34e0a1; /* brand highlight (NEAR-like), only on dark backgrounds */
   --color-link: #6aa8f2;
 

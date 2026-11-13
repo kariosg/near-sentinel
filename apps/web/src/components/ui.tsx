@@ -338,7 +338,7 @@ export function Button({
 }) {
   const v =
     variant === "primary"
-      ? "bg-gradient-to-b from-accent to-accent-2 text-white shadow-[0_8px_24px_-10px_rgb(37_99_235/0.8)] hover:brightness-110"
+      ? "bg-gradient-to-b from-primary to-primary-2 text-white shadow-[0_8px_24px_-10px_rgb(4_120_87/0.8)] hover:brightness-110"
       : variant === "subtle"
         ? "bg-surface-2 text-ink hover:bg-surface-3 border border-line"
         : "border border-line-strong text-ink-2 hover:border-link/60 hover:bg-surface-2 hover:text-ink";
@@ -495,6 +495,15 @@ export function download(filename: string, data: unknown) {
 }
 
 export const fmtMs = (n?: number | null) => (n === null || n === undefined ? "—" : `${n.toLocaleString()} ms`);
+
+/** Unambiguous date and time for any locale: "14 Nov 2026, 18:46 (13:16 UTC)". */
+export function fmtDateTime(ms: number | string): string {
+  const d = new Date(ms);
+  if (Number.isNaN(d.getTime())) return "—";
+  const local = `${d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}, ${d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`;
+  const utc = d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
+  return `${local} (${utc} UTC)`;
+}
 export const fmtPct = (n?: number | null) => (n === null || n === undefined ? "—" : `${(n * 100).toFixed(n === 1 ? 0 : 1)}%`);
 export const short = (s?: string, n = 10) => (!s ? "" : s.length <= n * 2 + 1 ? s : `${s.slice(0, n)}…${s.slice(-6)}`);
 

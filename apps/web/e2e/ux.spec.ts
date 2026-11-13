@@ -12,7 +12,7 @@ import { expect, test, type Page } from "@playwright/test";
 const SHOTS = "../../docs/screenshots";
 // Full-page captures: render the sticky sidebar at the top instead of mid-page.
 const SHOT_CSS = "aside { position: static !important; }";
-const PAGES = ["start", "overview", "inspect", "providers", "incidents", "benchmarks", "integrate", "settings"];
+const PAGES = ["start", "how", "overview", "inspect", "providers", "incidents", "benchmarks", "integrate", "settings"];
 const VIEWPORTS = [
   { name: "mobile", width: 390, height: 844 },
   { name: "tablet", width: 768, height: 1024 },
@@ -64,7 +64,8 @@ test.describe("responsive layout", () => {
       if (vp.name === "mobile") {
         await page.goto("/#/overview");
         await page.waitForLoadState("networkidle");
-        await page.screenshot({ path: `${SHOTS}/mobile-overview.png`, fullPage: true, style: SHOT_CSS });
+        await page.waitForTimeout(1500); // let the provider tiles fill in
+        await page.screenshot({ path: `${SHOTS}/mobile-overview.png`, fullPage: true, style: SHOT_CSS, animations: "disabled" });
       }
       expect(errors).toEqual([]);
     });
@@ -106,6 +107,14 @@ test.describe("optional account verification", () => {
     await expect(page.getByRole("region", { name: /Verify your NEAR account/ })).toBeHidden();
     await expect(page.getByText("not verified (optional)")).toBeVisible();
     expect(errors).toEqual([]);
+  });
+
+  test("the banner stays hidden when a wallet is already connected through Owner actions", async ({ page }) => {
+    // NEAR Connect remembers the chosen wallet under this key; the account is then shown in Owner actions, so don't ask again.
+    await page.addInitScript(() => localStorage.setItem("selected-wallet", "meteor-wallet"));
+    await page.goto("/#/overview");
+    await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
+    await expect(page.getByRole("region", { name: /Verify your NEAR account/ })).toBeHidden();
   });
 
   test("Verify sends the user to MyNearWallet with a server nonce, the message and our callback", async ({ page, baseURL }) => {
@@ -395,6 +404,9 @@ test.describe("vault and guard: complete information and guidance", () => {
       await expect(panel).toContainText(t);
     }
     await expect(panel.getByRole("link", { name: "karios.testnet", exact: true })).toHaveAttribute("href", /nearblocks\.io\/address\/karios\.testnet/);
+    // The 24-hour reset, when shown, is unambiguous in every locale: "14 Nov 2026, 18:46 (13:16 UTC)".
+    const text = (await panel.textContent()) ?? "";
+    if (text.includes("resets")) expect(text).toMatch(/resets \d{1,2} [A-Z][a-z]{2,3} \d{4}, \d{2}:\d{2} \(\d{2}:\d{2} UTC\)/);
     await panel.getByRole("button", { name: "Help: fee per payment" }).focus();
     await expect(page.getByRole("tooltip").filter({ hasText: "pay-once record" }).first()).toBeVisible();
     expect(errors).toEqual([]);
@@ -476,6 +488,20 @@ test("share preview: description, Open Graph and X card tags, and the preview im
   const og = await request.get("/og.png");
   expect(og.status()).toBe(200);
   expect(og.headers()["content-type"]).toContain("image/png");
+});
+
+test("'How it works, in charts' is linked from Start and opens the in-app How it works page", async ({ page }) => {
+  const errors = trackErrors(page);
+  await skipIdentity(page);
+  await page.goto("/#/start");
+  await page.getByRole("link", { name: "How it works, in charts" }).click();
+  await expect(page).toHaveURL(/#\/how$/);
+  await expect(page.locator("main h1")).toHaveText("How it works");
+  await expect(page.getByRole("heading", { level: 2, name: "The real-life problem" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "Why this is harder on NEAR than on EVM" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "Live wallet test (2026-11-13, testnet)" })).toBeVisible();
+  await page.waitForLoadState("networkidle");
+  expect(errors).toEqual([]);
 });
 
 test("integrate page: how to use it in your project, open source, and the revenue model", async ({ page }) => {

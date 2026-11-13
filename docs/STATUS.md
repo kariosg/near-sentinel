@@ -1,6 +1,6 @@
 # STATUS (resume point)
 
-_Last updated: 2026-11-13. Product, Guard (`guard.karios.testnet`) and Vault (`vault.karios.testnet`) on testnet, NEAR AI agent (4/4 live) and the live dashboard https://64-177-60-105.sslip.io are done and verified. Branch `feature/agent-spend-guard` adds the fixes from an independent AI-judge screening (see Uncommitted work). Hackathon deadline: **2026-11-14 23:59 UTC**; no code changes after it._
+_Last updated: 2026-11-13. Product, Guard (`guard.karios.testnet`) and Vault (`vault.karios.testnet`) on testnet, NEAR AI agent (4/4 live) and the live dashboard https://64-177-60-105.sslip.io are done and verified. The agent spend guard (`e6efc5b`, from an independent AI-judge screening) is pushed and live. Hackathon deadline: **2026-11-14 23:59 UTC**; no code changes after it._
 
 ## How to resume
 ```bash
@@ -9,7 +9,7 @@ pnpm build              # sdk → agent-demo → mcp → api → web → near-ai
 pnpm typecheck
 pnpm test               # secrets gate + sdk 346 + mcp 17 (stdio e2e) + api 87 + demo 12 assertions + NEAR AI agent 9 (= 471)
 pnpm test:live          # 10 read-only tests against public NEAR RPCs (7 testnet + 3 mainnet)
-pnpm test:e2e           # 59 Playwright tests (functional + axe a11y + responsive + keyboard + headers/CSP + judge tour)
+pnpm test:e2e           # 62 Playwright tests (functional + axe a11y + responsive + keyboard + headers/CSP + judge tour)
 pnpm test:contract      # guard 14 + vault 19 Rust unit tests + 27-check on-chain suite on a local neard sandbox (Docker)
 pnpm verify             # every check above in one summary table (`--quick`: no network/browser/Docker)
 pnpm test:load          # load + soak of the built server against local mock RPCs (17 gates)
@@ -112,22 +112,27 @@ docker compose up -d --build
 - `pnpm contract:deploy` runs `pnpm --filter … run deploy` (plain `deploy` would hit pnpm's built-in command). `-- --i-confirm` forwarding verified.
 
 ## Uncommitted work
-- **Branch `feature/agent-spend-guard` (not yet committed; awaiting the owner's OK).** Fixes from an independent AI-judge screening:
-  - `preflightSpend` now returns `action` (SIGN / ASK_HUMAN / REFUSE), which folds in the receiver check: a lookalike payee is REFUSE even when the contract would accept it. `decision` is unchanged.
-  - SDK `guardedSpend`: an agent-side wrapper that signs only on SIGN, asks a human on ASK_HUMAN and never signs on REFUSE or on error.
-  - `pnpm demo:injection`: simulated prompt-injection attack with a committed transcript (`docs/injection-demo.md`).
-  - NEAR AI agent gets the `preflight_spend` tool; MCP `preflight_spend` and the dashboard show the action.
-  - `pnpm proof:testnet`: the real-transaction proof as a committed script (dry run by default).
-  - Docs: test counts, "fixed 24-hour window" wording, signing and NEAR AI signature claims, other-projects disclosure.
-  - Gates on the branch: build, typecheck, `pnpm test` 471/471. E2E and live re-run before commit.
-- `master` = `6cb0787`, pushed and deployed (live re-audit 2026-11-13: e2e 59/59 incl. one re-run, Lighthouse a11y/BP/SEO 100, ZAP 0 failures). Rollback on the server: image `near-sentinel:previous`, `Caddyfile.previous`, a data backup.
+- Code: none. `master` = `e6efc5b` (agent spend guard), pushed and deployed 2026-11-13.
+  - What it added: `preflightSpend` `action` (SIGN / ASK_HUMAN / REFUSE, folds in the receiver check), SDK `guardedSpend`, `pnpm demo:injection` (transcript `docs/injection-demo.md`), `preflight_spend` for the NEAR AI agent, action shown in MCP and the dashboard, `pnpm proof:testnet`, docs aligned (471 tests, fixed 24-hour window, exact signing claims).
+  - Gates before the commit: `pnpm verify` all PASS (471 tests, live 10/10, e2e 59/59, contracts 14 + 19 Rust + 27/27 sandbox). A clean Linux container ran the README from a fresh clone: all steps pass.
+  - Live after deploying: e2e 59/59; receiver checks 15/15; API checks 36/36; walkthrough 15/15; `/api/v1/spend-preflight` returns SIGN for the real payee and REFUSE for `kari0s.testnet`.
+  - Final browser audit, live: Lighthouse mobile 93 / desktop 96 (a11y, best practices, SEO 100; CLS 0); OWASP ZAP 0 failures, 62 passed, only the 6 documented low notes (`docs/AUDIT.md` section 4). Nothing to fix.
+- **Working tree is dirty (finished, not committed, not deployed): real-wallet test fixes + logo I + chart page.** Waiting for the owner to check it on localhost, then OK commit → push → deploy.
+  - Real-wallet test passed on the live site (report `docs/manual-wallet-test-2026-11-13.md`; 4 testnet txs by a team tester's wallet).
+  - Fixes: wallet restored after reload (`restoreWallet` in `apps/web/src/wallet.ts`); identity banner hidden while a wallet is connected; vault panels refresh after an owner tx (`onTxSent`); unambiguous dates (`fmtDateTime` in `components/ui.tsx`); honest hints for old example txs.
+  - Brand: logo I on dark green `#065f46` with a thin rim, mark centred (icons.tsx, favicon.svg, docs/media/logo.svg, apple-touch-icon.png, og.png via `scripts/render-brand.mjs`).
+  - New "How it works" page in the dashboard (`#/how`, `apps/web/src/pages/HowItWorks.tsx`; replaces the standalone `/how-it-works.html`, whose source copy stays in git-ignored `media/how-sentinel-works.html`), linked from Start, README, JUDGING.
+  - Local gates (final: green logo + green main buttons, everything else multicolour as before): `pnpm verify` all PASS: 471 tests, live 10/10, e2e 62/62 (axe contrast covers the green), contracts 14 + 19 Rust + 27/27 sandbox. README screenshots retaken with the new look; the 5 README GIFs are kept as the submission-time originals (owner's choice).
+  - Still to check with the owner's wallet: restore after reload (on localhost or live after deploy).
+  - Also uncommitted: the earlier docs-only STATUS/AUDIT live-results edits.
+- Rollback on the server: image `near-sentinel:previous` (= `6cb0787`), data backup `~/backups/sentinel-data-20261113T071554Z.tgz`. The Caddyfile is unchanged.
 - `packages/sdk/t.cjs` is a local scratch file, deliberately untracked. `media/` is git-ignored.
 - The tag `hackathon-submission` still points to `cc2aa40`; moving it to the final commit is the owner's action.
 
 ## Blocked on the owner
 - Submitted 2026-11-11 (X post https://x.com/kariosgx/status/2120484078420169114). Results by 2026-11-18 23:59 UTC.
-- Before 2026-11-14 23:59 UTC: approve and push `feature/agent-spend-guard`, then move the tag `hackathon-submission` to the final commit. No code changes after the deadline.
-- Optional: owner wallet hand test (docs/TESTING.md section B).
+- Before 2026-11-14 23:59 UTC: move the tag `hackathon-submission` to the final commit. No code changes after the deadline.
+- Done 2026-11-13: owner-wallet hand test (docs/TESTING.md section B), all steps pass.
 - After results: destroy the Vultr instance to stop billing.
 - The X post (with the demo video) and the submission form (mainnet payout account).
 

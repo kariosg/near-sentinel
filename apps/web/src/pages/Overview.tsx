@@ -43,7 +43,7 @@ export function OverviewPage() {
             several independent RPC providers and answers with evidence. It is read-only.
           </p>
         </div>
-        <a href="#/inspect" className="inline-flex items-center gap-2 self-start rounded-xl bg-gradient-to-b from-accent to-accent-2 px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-110 md:self-center">
+        <a href="#/inspect" className="inline-flex items-center gap-2 self-start rounded-xl bg-gradient-to-b from-primary to-primary-2 px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-110 md:self-center">
           <Icon name="search" size={16} />
           Check a transaction
         </a>

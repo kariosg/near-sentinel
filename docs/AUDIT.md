@@ -6,6 +6,8 @@
 - Lighthouse mobile 89 and desktop 95 (accessibility, best practices and SEO 100, CLS 0);
 - OWASP ZAP 0 failures.
 
+**Final re-audit on the submitted code (`e6efc5b`, live, 2026-11-13):** browser tests 59/59 (axe on all 8 pages), receiver checks 15/15, API checks 36/36, walkthrough 15/15; Lighthouse mobile 93 and desktop 96 (accessibility, best practices and SEO 100; CLS 0 mobile, 0.02 desktop); OWASP ZAP 0 failures, 62 checks passed, with the same 6 low notes listed in section 4.
+
 Everything below was run against the **live** instance (https://64-177-60-105.sslip.io) or the production Docker image, with real testnet data. Each audit lists its result, what was fixed, and what is left on purpose.
 
 ## 1. Real transactions on testnet
@@ -45,7 +47,7 @@ All transactions were testnet only, between the owner's own accounts (`karios.te
 | Audit | Tool | Result |
 |---|---|---|
 | Accessibility, best practices, SEO | Lighthouse 12 | **100 / 100 / 100** (mobile and desktop) |
-| Performance | Lighthouse 12 (live, after the fixes) | Mobile **78 → 89**, desktop **93 → 95**. Layout shift (CLS) on mobile **0.368 → 0** |
+| Performance | Lighthouse 12 (live, after the fixes) | Mobile **78 → 89** (93 on the final re-run), desktop **93 → 95** (96 on the final re-run). Layout shift (CLS) on mobile **0.368 → 0** |
 | Accessibility (WCAG 2.1 AA) | axe-core on all 8 pages, in the browser suite | 0 serious or critical issues |
 | Web security, passive | OWASP ZAP baseline (re-run live after the fixes) | **0 failures**, 62 checks passed. The remaining low notes are expected from the staged CSP rollout or accepted with a reason (see below) |
 | API fuzzing | Schemathesis on the OpenAPI spec (28 operations, 166 generated cases) | No crashes. The only 5xx answers are the intended `503 PROTECTED_ENDPOINTS_DISABLED` when no admin key is configured. The rest are OpenAPI-completeness notes, not bugs |
@@ -91,4 +93,4 @@ All transactions were testnet only, between the owner's own accounts (`karios.te
 
 ## 5. Re-run it yourself
 
-`pnpm verify` runs the build, 471 unit and integration tests, 10 live tests, 59 browser tests and the contract suites. The real-transaction checks need the owner's testnet key and are not part of `pnpm verify`.
+`pnpm verify` runs the build, 471 unit and integration tests, 10 live tests, 62 browser tests and the contract suites. The real-transaction checks need the owner's testnet key and are not part of `pnpm verify`.

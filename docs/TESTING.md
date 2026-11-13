@@ -29,7 +29,7 @@ All real demo transactions and accounts, with one-click links: [JUDGING.md → D
 
 This tests **Sentinel Vault owner actions**: your own wallet signs through NEAR Connect; the dashboard only prepares and previews the transaction. You need a testnet account (e.g. in Meteor Wallet or MyNearWallet, network **Testnet**) with about 0.2 testnet NEAR, and a second account to act as the agent (any account you own, or `kariosr.testnet` as a receiver-only example).
 
-Go to Inspect → **③ Vault** → *Owner actions*.
+Go to Inspect → **③ Vault** → *Owner actions*. (Run end to end with a real wallet on 2026-11-13, every step as expected: [manual-wallet-test-2026-11-13.md](manual-wallet-test-2026-11-13.md).)
 
 | # | Do | Expected result |
 |---|---|---|
@@ -59,7 +59,7 @@ Needs Node ≥ 22.16 and pnpm 8; Docker only for the contract suite.
 
 ```bash
 pnpm install
-pnpm verify            # one table: build, 471 unit/integration tests, demo, 10 live tests, 59 browser tests, contracts (if Docker)
+pnpm verify            # one table: build, 471 unit/integration tests, demo, 10 live tests, 62 browser tests, contracts (if Docker)
 pnpm verify --quick    # same without network, browser or Docker
 ```
 
@@ -67,7 +67,7 @@ pnpm verify --quick    # same without network, browser or Docker
 |---|---|
 | `pnpm test` | Secrets gate + 471 tests: SDK 346, MCP server over real stdio 17, API 87, demo 12 (retry demo 7 + prompt-injection attack demo 5), NEAR AI agent 9 (offline) |
 | `pnpm test:live` | 10 read-only tests against public testnet and mainnet RPCs |
-| `pnpm test:e2e` | 59 browser tests: every flow above, accessibility (WCAG 2.1 AA), phone/tablet/desktop, keyboard, the real demo data |
+| `pnpm test:e2e` | 62 browser tests: every flow above, accessibility (WCAG 2.1 AA), phone/tablet/desktop, keyboard, the real demo data |
 | `pnpm test:contract` | Docker: Guard 14 + Vault 19 Rust unit tests, then 27 checks on a local NEAR node (incl. a function-call key that can only `spend`) |
 | `pnpm test:load` | Load and soak test of the server (17 gates, no memory leak) |
 | `pnpm demo` | Simulated: naive agent pays 2 NEAR, guarded agent pays 1 |

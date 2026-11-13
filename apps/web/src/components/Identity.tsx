@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, type IdentityResult } from "../api";
+import { hasStoredWallet } from "../wallet";
 import { Icon } from "./icons";
 import { Button, Pill } from "./ui";
 
@@ -97,7 +98,14 @@ export function IdentityBanner({ network }: { network?: string }) {
   const state = useIdentity();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  if (state) return null;
+  // A wallet connected through Owner actions already shows the account; don't ask a second time.
+  const [walletOn, setWalletOn] = useState(hasStoredWallet);
+  useEffect(() => {
+    const on = () => setWalletOn(hasStoredWallet());
+    window.addEventListener("sentinel-identity", on);
+    return () => window.removeEventListener("sentinel-identity", on);
+  }, []);
+  if (state || walletOn) return null;
   return (
     <section aria-labelledby="identity-title" className="glow-border card mb-6 rounded-2xl px-5 py-4 text-sm animate-fade-up">
       <div className="flex flex-col gap-4 md:flex-row md:items-center">

@@ -6,6 +6,7 @@ import { Icon, Logo, type IconName } from "./components/icons";
 import { IdentityBanner, IdentityStatus, useWalletCallback } from "./components/Identity";
 import { Kbd, LiveDot, Pill, useFocusTrap } from "./components/ui";
 import { BenchmarksPage } from "./pages/Benchmarks";
+import { HowItWorksPage } from "./pages/HowItWorks";
 import { IncidentsPage } from "./pages/Incidents";
 import { InspectPage } from "./pages/Inspect";
 import { IntegratePage } from "./pages/Integrate";
@@ -18,6 +19,7 @@ type Route = { path: string; label: string; icon: IconName; group: string; descr
 
 const ROUTES: Route[] = [
   { path: "start", label: "Start here", icon: "rocket", group: "Get started", description: "What NEAR Sentinel does and a 3-minute guided tour for judges.", render: () => <StartPage /> },
+  { path: "how", label: "How it works", icon: "chart", group: "Get started", description: "The real problem, the layer that solves it and the proof, in charts: NEAR vs EVM, the evidence and the live wallet test.", render: () => <HowItWorksPage /> },
   { path: "inspect", label: "Inspect & retry check", icon: "search", group: "Use it", description: "Paste any testnet transaction: get a verdict with per-provider evidence and the receipt graph. Also look up Guard contract intents.", render: () => <InspectPage /> },
   { path: "overview", label: "Overview", icon: "gauge", group: "Use it", description: "Live health of the RPC providers Sentinel cross-checks, and recent inspections on this server.", render: () => <OverviewPage /> },
   { path: "providers", label: "RPC providers", icon: "server", group: "Use it", description: "Each provider's tested capabilities, latency history and request metrics.", render: () => <ProvidersPage /> },
@@ -254,10 +256,11 @@ export function App() {
   const status = <StatusPanel network={providers.data?.network} live={live} apiVersion={health.data?.version} apiDown={health.isError} />;
   const brand = (
     <a href="#/start" className="flex items-center gap-3 rounded-lg px-1">
-      <Logo size={34} />
+      <Logo size={42} />
       <span className="leading-none">
-        <span className="block text-[10px] font-medium uppercase tracking-[0.22em] text-muted">NEAR</span>
-        <span className="mt-1 block text-[17px] font-bold tracking-tight text-ink">Sentinel</span>
+        <span className="block text-[10.5px] font-semibold uppercase tracking-[0.24em] text-mint">NEAR</span>
+        <span className="mt-1 block bg-gradient-to-r from-ink via-[#b9f3dc] to-mint bg-clip-text text-[20px] font-extrabold tracking-tight text-transparent">Sentinel</span>
+        <span className="mt-1 block text-[11px] font-medium text-muted">did it land?</span>
         <span className="sr-only"> (NEAR Sentinel, transaction-safety guard)</span>
       </span>
     </a>
@@ -362,7 +365,7 @@ export function App() {
 
           <footer className="mt-12 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5 text-xs text-muted">
             <p className="flex items-center gap-2">
-              <Logo size={18} /> NEAR Sentinel · read-only · {providers.data?.network ?? "testnet"} · MIT licensed
+              <Logo size={22} /> NEAR Sentinel · read-only · {providers.data?.network ?? "testnet"} · MIT licensed
             </p>
             <p className="flex items-center gap-3">
               <a className="hover:text-ink-2" href="/docs" target="_blank" rel="noreferrer">

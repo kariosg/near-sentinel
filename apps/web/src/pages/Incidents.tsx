@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api";
-import { Card, Empty, ErrorBox, Loading, Pill, timeAgo } from "../components/ui";
+import { Card, Empty, ErrorBox, fmtDateTime, Loading, Pill, timeAgo } from "../components/ui";
 
 const sevTone = { critical: "critical", major: "serious", minor: "warning", info: "info" } as const;
 
@@ -26,8 +26,8 @@ export function IncidentsPage() {
               </div>
               <p className="mt-1 text-sm text-ink-2">{i.summary}</p>
               <p className="mt-1 text-xs text-muted">
-                opened {new Date(i.openedAt).toLocaleString()}
-                {i.closedAt && ` · closed ${new Date(i.closedAt).toLocaleString()}`}
+                opened {fmtDateTime(i.openedAt)}
+                {i.closedAt && ` · closed ${fmtDateTime(i.closedAt)}`}
               </p>
               <details className="mt-1 text-xs">
                 <summary className="cursor-pointer text-link">evidence</summary>

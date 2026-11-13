@@ -27,6 +27,31 @@ export async function connectWallet(): Promise<Connected> {
   return { accountId, wallet };
 }
 
+/** True when NEAR Connect remembers a wallet from an earlier visit (its own localStorage key). No wallet code is loaded. */
+export function hasStoredWallet(): boolean {
+  try {
+    return !!localStorage.getItem("selected-wallet");
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Reconnect the wallet the user chose on an earlier visit, without opening the picker.
+ * Loads the wallet code only if a wallet is remembered; returns undefined on any problem (the user can still click Connect).
+ */
+export async function restoreWallet(): Promise<Connected | undefined> {
+  if (!hasStoredWallet()) return undefined;
+  try {
+    const c = await connector();
+    const { wallet, accounts } = await c.getConnectedWallet();
+    const accountId = accounts[0]?.accountId;
+    return accountId ? { accountId, wallet } : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function disconnectWallet(wallet?: NearWalletBase): Promise<void> {
   if (!connectorP) return;
   const c = await connectorP;
