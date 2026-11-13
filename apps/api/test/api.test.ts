@@ -145,7 +145,9 @@ describe("system", () => {
       expect(r.headers["x-content-type-options"]).toBe("nosniff");
       expect(r.headers["referrer-policy"]).toBe("no-referrer");
       expect(r.headers["x-frame-options"]).toBe("DENY");
-      expect(r.headers["content-security-policy"]).toBe("frame-ancestors 'none'");
+      expect(r.headers["content-security-policy"]).toBe("frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'");
+      expect(r.headers["content-security-policy-report-only"]).toContain("script-src 'self'");
+      expect(r.headers["cross-origin-opener-policy"]).toBe("same-origin-allow-popups");
     }
   });
 

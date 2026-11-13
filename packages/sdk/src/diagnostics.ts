@@ -103,7 +103,7 @@ export function diagnoseOutcome(c: Classification, txHash: string): Diagnostic[]
       confidence: "high",
       explanation:
         `Receipt ${n.receiptId} (depth ${n.depth}) executed on ${n.executorId} and returned Failure: ` +
-        `${n.failure?.message ?? "(no message)"}.` +
+        `${(n.failure?.message ?? "(no message)").replace(/\.+$/, "")}.` +
         (multi ? " Other receipts in this transaction SUCCEEDED, so state changes may have been applied partially." : ""),
       evidence: [
         {

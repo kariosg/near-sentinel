@@ -84,14 +84,14 @@ It ships as a TypeScript SDK, an **MCP server for AI agents**, a REST API and a 
 | Do | See |
 |---|---|
 | Open https://64-177-60-105.sslip.io (nothing to install) | The live dashboard on testnet: same tour, examples and benchmark as below |
-| `pnpm install && pnpm build && pnpm test` | Secrets check, then 440 tests pass (sdk 326, mcp 17, api 83, demo 7, NEAR AI agent 7) |
+| `pnpm install && pnpm build && pnpm test` | Secrets check, then 444 tests pass (sdk 326, mcp 17, api 87, demo 7, NEAR AI agent 7) |
 | `pnpm demo` | Naive agent: merchant receives 2 NEAR. Sentinel-guarded agent: 1 NEAR. |
 | `pnpm start`, then open http://127.0.0.1:8080 | Dashboard on live testnet. It opens on **Start here**: a 3-minute judge tour where every step is one click. Click **Skip** on the optional verify banner. Press **Ctrl K** to jump anywhere. |
 | Inspect page → paste a testnet tx hash | Verdict, per-provider evidence, receipt graph |
 | Benchmarks page → **Run simulated faults** (no key needed) | 12/12 fault scenarios classified correctly in a few seconds |
 | `pnpm test:live` | 10 read-only tests against public RPCs: 7 on testnet, 3 on mainnet (a real recent mainnet transaction picked live) |
 | `pnpm test:contract` (Docker) | 33 Rust unit tests (Guard 14 + Vault 19) + 27 on-chain checks on a local NEAR sandbox, including a duplicate payment rejected with `DUPLICATE_INTENT` and an agent whose function-call key can only `spend` within its allowance |
-| `pnpm test:e2e` (starts the built API itself; uses Google Chrome if installed, otherwise run `pnpm --filter @near-sentinel/web exec playwright install chromium` once) | 52 browser tests: flows, accessibility, mobile, keyboard, judge tour, command palette, modal focus, reduced motion |
+| `pnpm test:e2e` (starts the built API itself; uses Google Chrome if installed, otherwise run `pnpm --filter @near-sentinel/web exec playwright install chromium` once) | 59 browser tests: flows, accessibility, mobile, keyboard, judge tour, command palette, modal focus, reduced motion |
 | Inspect page → ④ **Agent keys** → *Live demo agent keys*; ③ Vault → *Would this payment be allowed?* | Agent security: a full-access key flagged with the safe setup; a payment to an unlisted receiver BLOCKED before signing |
 | MCP: see [From an AI agent](#from-an-ai-agent-mcp) | `check_retry_safety`, `check_intent`, `check_spend_allowance`, `preflight_spend`, `check_receiver`, `audit_agent_keys` and 4 more read-only tools |
 
@@ -418,6 +418,7 @@ docs/                                        architecture, API, security, deploy
 - [API](docs/api/README.md)
 - [Security model](SECURITY.md) (with the OWASP agentic mapping), [threat model](docs/security/THREAT_MODEL.md) and [privacy](docs/PRIVACY.md)
 - [Deployment](docs/deployment/DEPLOY.md)
+- [Audit report](docs/AUDIT.md): real-transaction proof, Lighthouse, OWASP ZAP, API fuzzing, axe, UI/UX audit
 - [Known limitations](docs/KNOWN_LIMITATIONS.md)
 - [Agent Skill: near-sentinel](skills/near-sentinel/SKILL.md)
 - [Using Sentinel next to the official NEAR MCP Server](docs/integrations/near-mcp.md)

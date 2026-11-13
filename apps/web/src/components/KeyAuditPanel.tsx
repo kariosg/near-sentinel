@@ -149,7 +149,9 @@ function KeyAuditResult({ r }: { r: KeyAudit }) {
         <thead>
           <tr className="text-left text-xs text-muted">
             <th className="py-1 font-normal">Provider</th>
-            <th className="py-1 font-normal">Answer</th>
+            <th className="py-1 font-normal">
+              Answer<Help label="provider answers">KEYS: this provider listed the account&apos;s keys. NOT_FOUND: the account does not exist. ERROR: no usable answer. If providers disagree, the riskiest answer is shown.</Help>
+            </th>
             <th className="py-1 text-right font-normal">Latency</th>
           </tr>
         </thead>

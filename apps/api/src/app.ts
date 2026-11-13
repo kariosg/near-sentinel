@@ -23,6 +23,7 @@ import { requireApiKey } from "./auth.js";
 import { IDENTITY_MESSAGE, IDENTITY_RECIPIENT, NonceStore, verifyNep413 } from "./identity.js";
 import { BenchmarkRunner } from "./benchmarks.js";
 import { audit, openDb, prune, setAuditSalt, type Db } from "./db.js";
+import { securityHeaders } from "./security-headers.js";
 import type { Env } from "./env.js";
 import { Prober } from "./prober.js";
 import { Runtime } from "./runtime.js";
@@ -146,11 +147,8 @@ export async function buildApp(env: Env, opts: { db?: Db } = {}): Promise<AppDep
 
   app.addHook("onSend", async (req, reply) => {
     reply.header("x-request-id", req.id);
-    reply.header("x-content-type-options", "nosniff");
-    reply.header("referrer-policy", "no-referrer");
-    // Anti-clickjacking for direct deployments (no reverse proxy). Restricts framing only, not scripts or styles.
-    reply.header("x-frame-options", "DENY");
-    reply.header("content-security-policy", "frame-ancestors 'none'");
+    // One policy for every response (see security-headers.ts); Caddy sends the same strings in production.
+    for (const [k, v] of Object.entries(securityHeaders({ url: req.url, https: req.protocol === "https" }))) reply.header(k, v);
     if (req.url.startsWith("/api/")) reply.header("cache-control", "no-store");
   });
 
@@ -657,7 +655,16 @@ export async function buildApp(env: Env, opts: { db?: Db } = {}): Promise<AppDep
   const webDist = env.WEB_DIST ? resolve(env.WEB_DIST) : [resolve("../web/dist"), resolve("apps/web/dist"), resolve("web")].find((p) => existsSync(join(p, "index.html")));
   if (webDist && existsSync(join(webDist, "index.html"))) {
     // wildcard: true serves files that exist at request time (a rebuilt bundle works without a restart).
-    await app.register(fastifyStatic, { root: webDist, wildcard: true, index: ["index.html"] });
+    await app.register(fastifyStatic, {
+      root: webDist,
+      wildcard: true,
+      index: ["index.html"],
+      // Vite fingerprints everything in /assets (the file name changes with the content): cache it for a year.
+      // index.html and other files stay revalidated so a new deploy shows up at once.
+      setHeaders: (reply, path) => {
+        reply.header("cache-control", /(^|[\\/])assets[\\/]/.test(path) ? "public, max-age=31536000, immutable" : "no-cache");
+      },
+    });
     app.setNotFoundHandler((req, reply) => {
       const path = req.url.split("?")[0]!;
       // SPA fallback ONLY for page routes. A missing asset (has a file extension) must be a real 404,

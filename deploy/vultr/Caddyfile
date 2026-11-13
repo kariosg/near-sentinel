@@ -37,18 +37,12 @@
 	@compressible not path /api/v1/events
 	encode @compressible zstd gzip
 
-	# Security headers. `defer` applies them after the app responds, so they REPLACE (not duplicate) the
-	# nosniff / referrer-policy / anti-framing headers the app already sets (same values). The CSP only
-	# forbids framing (clickjacking) and does not restrict scripts or styles, so the dashboard
-	# and the Swagger UI at /docs keep working.
+	# Security headers. The app sets the full policy on every response (apps/api/src/security-headers.ts:
+	# enforced CSP, report-only strict CSP, COOP, CORP, nosniff, referrer and permissions policy), so it is
+	# defined in exactly one place. Caddy adds only what belongs to the TLS edge.
 	header {
 		defer
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
-		X-Content-Type-Options "nosniff"
-		Referrer-Policy "no-referrer"
-		X-Frame-Options "DENY"
-		Content-Security-Policy "frame-ancestors 'none'"
-		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
 		-Server
 	}
 

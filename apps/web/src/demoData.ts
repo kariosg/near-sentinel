@@ -106,7 +106,7 @@ export const DEMO_TXS: DemoTx[] = [
 /** The real testnet accounts used by the demos. */
 export const DEMO_ACCOUNTS: Array<{ id: string; role: string }> = [
   { id: "karios.testnet", role: "Payer and Vault owner: the account whose agent sends payments" },
-  { id: "kariosr.testnet", role: "Receiver in the real-money demo, and the agent allowed to spend from the Vault" },
+  { id: "kariosr.testnet", role: "Receiver in the real-money demo, and the agent of the live Vault allowance (which may pay only karios.testnet)" },
   { id: "guard.karios.testnet", role: "Sentinel Guard contract: pays at most once per intent" },
   { id: "vault.karios.testnet", role: "Sentinel Vault contract: an allowance the agent spends with limits" },
 ];

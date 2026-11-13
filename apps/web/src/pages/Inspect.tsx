@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { api, type Diagnostic, type Inspection, type InspectInput } from "../api";
 import { GuardPanel } from "../components/GuardPanel";
 import { VaultPanel } from "../components/VaultPanel";
@@ -40,6 +40,20 @@ export function InspectPage() {
     if (initial.hash && initial.sender) m.mutate({ transactionHash: initial.hash, senderAccountId: initial.sender });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Bring the loading state, then the verdict, into view: on a phone or after a tour link the result starts far below the fold.
+  const resultRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (m.status !== "pending" && m.status !== "success" && m.status !== "error") return;
+    const el = resultRef.current;
+    if (!el) return;
+    const t = setTimeout(() => {
+      const r = el.getBoundingClientRect();
+      if (r.top < 0 || r.top > window.innerHeight * 0.6)
+        el.scrollIntoView({ behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+    }, 60);
+    return () => clearTimeout(t);
+  }, [m.status, m.data?.inspectedAt]);
 
   const pick = (x: DemoTx) => {
     setMode("hash");
@@ -167,9 +181,11 @@ export function InspectPage() {
       </Card>
       </div>
 
-      {m.isPending && <Querying />}
-      {m.isError && <ErrorBox error={m.error} />}
-      {m.data && <Result key={m.data.inspectedAt} r={m.data} />}
+      <div id="inspect-result" ref={resultRef} className="scroll-mt-24 space-y-6" aria-live="polite" aria-busy={m.isPending}>
+        {m.isPending && <Querying />}
+        {m.isError && <ErrorBox error={m.error} />}
+        {m.data && <Result key={m.data.inspectedAt} r={m.data} />}
+      </div>
       {!m.data && !m.isPending && !m.isError && <Empty icon="search">Enter a transaction or pick an example. Nothing is signed or sent.</Empty>}
 
       <div id="tool-guard" className="scroll-mt-24">
@@ -216,7 +232,7 @@ function ExampleGroup({ title, items, onPick }: { title: string; items: DemoTx[]
             </p>
             <p className="mt-0.5 text-[11px] leading-snug text-muted">
               {x.story}{" "}
-              <a className="text-link underline" href={explorerTx(x.hash)} target="_blank" rel="noreferrer">
+              <a className="text-link underline" href={explorerTx(x.hash)} target="_blank" rel="noreferrer" aria-label={`explorer: ${x.label} on NearBlocks`}>
                 explorer
               </a>
             </p>

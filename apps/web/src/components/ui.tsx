@@ -219,7 +219,7 @@ export function Kbd({ children }: { children: ReactNode }) {
 
 /**
  * Hover/focus tooltip. The trigger must be focusable for keyboard users. The trigger gets aria-describedby, the text is
- * hidden from assistive tech until shown (visibility), and Escape dismisses it (WCAG 1.4.13).
+ * hidden until shown (display: none, so a closed tooltip takes no space and cannot widen its card), and Escape dismisses it (WCAG 1.4.13).
  */
 export function Tooltip({ tip, children, align = "center" }: { tip: ReactNode; children: ReactNode; align?: "center" | "start" }) {
   const id = useId();
@@ -235,7 +235,7 @@ export function Tooltip({ tip, children, align = "center" }: { tip: ReactNode; c
       <span
         id={id}
         role="tooltip"
-        className={`pointer-events-none invisible absolute bottom-full z-30 mb-2 w-64 ${align === "start" ? "left-0" : "left-1/2 -translate-x-1/2"} translate-y-1 rounded-lg border border-line-strong bg-surface-3 px-3 py-2 text-xs leading-relaxed text-ink-2 opacity-0 shadow-xl transition group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100`}
+        className={`pointer-events-none absolute bottom-full z-30 mb-2 hidden w-64 max-w-[calc(100vw-2rem)] ${align === "start" ? "left-0" : "left-1/2 -translate-x-1/2"} rounded-lg border border-line-strong bg-surface-3 px-3 py-2 text-xs leading-relaxed text-ink-2 shadow-xl group-focus-within:block group-hover:block`}
       >
         {tip}
       </span>

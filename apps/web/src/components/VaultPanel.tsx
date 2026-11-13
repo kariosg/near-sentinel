@@ -139,7 +139,9 @@ export function VaultPanel() {
             <thead>
               <tr className="text-left text-xs text-muted">
                 <th className="py-1 font-normal">Provider</th>
-                <th className="py-1 font-normal">Answer</th>
+                <th className="py-1 font-normal">
+              Answer<Help label="provider answers">POLICY: this provider returned the allowance. NO_POLICY: none exists. ERROR: no usable answer. Sentinel uses the smallest amount any provider reports.</Help>
+            </th>
                 <th className="py-1 text-right font-normal">Latency</th>
               </tr>
             </thead>

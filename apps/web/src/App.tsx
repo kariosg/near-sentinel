@@ -19,7 +19,7 @@ type Route = { path: string; label: string; icon: IconName; group: string; descr
 const ROUTES: Route[] = [
   { path: "start", label: "Start here", icon: "rocket", group: "Get started", description: "What NEAR Sentinel does and a 3-minute guided tour for judges.", render: () => <StartPage /> },
   { path: "inspect", label: "Inspect & retry check", icon: "search", group: "Use it", description: "Paste any testnet transaction: get a verdict with per-provider evidence and the receipt graph. Also look up Guard contract intents.", render: () => <InspectPage /> },
-  { path: "overview", label: "Overview", icon: "gauge", group: "Use it", description: "Live health of the RPC providers Sentinel cross-checks, and your recent inspections.", render: () => <OverviewPage /> },
+  { path: "overview", label: "Overview", icon: "gauge", group: "Use it", description: "Live health of the RPC providers Sentinel cross-checks, and recent inspections on this server.", render: () => <OverviewPage /> },
   { path: "providers", label: "RPC providers", icon: "server", group: "Use it", description: "Each provider's tested capabilities, latency history and request metrics.", render: () => <ProvidersPage /> },
   { path: "incidents", label: "Incidents", icon: "alert", group: "Use it", description: "Provider outages, lag, wrong-chain and capability changes, opened and closed automatically.", render: () => <IncidentsPage /> },
   { path: "benchmarks", label: "Benchmarks", icon: "chart", group: "Prove it", description: "Fault-injection scenarios (one click, no key) and real provider measurements.", render: () => <BenchmarksPage /> },
@@ -189,7 +189,7 @@ function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void 
             onChange={(e) => (setQ(e.target.value), setSel(0))}
             placeholder="Search pages and actions…"
             aria-label="Search pages and actions"
-            className="w-full bg-transparent py-4 text-sm text-ink focus:outline-none"
+            className="w-full rounded-md bg-transparent py-4 text-sm text-ink focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-link"
           />
           <Kbd>Esc</Kbd>
         </div>
@@ -331,7 +331,7 @@ export function App() {
 
       <main ref={main} tabIndex={-1} className="min-w-0 px-4 pb-10 pt-6 focus:outline-none sm:px-6 lg:px-10 lg:pt-8">
         <div className="mx-auto max-w-[1240px]">
-          {providers.data && <IdentityBanner network={providers.data.network} />}
+          <IdentityBanner network={providers.data?.network} />
           {walletError && (
             <p role="alert" className="mb-5 flex items-start gap-2 rounded-xl border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-ink-2 animate-fade-up">
               <Icon name="alert" size={16} className="mt-0.5 text-warning" />

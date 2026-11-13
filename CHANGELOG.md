@@ -4,6 +4,35 @@
 
 First release, built for NEAR HACKATHON (Nov 2026).
 
+### Full audit and fixes (2026-11-13)
+- **New `docs/AUDIT.md`:**
+  - real testnet transactions: Vault 10/10 predictions matched, Guard paid once with the repeat refused and refunded;
+  - Lighthouse: accessibility, best practices and SEO 100; mobile layout shift 0.368 → 0;
+  - OWASP ZAP baseline: 0 failures;
+  - Schemathesis API fuzzing: no crashes;
+  - axe, randomized tests, and a UI/UX audit.
+- **UI fixes:**
+  - the Inspect verdict scrolls into view and is announced;
+  - closed tooltips no longer widen the cards;
+  - the verify banner no longer shifts the page;
+  - "Try an allowed payment";
+  - the Guard tour step deep-links to its tool;
+  - one "Intent ID" term;
+  - help on the provider answer badges;
+  - an operator count on Start;
+  - descriptive link names;
+  - the "got lucky" naive card;
+  - fingerprinted assets cached as immutable.
+- **Security headers:**
+  - one policy in `apps/api/src/security-headers.ts`;
+  - the enforced CSP adds `base-uri`, `form-action` and `object-src` (ZAP 10055 fixed);
+  - the strict CSP is shipped as Report-Only (0 violations, browser-tested);
+  - COOP `same-origin-allow-popups` and CORP added;
+  - COEP is deliberately not set;
+  - Caddy now adds only HSTS.
+- **Cosmetic fixes:** the palette focus ring sits inside the box, and long provider names wrap.
+- **Tests:** API 87, browser 59. The new browser tests cover the headers, 0 strict-CSP violations, and the wallet picker loading under the new headers.
+
 ### Receiver scam check (2026-11-12)
 - **What it is:** SDK `checkReceiver`, `GET /api/v1/receiver-check` and MCP `check_receiver` (10 read-only tools). The same check also runs inside every payment check as `receiverCheck`.
 - **What it flags:**

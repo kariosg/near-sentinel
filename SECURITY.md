@@ -47,6 +47,20 @@ They sign with keys the operator places in **git-ignored** `.env` files (`exampl
 | No secrets in the repository | `scripts/check-secrets.mjs` | runs first in `pnpm test`; self-tested with planted fake key and seed line |
 | Dependency scanning | `pnpm audit` | "No known vulnerabilities found" (2026-11-10) |
 
+## Web security headers
+
+The headers are defined once, in `apps/api/src/security-headers.ts`, and sent on every response. They are unit- and browser-tested. The TLS proxy adds HSTS.
+
+| Header | Value | Why |
+|---|---|---|
+| `Content-Security-Policy` (enforced) | `frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'`, plus `upgrade-insecure-requests` over HTTPS | No framing (clickjacking), no `<base>` or form hijacking, no plugins. Cannot break scripts or wallets |
+| `Content-Security-Policy-Report-Only` | strict: `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https: wss:; …` | Staged rollout (OWASP CSP Cheat Sheet). The dashboard produces **0 violations** on every page and main flow (browser-tested). It is enforced once owner wallet signing has been re-tested under it, because wallet code runs in `srcdoc` iframes that inherit the page's CSP |
+| `Cross-Origin-Opener-Policy` | `same-origin-allow-popups` | Isolates the window from cross-origin openers and keeps wallet popups working |
+| `Cross-Origin-Resource-Policy` | `same-origin` (API), `same-site` (pages, assets) | Stops other sites embedding API responses |
+| `Strict-Transport-Security` | `max-age=31536000; includeSubDomains` (at the TLS proxy) | HTTPS only |
+| `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy` | `DENY`, `nosniff`, `no-referrer`, camera/mic/geolocation/payment off | Defence in depth |
+| `Cross-Origin-Embedder-Policy` | **not set, on purpose** | `require-corp` would block the wallets' cross-origin frames and icons. Nothing here needs cross-origin isolation |
+
 ## Agent security (OWASP Top 10 for Agentic Applications, 2026)
 
 How Sentinel maps to the [OWASP Top 10 for Agentic Applications (2026)](https://genai.owasp.org/resource/owasp-top-10-for-agentic-applications-for-2026/). The core idea: an agent's spending limits live **on-chain**, not in its prompt, so a hijacked or confused model still cannot exceed them.

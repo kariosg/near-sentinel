@@ -36,6 +36,12 @@ Honest list. Nothing here is claimed as working elsewhere.
 - **The safety score is a heuristic** over the policy's limits (any receiver, agent can pay itself, per-payment = daily, daily ≥ balance); it does not know what the receivers are.
 - **Privacy is pseudonymisation.** Audit-log IPs are salted hashes, not anonymous data; whoever holds the salt can test a known IP. A rare low-level proxy error line (e.g. a failed TLS handshake) can still name the peer address.
 
+- **The strict Content-Security-Policy is report-only for now.**
+  - **Enforced today:** framing, `<base>`, form actions and plugins.
+  - **Reported, not enforced:** the strict policy (`script-src 'self'`, `connect-src`, …). The dashboard has 0 violations, but the wallet connector runs wallet code in `srcdoc` iframes that inherit the page's CSP, so enforcement waits until owner wallet signing has been re-tested under it.
+  - **COEP is not set on purpose:** it would block the wallets' cross-origin frames.
+  - Details are in [SECURITY.md](../SECURITY.md#web-security-headers).
+
 ## Optional account verification
 - **MyNearWallet only** (NEP-413 sign-message redirect). Other wallets (Meteor, HOT, Ledger) are not wired; no wallet library is bundled.
 - **A label, not authentication.** It shows which account the dashboard user is; it grants no extra rights and creates no session. Protected endpoints still use API keys.

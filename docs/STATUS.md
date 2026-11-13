@@ -109,10 +109,12 @@ docker compose up -d --build
 - `pnpm contract:deploy` runs `pnpm --filter … run deploy` (plain `deploy` would hit pnpm's built-in command). `-- --i-confirm` forwarding verified.
 
 ## Uncommitted work
-- Only this STATUS note. `master` = `1d0cd80` (2026-11-13): receiver scam check, merged fast-forward from `feature/receiver-check`. Both branches are pushed; the branch is kept.
-- **Deployed and verified live** at https://64-177-60-105.sslip.io (app image only; Caddy and database unchanged):
-  - live e2e 52/52, receiver checks 15/15, API checks 36/36, walkthrough 15/15 (incl. step 12a lookalike);
-  - rollback image `near-sentinel:previous` = `62997e0`.
+- None after this commit. Full audit and fixes (2026-11-13):
+  - **Fixes:** UI/UX fixes, layout shift 0.368 → 0, immutable asset caching, security headers (enforced CSP + strict Report-Only CSP, COOP/CORP; ZAP 10055 fixed, COEP accepted with a reason), cosmetic fixes.
+  - **Docs:** `docs/AUDIT.md`.
+  - **Gates:** `pnpm verify` all PASS (444 unit/integration, live 10, e2e 59/59, contracts); `pnpm audit` clean.
+  - **Real testnet:** Vault 10/10 predictions matched; Guard pay-once 6/6.
+- Last deploy: `1d0cd80` (receiver scam check), verified live; rollback image `near-sentinel:previous` = `62997e0`.
 - Real testnet proof (2026-11-12): 10/10 Sentinel predictions matched the Vault contract; tx list in JUDGING.md.
 - `packages/sdk/t.cjs` is a local scratch file, deliberately untracked. `media/` is git-ignored.
 - The tag `hackathon-submission` still points to `cc2aa40`; moving it needs a force tag push (owner's action).

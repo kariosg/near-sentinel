@@ -67,6 +67,14 @@ export function PreflightForm({ contract, owner, agent }: { contract: string; ow
     e.preventDefault();
     run(receiver, amount);
   };
+  /** One-click demo: a normal payment to the owner's only allowed receiver. */
+  const tryAllowed = () => {
+    const recv = "karios.testnet";
+    const amt = "0.01";
+    setReceiver(recv);
+    setAmount(amt);
+    run(recv, amt);
+  };
   /** One-click demo: a prompt-injected agent is told to pay a lookalike of the real payee. */
   const tryLookalike = () => {
     const recv = "kari0s.testnet";
@@ -93,12 +101,20 @@ export function PreflightForm({ contract, owner, agent }: { contract: string; ow
       <form onSubmit={submit} className="mt-3 grid gap-3 md:grid-cols-[1.2fr_0.8fr_1fr_auto] md:items-end">
         <Field label="Receiver" value={receiver} onChange={(e) => setReceiver(e.target.value)} placeholder="e.g. shop.testnet" required />
         <Field label="Amount (NEAR)" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.01" inputMode="decimal" required />
-        <Field label="Payment id (optional)" value={intent} onChange={(e) => setIntent(e.target.value)} placeholder="e.g. order-7f3a" />
+        <Field label="Intent ID (optional)" value={intent} onChange={(e) => setIntent(e.target.value)} placeholder="e.g. order-7f3a" />
         <Button type="submit" icon="shieldCheck" disabled={m.isPending} className="md:mb-[1px]">
           {m.isPending ? "Checking…" : "Check payment"}
         </Button>
       </form>
       <div className="mt-2 flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={tryAllowed}
+          className="inline-flex items-center gap-1.5 rounded-full border border-line-strong bg-surface-2/60 px-3 py-1.5 text-xs font-medium text-ink transition hover:border-link/60 hover:bg-surface-3"
+        >
+          <Icon name="check" size={13} className="text-good" />
+          Try an allowed payment
+        </button>
         <button
           type="button"
           onClick={tryLookalike}
@@ -108,7 +124,7 @@ export function PreflightForm({ contract, owner, agent }: { contract: string; ow
           Try a scam lookalike
         </button>
         <span className="text-[11px] text-ink-2">
-          You&apos;ll see: <span className="font-medium text-ink">kari0s.testnet</span> (zero, not o) flagged as a lookalike of the real payee.
+          You&apos;ll see: 0.01 NEAR to <span className="font-medium text-ink">karios.testnet</span> ALLOWED; <span className="font-medium text-ink">kari0s.testnet</span> (zero, not o) BLOCKED and flagged as a lookalike.
         </span>
       </div>
       {privacy && (

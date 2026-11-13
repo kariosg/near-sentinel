@@ -92,7 +92,8 @@ async function startVerification(network: string) {
 }
 
 /** Dismissible first-visit banner with an always-visible Skip. */
-export function IdentityBanner({ network }: { network: string }) {
+/** Renders immediately (no layout shift on first paint); the verify button waits until the server reports its network. */
+export function IdentityBanner({ network }: { network?: string }) {
   const state = useIdentity();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -115,8 +116,9 @@ export function IdentityBanner({ network }: { network: string }) {
         <div className="flex flex-wrap gap-2 md:shrink-0">
           <Button
             icon="wallet"
-            disabled={busy}
+            disabled={busy || !network}
             onClick={() => {
+              if (!network) return;
               setBusy(true);
               setErr(null);
               startVerification(network).catch((e: unknown) => {
@@ -125,7 +127,7 @@ export function IdentityBanner({ network }: { network: string }) {
               });
             }}
           >
-            {busy ? "Opening wallet…" : `Verify with MyNearWallet (${network})`}
+            {busy ? "Opening wallet…" : network ? `Verify with MyNearWallet (${network})` : "Verify with MyNearWallet"}
           </Button>
           <Button variant="ghost" icon="arrowRight" onClick={() => save({ skipped: true })}>
             Skip — explore without a wallet

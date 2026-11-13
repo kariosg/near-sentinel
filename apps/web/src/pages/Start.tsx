@@ -54,7 +54,7 @@ const STEPS: Step[] = [
   {
     id: "guard",
     title: "Look up the Guard contract",
-    href: "#/inspect",
+    href: "#/inspect?tool=guard",
     time: "20 s",
     icon: "shieldCheck",
     what: "Sentinel Guard is a Rust contract, live on testnet as guard.karios.testnet: pay(intent_id, receiver_id) pays at most once per payer and intent.",
@@ -138,17 +138,17 @@ export function StartPage() {
               <span>
                 Naive agent paid <strong className="text-critical">twice</strong>
               </span>
-              <a className="font-mono text-xs text-link underline" href="https://testnet.nearblocks.io/txns/185YtdJZxUCMAaqjRtmSj4MTx51mdiMpjhAPmZ3rZaH" target="_blank" rel="noreferrer">
+              <a className="font-mono text-xs text-link underline" href="https://testnet.nearblocks.io/txns/185YtdJZxUCMAaqjRtmSj4MTx51mdiMpjhAPmZ3rZaH" target="_blank" rel="noreferrer" aria-label="tx 1: naive agent payment 1 on NearBlocks">
                 tx 1
               </a>
-              <a className="font-mono text-xs text-link underline" href="https://testnet.nearblocks.io/txns/6h2hMxjpjdYwDF6zXJ5gTwD5MY47UT7thdRaxZM2Pc6h" target="_blank" rel="noreferrer">
+              <a className="font-mono text-xs text-link underline" href="https://testnet.nearblocks.io/txns/6h2hMxjpjdYwDF6zXJ5gTwD5MY47UT7thdRaxZM2Pc6h" target="_blank" rel="noreferrer" aria-label="tx 2: naive agent payment 2 on NearBlocks">
                 tx 2
               </a>
               <span className="text-muted">·</span>
               <span>
                 Sentinel-guarded agent paid <strong className="text-good">once</strong>
               </span>
-              <a className="font-mono text-xs text-link underline" href="https://testnet.nearblocks.io/txns/C59gttNUHCaVTHVi2GKCw6zu5C7QcmwPbUuw9NeaXnzS" target="_blank" rel="noreferrer">
+              <a className="font-mono text-xs text-link underline" href="https://testnet.nearblocks.io/txns/C59gttNUHCaVTHVi2GKCw6zu5C7QcmwPbUuw9NeaXnzS" target="_blank" rel="noreferrer" aria-label="tx: guarded agent payment on NearBlocks">
                 tx
               </a>
               <a className="text-xs font-medium text-link underline" href="#/inspect?example=guarded" onClick={() => mark("proof")}>
@@ -194,6 +194,7 @@ export function StartPage() {
                   <>
                     {up > 0 && <LiveDot />}
                     <CountUp value={up} /> / {rows.length}
+                    <span className="text-xs font-normal text-muted">({new Set(rows.filter((p) => p.reachable).map((p) => p.operator)).size} operators)</span>
                   </>
                 ) : (
                   "…"
@@ -383,9 +384,9 @@ export function StartPage() {
           <SectionTitle id="verify-title" eyebrow="Reproduce it" title="Verify from your terminal" sub="Node ≥ 22.16 and pnpm 8. Docker only for the contract suite." />
           <ul className="space-y-3 text-sm text-ink-2">
             {[
-              ["440 unit and integration tests", "SDK, MCP server (real stdio), API, demo, NEAR AI agent"],
+              ["444 unit and integration tests", "SDK, MCP server (real stdio), API, demo, NEAR AI agent"],
               ["10 live tests", "read-only, against public testnet and mainnet RPCs"],
-              ["52 browser tests", "flows, accessibility, phone/tablet/desktop, keyboard, this tour, the demo data, agent security"],
+              ["59 browser tests", "flows, accessibility, phone/tablet/desktop, keyboard, this tour, the demo data, agent security"],
               ["33 + 27 + 21 contract checks", "Guard and Vault: Rust unit tests, a local NEAR node, then live on testnet"],
             ].map(([a, b]) => (
               <li key={a} className="flex gap-3">
@@ -400,7 +401,7 @@ export function StartPage() {
           </ul>
         </div>
         <CodeBlock title="bash">{`pnpm install && pnpm build
-pnpm test            # secrets check + 440 tests
+pnpm test            # secrets check + 444 tests
 pnpm demo            # naive agent pays 2 NEAR, guarded pays 1
 pnpm start           # this dashboard on http://127.0.0.1:8080
 pnpm test:contract   # Docker: 33 Rust tests + 27 on-chain checks`}</CodeBlock>
@@ -545,9 +546,21 @@ function FlowDiagram({ providers }: { providers?: Array<{ name: string; up: bool
             <circle cx="408" cy={ys[i]} r="4" fill={p.up ? "#2fbf5b" : "#f47272"}>
               {motion && p.up && <animate attributeName="opacity" values="1;0.35;1" dur="2s" begin={`${i * 0.4}s`} repeatCount="indefinite" />}
             </circle>
-            <text x="420" y={(ys[i] ?? 0) + 4} fill="#c3cad6" fontSize="11">
-              {p.name.length > 15 ? `${p.name.slice(0, 14)}…` : p.name}
-            </text>
+            {p.name.length > 15 && p.name.includes("-") ? (
+              // Long names wrap at the hyphen instead of being cut ("fastnear-" / "archival").
+              <text x="420" y={(ys[i] ?? 0) - 2} fill="#c3cad6" fontSize="10.5">
+                <title>{p.name}</title>
+                <tspan x="420">{p.name.slice(0, p.name.indexOf("-") + 1)}</tspan>
+                <tspan x="420" dy="12">
+                  {p.name.slice(p.name.indexOf("-") + 1)}
+                </tspan>
+              </text>
+            ) : (
+              <text x="420" y={(ys[i] ?? 0) + 4} fill="#c3cad6" fontSize="11">
+                <title>{p.name}</title>
+                {p.name.length > 15 ? `${p.name.slice(0, 14)}…` : p.name}
+              </text>
+            )}
           </g>
         ))}
         <text x="450" y="276" textAnchor="middle" fill="#8f99aa" fontSize="10">independent RPC providers</text>
@@ -595,9 +608,12 @@ function LiveDemo() {
   const card = (r: DemoRun["runs"][number]) => (
     <div key={r.agent} className="rounded-xl border border-line bg-surface-2/60 p-4">
       <p className="text-sm font-semibold text-ink">{r.agent === "naive" ? "Naive agent" : "Agent guarded by Sentinel"}</p>
-      <p className={`mt-1 text-xl font-semibold ${r.transfers > 1 ? "text-critical" : "text-good"}`}>
+      <p className={`mt-1 text-xl font-semibold ${r.transfers > 1 ? "text-critical" : r.agent === "naive" && r.signedTransactions > 1 ? "text-warning" : "text-good"}`}>
         {r.transfers} {r.transfers === 1 ? "transfer" : "transfers"} · merchant got {r.receivedNear} NEAR
       </p>
+      {r.transfers === 1 && r.agent === "naive" && r.signedTransactions > 1 && (
+        <p className="mt-1 text-xs font-medium text-warning">Got lucky: it signed {r.signedTransactions} payments; if the first had landed late, it would have paid twice.</p>
+      )}
       <p className="mt-1 text-xs text-ink-2">
         {r.agent === "guarded" ? `Sentinel: ${r.decisions.join(" → ")}` : r.decisions.join(" → ")} · signed {r.signedTransactions}{" "}
         {r.signedTransactions === 1 ? "transaction" : "transactions"}

@@ -156,7 +156,7 @@ test("guard contract panel: unknown contract → UNKNOWN with per-provider evide
   await page.goto("/#/inspect");
   await page.getByLabel("Guard contract").fill("sentinel-guard-does-not-exist-e2e.testnet");
   await page.getByLabel("Payer account").fill("alice.testnet");
-  await page.getByLabel("Intent ID").fill("order-1");
+  await page.getByLabel("Intent ID", { exact: true }).fill("order-1");
   await page.getByRole("button", { name: "Check intent" }).click();
   const panel = page.locator("section", { hasText: "Guard contract —" });
   await expect(panel).toContainText("UNKNOWN", { timeout: 30_000 });
@@ -556,9 +556,9 @@ test.describe("agent security and privacy", () => {
   test("payment ids that look like personal data get a privacy warning", async ({ page }) => {
     await skipIdentity(page);
     await page.goto("/#/inspect");
-    await page.getByLabel("Intent ID").fill("alice@example.com");
+    await page.getByLabel("Intent ID", { exact: true }).fill("alice@example.com");
     await expect(page.getByRole("note").filter({ hasText: "public on-chain forever" })).toBeVisible();
-    await page.getByLabel("Intent ID").fill("order-7f3a");
+    await page.getByLabel("Intent ID", { exact: true }).fill("order-7f3a");
     await expect(page.getByRole("note").filter({ hasText: "public on-chain forever" })).toHaveCount(0);
     const { intentIdPrivacyWarning } = await import("../src/vaultInfo");
     expect(intentIdPrivacyWarning("+14155550123")).toContain("phone");
@@ -585,5 +585,106 @@ test.describe("agent security and privacy", () => {
     await expect(card).toContainText("Not covered");
     await expect(card).toContainText("What Sentinel stores");
     await expect(card.getByRole("link", { name: "Privacy" })).toHaveAttribute("href", /docs\/PRIVACY\.md$/);
+  });
+});
+
+test.describe("audit fixes", () => {
+  test("static caching: fingerprinted assets are immutable, index.html is revalidated", async ({ request }) => {
+    const index = await request.get("/");
+    expect(index.headers()["cache-control"]).toBe("no-cache");
+    const asset = (await index.text()).match(/\/assets\/[^"]+\.js/)?.[0];
+    expect(asset).toBeTruthy();
+    const a = await request.get(asset!);
+    expect(a.headers()["cache-control"]).toContain("immutable");
+  });
+
+  test("closed tooltips take no space: the Guard and Vault cards do not scroll sideways", async ({ page }) => {
+    await skipIdentity(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/#/inspect?tool=vault");
+    const panel = page.locator("section", { hasText: "Agent allowance —" });
+    await page.getByRole("button", { name: "Live agent allowance" }).click();
+    await expect(panel).toContainText("ACTIVE", { timeout: 30_000 });
+    const over = await panel.evaluate((el) => el.scrollWidth - el.clientWidth);
+    expect(over).toBeLessThanOrEqual(1);
+  });
+
+  test("an example's verdict is brought into view and announced", async ({ page }) => {
+    await skipIdentity(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/#/inspect");
+    await page.getByRole("button", { name: "Guarded agent paid once", exact: true }).click();
+    await expect(page.getByText("Do not retry", { exact: true }).first()).toBeInViewport({ timeout: 30_000 });
+    await expect(page.locator("#inspect-result")).toHaveAttribute("aria-live", "polite");
+  });
+
+  test("vault payment check: one-click allowed payment", async ({ page }) => {
+    await skipIdentity(page);
+    await page.goto("/#/inspect?tool=vault");
+    const panel = page.locator("section", { hasText: "Agent allowance —" });
+    await page.getByRole("button", { name: "Live agent allowance" }).click();
+    await expect(panel).toContainText("ACTIVE", { timeout: 30_000 });
+    const pre = panel.locator("section", { hasText: "Would this payment be allowed?" });
+    await pre.getByRole("button", { name: "Try an allowed payment" }).click();
+    await expect(pre).toContainText("ALLOWED", { timeout: 30_000 });
+    await expect(pre.getByRole("region", { name: "Receiver check" })).toContainText("OK");
+  });
+});
+
+test.describe("security headers and CSP readiness", () => {
+  const recordCsp = (page: Page) =>
+    page.addInitScript(() => {
+      (window as any).__csp = [];
+      document.addEventListener("securitypolicyviolation", (e) =>
+        (window as any).__csp.push({ disposition: e.disposition, directive: e.effectiveDirective, blocked: e.blockedURI, source: e.sourceFile }),
+      );
+    });
+  const violations = (page: Page) => page.evaluate(() => (window as any).__csp as Array<{ disposition: string; directive: string; blocked: string }>);
+
+  test("pages send the enforced CSP, the strict report-only CSP and COOP", async ({ request }) => {
+    const r = await request.get("/");
+    const h = r.headers();
+    for (const d of ["frame-ancestors 'none'", "base-uri 'self'", "form-action 'self'", "object-src 'none'"]) expect(h["content-security-policy"]).toContain(d);
+    expect(h["content-security-policy-report-only"]).toContain("script-src 'self'");
+    expect(h["cross-origin-opener-policy"]).toBe("same-origin-allow-popups");
+    expect(h["x-frame-options"]).toBe("DENY");
+    const docs = await request.get("/docs");
+    expect(docs.headers()["content-security-policy"]).toContain("frame-ancestors 'none'");
+    expect(docs.headers()["content-security-policy-report-only"]).toBeUndefined();
+  });
+
+  test("the dashboard is ready for the strict CSP: 0 violations on every page and main flow", async ({ page }) => {
+    await recordCsp(page);
+    await skipIdentity(page);
+    for (const p of PAGES) {
+      await page.goto(`/#/${p}`);
+      await expect(page.locator("main h1").first()).toBeVisible();
+    }
+    await page.goto("/#/inspect?example=guarded");
+    await expect(page.getByText("Do not retry", { exact: true }).first()).toBeVisible({ timeout: 30_000 });
+    await page.getByRole("button", { name: "Paid intent" }).click();
+    await expect(page.getByText(/Already paid:/).first()).toBeVisible({ timeout: 30_000 });
+    await page.getByRole("button", { name: "Live agent allowance" }).click();
+    const pre = page.locator("section", { hasText: "Would this payment be allowed?" }).last();
+    await pre.getByRole("button", { name: "Try a scam lookalike" }).click();
+    await expect(pre).toContainText("DANGER", { timeout: 30_000 });
+    await page.getByRole("button", { name: "Live demo agent keys" }).click();
+    await expect(page.getByRole("list", { name: "Access keys" })).toBeVisible({ timeout: 30_000 });
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test("the wallet connector still loads under the enforced headers (no signing)", async ({ page }) => {
+    await recordCsp(page);
+    const errors = trackErrors(page);
+    await skipIdentity(page);
+    await page.goto("/#/inspect?tool=vault");
+    await page.getByRole("button", { name: "Connect wallet" }).first().click();
+    // NEAR Connect's own wallet picker (an in-page modal) lists the wallets it loaded from its manifest.
+    await expect(page.getByText(/Meteor|MyNearWallet|HOT|Intear/i).first()).toBeVisible({ timeout: 30_000 });
+    const v = await violations(page);
+    expect(v.filter((x) => x.disposition === "enforce")).toEqual([]);
+    console.log(`report-only notes while the wallet picker is open: ${JSON.stringify(v)}`);
+    await page.keyboard.press("Escape");
+    expect(errors).toEqual([]);
   });
 });
