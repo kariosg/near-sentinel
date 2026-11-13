@@ -112,11 +112,13 @@ docker compose up -d --build
 - `pnpm contract:deploy` runs `pnpm --filter … run deploy` (plain `deploy` would hit pnpm's built-in command). `-- --i-confirm` forwarding verified.
 
 ## Uncommitted work
-- `master` = `1b62c34` (real-wallet test fixes, How it works page, logo I), pushed and deployed 2026-11-13 ~15:10 UTC.
-  - Live after deploying `1b62c34`: e2e 62/62; receiver checks 15/15; API checks 36/36; walkthrough 15/15; local = GitHub = live.
-  - Rollback on the server: image `near-sentinel:previous` (= `e6efc5b`), data backup `~/backups/sentinel-data-20261113T150817Z.tgz`.
-- **Working tree (finished, being shipped as one more commit):** code-splitting (first-screen JS 490 → 309 KB), Overview shows each recent tx once, Start without the redundant event badge and with the current test count. Full `pnpm verify` all PASS (471, live 10/10, e2e 62/62, contracts).
+- None. `master` = `ab17061` + this docs-only commit; code `ab17061` pushed and deployed 2026-11-13 ~15:55 UTC. Local = GitHub = live.
+  - `ab17061`: code-splitting (first-screen JS 490 → 309 KB), Overview lists each recent tx once, Start without the redundant event badge, test count 471.
+  - `1b62c34`: real-wallet test fixes, in-app "How it works" page, logo I (green), green main buttons only.
+  - Live after deploying `ab17061`: e2e 62/62; receiver checks 15/15; API checks 36/36; walkthrough 15/15; Lighthouse mobile 97 / desktop 97 (a11y, best practices, SEO 100).
+  - Rollback on the server: image `near-sentinel:previous` (= `1b62c34`), data backup `~/backups/sentinel-data-20261113T155309Z.tgz`.
 - `packages/sdk/t.cjs` is a local scratch file, deliberately untracked. `media/` is git-ignored.
+- GitHub also has two old branches, `feature/agent-security` and `feature/receiver-check`, both fully merged into `master` (deleting them is the owner's call).
 - The tag `hackathon-submission` still points to `cc2aa40`; moving it to the final commit is the owner's action.
 
 ## Blocked on the owner

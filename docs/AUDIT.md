@@ -6,7 +6,9 @@
 - Lighthouse mobile 89 and desktop 95 (accessibility, best practices and SEO 100, CLS 0);
 - OWASP ZAP 0 failures.
 
-**Final re-audit on the submitted code (`e6efc5b`, live, 2026-11-13):** browser tests 59/59 (axe on all 8 pages), receiver checks 15/15, API checks 36/36, walkthrough 15/15; Lighthouse mobile 93 and desktop 96 (accessibility, best practices and SEO 100; CLS 0 mobile, 0.02 desktop); OWASP ZAP 0 failures, 62 checks passed, with the same 6 low notes listed in section 4.
+**Latest live run (`ab17061`, 2026-11-13, after code-splitting):** browser tests 62/62, receiver checks 15/15, API checks 36/36, walkthrough 15/15; Lighthouse mobile **97** and desktop **97** (accessibility, best practices and SEO 100; LCP 1.7 s mobile; CLS 0 mobile, 0.02 desktop).
+
+**Earlier re-audit (`e6efc5b`, live, 2026-11-13):** browser tests 59/59 (axe on all 8 pages), receiver checks 15/15, API checks 36/36, walkthrough 15/15; Lighthouse mobile 93 and desktop 96 (accessibility, best practices and SEO 100; CLS 0 mobile, 0.02 desktop); OWASP ZAP 0 failures, 62 checks passed, with the same 6 low notes listed in section 4.
 
 Everything below was run against the **live** instance (https://64-177-60-105.sslip.io) or the production Docker image, with real testnet data. Each audit lists its result, what was fixed, and what is left on purpose.
 
