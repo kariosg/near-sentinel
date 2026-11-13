@@ -217,3 +217,102 @@ describe("private intent IDs", () => {
     expect(intentIdPrivacyWarning("2026-11-12:run-7")).toBeNull();
   });
 });
+
+describe("preflightSpend receiver check (advisory; never changes the decision)", () => {
+  const exists: MockAnswer = { result: { amount: "1", locked: "0", code_hash: "11111111111111111111111111111111", storage_usage: 1, block_height: 5000, block_hash: "x" } };
+  const missing = (id: string): MockAnswer => ({ result: { error: `account ${id} does not exist while viewing`, logs: [], block_height: 5000, block_hash: "x" } });
+  async function full(pol: VaultPolicy | null, account: (id: string) => MockAnswer, name = "a"): Promise<ProviderConfig> {
+    const srv = await startMockRpc((method, params) => {
+      seen.push({ name, method, params });
+      if (params?.request_type === "view_account") return account(params.account_id);
+      return params?.method_name === "get_spend" ? view(null) : view(pol);
+    });
+    servers.push(srv);
+    return { name, url: srv.url, operator: name };
+  }
+
+  it("allowlisted receiver: ALLOWED, receiverCheck OK and known, reason untouched; view_account asked once", async () => {
+    const r = await S([await full(policy(), () => exists)]).preflightSpend(req());
+    expect(r.decision).toBe("ALLOWED");
+    expect(r.receiverCheck).toMatchObject({ receiverId: "shop.testnet", status: "OK", knownReceiver: true, exists: true });
+    expect(r.reason).not.toMatch(/Warning/);
+    expect(seen.filter((s) => s.params.request_type === "view_account").map((s) => s.params)).toEqual([
+      { request_type: "view_account", finality: "final", account_id: "shop.testnet" },
+    ]);
+  });
+
+  it("lookalike of an allowlisted receiver: still BLOCKED NOT_ALLOWED_RECEIVER (unchanged), receiverCheck DANGER", async () => {
+    const r = await S([await full(policy(), () => exists)]).preflightSpend(req({ receiverId: "sh0p.testnet" }));
+    expect(r.decision).toBe("BLOCKED");
+    expect(r.code).toBe("NOT_ALLOWED_RECEIVER");
+    expect(r.reason).not.toMatch(/Warning/);
+    expect(r.receiverCheck).toMatchObject({ status: "DANGER", lookalikeOf: "shop.testnet", knownReceiver: false });
+  });
+
+  it("no allowlist: a lookalike of the owner stays ALLOWED but the reason warns", async () => {
+    const r = await S([await full(policy({ allowed_receivers: [] }), () => exists)]).preflightSpend(req({ receiverId: "a1ice.testnet" }));
+    expect(r.decision).toBe("ALLOWED");
+    expect(r.code).toBeUndefined();
+    expect(r.receiverCheck).toMatchObject({ status: "DANGER", lookalikeOf: vault.ownerId });
+    expect(r.reason).toMatch(/^Allowed: .* Warning: receiver check says DANGER: DANGER: a1ice\.testnet looks like alice\.testnet \(homoglyph\)/);
+  });
+
+  it("no allowlist: a receiver that does not exist stays ALLOWED but the reason warns NOT_FOUND", async () => {
+    const r = await S([await full(policy({ allowed_receivers: [] }), (id) => missing(id))]).preflightSpend(req({ receiverId: "nobody-here.testnet" }));
+    expect(r.decision).toBe("ALLOWED");
+    expect(r.receiverCheck).toMatchObject({ status: "NOT_FOUND", exists: false });
+    expect(r.reason).toMatch(/ Warning: receiver check says NOT_FOUND: /);
+  });
+
+  it("the receiver check failing (502) never changes the decision", async () => {
+    const r = await S([await full(policy(), () => ({ fault: { type: "http-502" } }))]).preflightSpend(req());
+    expect(r.decision).toBe("ALLOWED");
+    expect(r.receiverCheck?.status).toBe("UNKNOWN");
+    expect(r.reason).not.toMatch(/Warning/);
+  });
+
+  it("no policy yet: the owner is still a known receiver", async () => {
+    const r = await S([await full(null, () => exists)]).preflightSpend(req({ receiverId: vault.ownerId }));
+    expect(r.code).toBe("NO_POLICY");
+    expect(r.receiverCheck).toMatchObject({ status: "OK", knownReceiver: true });
+  });
+
+  it("every allowlist entry (20) plus the owner is checked: a lookalike of the last entry is caught", async () => {
+    const list = [...Array.from({ length: 19 }, (_, i) => `payee-number-${i}.testnet`), "zeta-coffee-shop.testnet"];
+    const r = await S([await full(policy({ allowed_receivers: list }), () => exists)]).preflightSpend(req({ receiverId: "zeta-c0ffee-shop.testnet" }));
+    expect(r.code).toBe("NOT_ALLOWED_RECEIVER");
+    expect(r.receiverCheck).toMatchObject({ status: "DANGER", lookalikeOf: "zeta-coffee-shop.testnet" });
+    const own = await S([await full(policy({ allowed_receivers: list }), () => exists)]).preflightSpend(req({ receiverId: "a1ice.testnet" }));
+    expect(own.receiverCheck).toMatchObject({ status: "DANGER", lookalikeOf: vault.ownerId });
+    const ok = await S([await full(policy({ allowed_receivers: list }), () => exists)]).preflightSpend(req({ receiverId: "zeta-coffee-shop.testnet" }));
+    expect(ok.decision).toBe("ALLOWED");
+    expect(ok.receiverCheck).toMatchObject({ status: "OK", knownReceiver: true });
+  });
+
+  it("providers disagree on an allowed implicit receiver: ALLOWED, and the reason warns", async () => {
+    const H = "ab".repeat(32);
+    const unknownAccount = (id: string): MockAnswer => ({
+      error: { name: "HANDLER_ERROR", code: -32000, message: "Server error", data: `account ${id} does not exist while viewing`, cause: { name: "UNKNOWN_ACCOUNT", info: {} } },
+    });
+    const r = await S([await full(policy({ allowed_receivers: [H] }), () => exists), await full(policy({ allowed_receivers: [H] }), unknownAccount, "b")]).preflightSpend(req({ receiverId: H }));
+    expect(r.decision).toBe("ALLOWED");
+    expect(r.code).toBeUndefined();
+    expect(r.receiverCheck?.status).toBe("WARNING");
+    expect(r.reason).toMatch(/ Warning: receiver check says WARNING: .*providers disagree/i);
+  });
+
+  it("providers disagree on a named receiver: NOT_FOUND warning (worst case), decision unchanged", async () => {
+    const r = await S([await full(policy({ allowed_receivers: [] }), () => exists), await full(policy({ allowed_receivers: [] }), missing, "b")]).preflightSpend(req({ receiverId: "new-shop.testnet" }));
+    expect(r.decision).toBe("ALLOWED");
+    expect(r.receiverCheck).toMatchObject({ status: "NOT_FOUND" });
+    expect(r.reason).toMatch(/ Warning: receiver check says NOT_FOUND: .*worst case/);
+  });
+
+  it("a plain raw-address WARNING (providers agree) does not touch the reason", async () => {
+    const H = "cd".repeat(32);
+    const r = await S([await full(policy({ allowed_receivers: [] }), () => exists)]).preflightSpend(req({ receiverId: H }));
+    expect(r.decision).toBe("ALLOWED");
+    expect(r.receiverCheck?.status).toBe("WARNING");
+    expect(r.reason).not.toMatch(/Warning/);
+  });
+});

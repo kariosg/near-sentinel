@@ -61,6 +61,19 @@ const spendView = (params: any): MockAnswer | undefined => {
   const value = args.intent_id === "used-1" ? { receiver_id: "shop.testnet", amount: "1", block_height: 900, status: "Paid" } : null;
   return { result: { result: [...Buffer.from(JSON.stringify(value))], logs: [], block_height: 1000, block_hash: "x" } };
 };
+const accountView = (params: any): MockAnswer | undefined => {
+  if (params?.request_type !== "view_account") return undefined;
+  const existing: Record<string, string> = {
+    "shop.testnet": "11111111111111111111111111111111",
+    "owner.testnet": "11111111111111111111111111111111",
+    "kari0s.testnet": "11111111111111111111111111111111",
+    "karios.testnet": "11111111111111111111111111111111",
+    "merchant.testnet": "E8jZ1giWcVrps8PcV75ATauu6gFRkcwjNtKp7NKmipZG",
+  };
+  const code_hash = existing[params.account_id];
+  if (code_hash) return { result: { amount: "1000000000000000000000000", locked: "0", code_hash, storage_usage: 182, storage_paid_at: 0, block_height: 1000, block_hash: "x" } };
+  return { result: { block_height: 1000, block_hash: "x", error: `account ${params.account_id} does not exist while viewing`, logs: [] } };
+};
 const KEY = "test-key-please-change";
 
 const state = { aDown: false, chain: "testnet", txCalls: 0 };
@@ -72,13 +85,13 @@ const handler = (method: string, params: any): MockAnswer => {
   }
   if (method === "status") return { result: { chain_id: state.chain, protocol_version: 88, sync_info: { latest_block_height: 1000, earliest_block_height: 1, syncing: false } } };
   if (method === "block") return { error: { name: "HANDLER_ERROR", code: -32000, message: "x", cause: { name: "UNKNOWN_BLOCK" } } };
-  if (method === "query") return (intentView(params) ?? policyView(params)) ?? spendView(params) ?? keyListView(params) ?? accessKeyView(params) ?? UNKNOWN_TX;
+  if (method === "query") return (intentView(params) ?? policyView(params)) ?? spendView(params) ?? keyListView(params) ?? accessKeyView(params) ?? accountView(params) ?? UNKNOWN_TX;
   return UNKNOWN_TX;
 };
 const bHandler = (method: string, params: any): MockAnswer => {
   if (method === "status") return { result: { chain_id: "testnet", protocol_version: 88, sync_info: { latest_block_height: 1000, earliest_block_height: 1, syncing: false } } };
   if (method === "EXPERIMENTAL_tx_status") return params.tx_hash === success.transaction.hash ? { result: success } : UNKNOWN_TX;
-  if (method === "query") return (intentView(params) ?? policyView(params)) ?? spendView(params) ?? keyListView(params) ?? accessKeyView(params) ?? UNKNOWN_TX;
+  if (method === "query") return (intentView(params) ?? policyView(params)) ?? spendView(params) ?? keyListView(params) ?? accessKeyView(params) ?? accountView(params) ?? UNKNOWN_TX;
   return UNKNOWN_TX;
 };
 
@@ -495,6 +508,58 @@ describe("agent keys and spend preflight (read-only)", () => {
     ["preflight unknown param", "/api/v1/spend-preflight?contract=vault.testnet&owner=owner.testnet&agent=agent.testnet&receiver=shop.testnet&amount=1&evil=1"],
   ])("400 on %s", async (_n, url) => {
     expect((await get(url)).statusCode).toBe(400);
+  });
+});
+
+describe("receiver scam check (read-only)", () => {
+  const get = (url: string) => d.app.inject({ method: "GET", url });
+  it("DANGER for a homoglyph lookalike of a known receiver, with per-provider evidence", async () => {
+    const r = await get("/api/v1/receiver-check?receiver=kari0s.testnet&known=karios.testnet,%20shop.testnet");
+    expect(r.statusCode).toBe(200);
+    const j = r.json();
+    expect(j).toMatchObject({ receiverId: "kari0s.testnet", status: "DANGER", kind: "named", exists: true, isContract: false, lookalikeOf: "karios.testnet", knownReceiver: false });
+    expect(j.findings[0]).toMatchObject({ severity: "high", technique: "homoglyph" });
+    expect(j.providers).toHaveLength(2);
+    expect(j.providers[0]).toMatchObject({ provider: "alpha", operator: "op-a", answer: "EXISTS", blockHeight: 1000 });
+    expect(typeof j.checkedAt).toBe("string");
+  });
+  it("OK for a known receiver; NOT_FOUND for a missing named account; contract is info", async () => {
+    expect((await get("/api/v1/receiver-check?receiver=karios.testnet&known=karios.testnet")).json()).toMatchObject({ status: "OK", knownReceiver: true, exists: true });
+    expect((await get("/api/v1/receiver-check?receiver=ghost-payee.testnet")).json()).toMatchObject({ status: "NOT_FOUND", exists: false });
+    const c = (await get("/api/v1/receiver-check?receiver=merchant.testnet")).json();
+    expect(c).toMatchObject({ status: "OK", isContract: true });
+    expect(c).not.toHaveProperty("knownReceiver");
+  });
+  it("spend-preflight carries the receiver check; the decision is unchanged", async () => {
+    const j = (await get("/api/v1/spend-preflight?contract=vault.testnet&owner=owner.testnet&agent=agent.testnet&receiver=sh0p.testnet&amount=1")).json();
+    expect(j).toMatchObject({ decision: "BLOCKED", code: "NOT_ALLOWED_RECEIVER", receiverCheck: { status: "DANGER", lookalikeOf: "shop.testnet" } });
+  });
+  it.each([
+    ["missing receiver", "/api/v1/receiver-check"],
+    ["bad receiver", "/api/v1/receiver-check?receiver=NOPE"],
+    ["bad known receiver", "/api/v1/receiver-check?receiver=shop.testnet&known=shop.testnet,Bad%20One"],
+    ["21 known receivers", `/api/v1/receiver-check?receiver=shop.testnet&known=${Array.from({ length: 21 }, (_, i) => `k${i}.testnet`).join(",")}`],
+    ["unknown param", "/api/v1/receiver-check?receiver=shop.testnet&evil=1"],
+  ])("400 on %s", async (_n, url) => {
+    const r = await get(url);
+    expect(r.statusCode).toBe(400);
+    expect(r.json().error.code).toBe("INVALID_INPUT");
+  });
+  it("empty known (?known= or known=,,) behaves as if absent; duplicates are removed before the 20 limit", async () => {
+    for (const q of ["known=", "known=,,", "known=%20,%20"]) {
+      const r = await get(`/api/v1/receiver-check?receiver=shop.testnet&${q}`);
+      expect(r.statusCode).toBe(200);
+      expect(r.json()).not.toHaveProperty("knownReceiver");
+      expect(r.json().findings.map((f: any) => f.title)).not.toContain("New payee: verify it from the original source, never from transaction history");
+    }
+    const dup = Array.from({ length: 30 }, () => "shop.testnet").join(",");
+    const r = await get(`/api/v1/receiver-check?receiver=shop.testnet&known=${dup}`);
+    expect(r.statusCode).toBe(200);
+    expect(r.json()).toMatchObject({ status: "OK", knownReceiver: true });
+  });
+  it("20 known receivers (after trimming empty entries) are accepted", async () => {
+    const known = Array.from({ length: 20 }, (_, i) => `k${i}.testnet`).join(",") + ",,";
+    expect((await get(`/api/v1/receiver-check?receiver=shop.testnet&known=${known}`)).statusCode).toBe(200);
   });
 });
 

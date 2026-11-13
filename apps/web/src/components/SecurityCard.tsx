@@ -6,7 +6,7 @@ const REPO = "https://github.com/kariosg/near-sentinel/blob/master";
 const LAYERS: Array<[string, string]> = [
   ["Limited key", "The agent holds a function-call key that can only call the Vault's spend, never a full-access key. Check it with the Agent keys tool."],
   ["Vault limits on-chain", "Per-payment and 24-hour limits, a receiver allowlist and the balance are enforced by the contract, not by the AI's prompt, so a tricked agent cannot go past them."],
-  ["Check before signing", "preflight_spend runs the Vault's own rules first, so the agent stops early with a clear reason."],
+  ["Check before signing", "preflight_spend runs the Vault's own rules first, and check_receiver flags lookalike payees, address poisoning and missing accounts, so the agent stops early with a clear reason."],
   ["Pay once", "Each payment id can be paid only once (Guard and Vault), so a retry after a timeout can never pay twice."],
   ["Kill switch", "The owner can freeze the agent instantly and withdraw the balance at any time."],
   ["Independent proof", "Every answer is cross-checked on several RPC operators; if they disagree, Sentinel says so instead of guessing."],
@@ -18,8 +18,8 @@ const coverLabel: Record<Cover, string> = { yes: "Covered", partial: "Partly", n
 
 /** OWASP Top 10 for Agentic Applications (2026): what Sentinel does for each risk, honestly. */
 const OWASP: Array<[string, string, Cover, string]> = [
-  ["ASI01", "Agent goal hijack", "yes", "Money rules live in the contract, not the prompt: a hijacked agent still meets the limits, the allowlist and the freeze."],
-  ["ASI02", "Tool misuse", "yes", "All 9 MCP tools are read-only (marked readOnlyHint). preflight_spend checks a payment before any signing tool is used."],
+  ["ASI01", "Agent goal hijack", "yes", "Money rules live in the contract, not the prompt: a hijacked agent still meets the limits, the allowlist and the freeze; the receiver check flags the lookalike payee it was told to pay."],
+  ["ASI02", "Tool misuse", "yes", "All 10 MCP tools are read-only (marked readOnlyHint). preflight_spend checks a payment before any signing tool is used."],
   ["ASI03", "Identity and privilege abuse", "yes", "Agent keys tool flags full-access keys; the Vault checks the direct caller (predecessor), not the signer; one allowance per owner + agent."],
   ["ASI04", "Agentic supply chain", "partial", "Pinned lockfile, pnpm audit, a secrets gate in tests and an open-source MCP server you can read. Third-party tools are your choice."],
   ["ASI05", "Unexpected code execution", "no", "Out of scope: Sentinel never runs code the agent writes."],

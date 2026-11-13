@@ -34,6 +34,7 @@ flowchart LR
 | `sentinel.ts` | Orchestration: input validation, signed-tx decoding, phased fan-out with correct ordering, answer validation, agreement, read failover, capability probing, subscription, report export. |
 | `intent.ts` | Sentinel Guard intent lookups (`checkIntent`), `privateIntentId` (HMAC id so no order number goes on-chain) and `intentIdPrivacyWarning`. |
 | `vault.ts` | Sentinel Vault: allowance decision (`checkSpendAllowance`, smallest `available_now` wins), the spend preflight (`decideSpendPreflight`: the contract's `spend()` checks in the same order, never ALLOWED above `available_now`) and the allowance safety score. |
+| `receiver.ts` | Receiver scam check (`view_account` on every provider): lookalike detection with a typosquatting technique label, address-poisoning detection for raw addresses, missing accounts; worst case across providers for named accounts, freshest answer for raw addresses. |
 | `keys.ts` | Agent key audit (`view_access_key_list` + `view_account` on every provider): grades each key; when providers disagree the riskiest answer wins. |
 | `ssrf.ts` | URL policy and a guarded `fetch` that re-checks the IP at connect time. |
 | `metrics.ts` | Rolling per-provider counters and latency percentiles. |

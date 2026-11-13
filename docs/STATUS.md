@@ -29,7 +29,7 @@ docker compose up -d --build
 | `pnpm build` / `pnpm typecheck` (7 packages) | pass / pass |
 | Secrets gate (`scripts/check-secrets.mjs`, all tracked files) | pass; self-tested with a planted fake key + seed line (caught) |
 | SDK unit | **160/160** (incl. retry-safety hardening, load-balancer re-check, default-provider independence, `checkIntent`, `checkSpendAllowance`, text helpers) |
-| MCP e2e (built server over stdio, official client) | **16/16** (9 tools) |
+| MCP e2e (built server over stdio, official client) | **17/17** (10 tools) |
 | API | **53/53** (incl. vault allowance route, security headers, public simulated benchmark vs key-protected real one, NEP-413 forgery cases, intents, SSE per-IP cap, 413 body limit, rate limits) |
 | Demo `--assert` | **7/7** |
 | Live testnet | **7/7** (aging-proof: the old failed tx now only lives on the archival operator → honest WAIT) |
@@ -109,14 +109,22 @@ docker compose up -d --build
 - `pnpm contract:deploy` runs `pnpm --filter … run deploy` (plain `deploy` would hit pnpm's built-in command). `-- --i-confirm` forwarding verified.
 
 ## Uncommitted work
-- **Ready, waiting for the owner's commit/push approval** (2026-11-12, on `master` after `817bf8d`): agent security shown everywhere.
-  - Start: tour step 7 and an "Agent security & privacy" card.
-  - Inspect: `#/inspect?tool=…` deep links.
-  - README: `docs/media/agent-security.gif` and the security rows.
-  - Docs: JUDGING fastest path, TESTING link, ARCHITECTURE modules, a KNOWN_LIMITATIONS section, and `AUDIT_IP_SALT` in both env examples.
-  - Tests: 51 e2e.
-  - After commit: redeploy the app image only (no Caddy or database change), then live tests.
-- None except this STATUS update. `master` = `ed1fbb0` (2026-11-12): agent security and privacy, merged fast-forward from `feature/agent-security`. Both branches are pushed; the branch is kept.
+- **Branch `feature/receiver-check`** (from `62997e0`, not committed yet, 2026-11-12): receiver scam check.
+  - What it covers: SDK `checkReceiver`, `GET /api/v1/receiver-check`, MCP `check_receiver` (10 tools), `receiverCheck` inside every payment check, the Vault UI "Receiver check" block with a side-by-side diff, the "Try a scam lookalike" demo, and the docs.
+  - Independent review: every finding fixed (sub-account payees, network-TLD-only stripping, worst-case consensus, diff highlight, accessibility, the `known` param).
+  - Gates (2026-11-12):
+    - `pnpm verify` all PASS: 440 unit/integration (sdk 326, mcp 17, api 83), live 10, e2e 52/52, contracts;
+    - two independent reviews, every finding fixed; 20,000 randomized detector cases with 0 false alarms or misses;
+    - **real testnet transactions:** 10/10 Sentinel predictions matched the Vault contract (3 paid, 7 refused with the predicted code), and the real payment got DO_NOT_RETRY (tx list in JUDGING.md);
+    - receiver checks on real testnet: 15/15 locally and in the production Docker image;
+    - original API checks 36/36;
+    - MCP `check_receiver` live: DANGER;
+    - `pnpm audit` clean.
+  - **Merge gate passed:** waiting for the owner's OK to commit, merge, push and deploy.
+- `master` = `62997e0`: agent security shown everywhere (tour step 7, Start card, `?tool=` deep links, GIF, docs). Pushed.
+- **Redeployed** (app image only; Caddy and database unchanged):
+  - live e2e 51/51, API checks 36/36, walkthrough 14/14;
+  - rollback image `near-sentinel:previous` = `ed1fbb0`.
 - **Deployed and verified live** at https://64-177-60-105.sslip.io (2026-11-12 ~15:30 UTC):
   - containers: sentinel healthy, Caddy recreated with the new log filter;
   - database: migrations 1+2 applied, all 18 audit rows hashed (0 raw IPs), 86 reports and 13,492 samples kept;

@@ -4,6 +4,22 @@
 
 First release, built for NEAR HACKATHON (Nov 2026).
 
+### Receiver scam check (2026-11-12)
+- **What it is:** SDK `checkReceiver`, `GET /api/v1/receiver-check` and MCP `check_receiver` (10 read-only tools). The same check also runs inside every payment check as `receiverCheck`.
+- **What it flags:**
+  - lookalikes of a known payee, labelled with the technique, using the typosquatting classification: homoglyph, omission, insertion, replacement, transposition, vowel swap, hyphenation, extra words;
+  - address poisoning of raw addresses (same first and last 4 characters);
+  - named accounts that do not exist;
+  - raw addresses;
+  - first-time payees (as an info note).
+- **How:** worst case across providers for named accounts (any NOT_FOUND counts); raw addresses use the freshest answer.
+- **UI:**
+  - a "Receiver check" block in the Vault payment check, showing the two names side by side with the differing characters highlighted;
+  - a one-click "Try a scam lookalike" demo (`kari0s.testnet`).
+- **Docs:** README, JUDGING, TESTING step 12a, SECURITY, threat model, KNOWN_LIMITATIONS, API/SDK/MCP docs and the Agent Skill.
+- **Tests:** SDK 326, API 83, MCP 17, browser 52. Findings from two independent reviews fixed before merge.
+- **Real testnet proof:** 10 real `spend` transactions, and every outcome matched Sentinel's prediction (3 paid, 7 refused with the predicted code, including the lookalike `kari0s.testnet` flagged DANGER). The real payment then got DO_NOT_RETRY. See JUDGING.md.
+
 ### Agent security and privacy (2026-11-12)
 - **Agent key check** (SDK `auditAgentKeys`, `GET /api/v1/agent-keys`, MCP `audit_agent_keys`, Inspect → ④ Agent keys). It lists every access key on an agent account, cross-checked on every provider, and flags full-access keys. A function-call key limited to the Vault's `spend` is graded least privilege, and the result prints the near-cli-rs commands for that safe setup. A missing account is confirmed with `view_account`, because providers answer an empty key list for unknown accounts.
 - **"Would this payment be allowed?"** (SDK `preflightSpend` / `decideSpendPreflight`, `GET /api/v1/spend-preflight`, MCP `preflight_spend`, a form in the Vault panel). It runs the Vault contract's own checks in the contract's order, before anything is signed. It never answers ALLOWED above the smallest amount any provider reports. It is advisory: the contract stays the final judge.

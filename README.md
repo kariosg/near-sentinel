@@ -48,7 +48,7 @@ A guard contract (including our own Sentinel Guard) only knows about calls that 
 | **Function-call access keys** | An agent's key may only call `spend` on the Vault: it can pay within limits and do nothing else. The agent key check (`view_access_key_list`) flags agents that hold a full-access key instead | Sandbox: NEAR rejects any other use (`INVALID_TRANSACTION`); live: [Inspect → ④ Agent keys](https://64-177-60-105.sslip.io/#/inspect?tool=keys) |
 | **NEAR AI Cloud** (TEE-hosted model, signed answers, attestation) | An AI agent decides real payment situations with Sentinel as its tools; Sentinel's verdict is binding | [docs/near-ai-run.md](docs/near-ai-run.md): 4/4, every answer signed, attestation contains the signing address |
 | **NEAR Connect** (`@hot-labs/near-connect`) | Vault owners fund, freeze or withdraw from the dashboard with their own wallet | Dashboard → Inspect → *Owner actions* |
-| **MCP for agents** + **Agent Skills** | 9 read-only MCP tools; an Agent Skill; designed to run next to NEAR's official MCP Server (`@nearai/near-mcp`), which has no status check | [skills/near-sentinel](skills/near-sentinel/SKILL.md), [docs/integrations/near-mcp.md](docs/integrations/near-mcp.md) |
+| **MCP for agents** + **Agent Skills** | 10 read-only MCP tools; an Agent Skill; designed to run next to NEAR's official MCP Server (`@nearai/near-mcp`), which has no status check | [skills/near-sentinel](skills/near-sentinel/SKILL.md), [docs/integrations/near-mcp.md](docs/integrations/near-mcp.md) |
 | **NEP-297 events, NEP-413 signed messages** | Contract events (`EVENT_JSON`); optional "verify your account" in the dashboard | Contract source; dashboard banner |
 | **NearBlocks, near CLI, testnet faucet** | Every proof links to NearBlocks; owner setup commands use the near CLI | Links throughout |
 
@@ -84,16 +84,16 @@ It ships as a TypeScript SDK, an **MCP server for AI agents**, a REST API and a 
 | Do | See |
 |---|---|
 | Open https://64-177-60-105.sslip.io (nothing to install) | The live dashboard on testnet: same tour, examples and benchmark as below |
-| `pnpm install && pnpm build && pnpm test` | Secrets check, then 310 tests pass (sdk 207, mcp 16, api 73, demo 7, NEAR AI agent 7) |
+| `pnpm install && pnpm build && pnpm test` | Secrets check, then 440 tests pass (sdk 326, mcp 17, api 83, demo 7, NEAR AI agent 7) |
 | `pnpm demo` | Naive agent: merchant receives 2 NEAR. Sentinel-guarded agent: 1 NEAR. |
 | `pnpm start`, then open http://127.0.0.1:8080 | Dashboard on live testnet. It opens on **Start here**: a 3-minute judge tour where every step is one click. Click **Skip** on the optional verify banner. Press **Ctrl K** to jump anywhere. |
 | Inspect page → paste a testnet tx hash | Verdict, per-provider evidence, receipt graph |
 | Benchmarks page → **Run simulated faults** (no key needed) | 12/12 fault scenarios classified correctly in a few seconds |
 | `pnpm test:live` | 10 read-only tests against public RPCs: 7 on testnet, 3 on mainnet (a real recent mainnet transaction picked live) |
 | `pnpm test:contract` (Docker) | 33 Rust unit tests (Guard 14 + Vault 19) + 27 on-chain checks on a local NEAR sandbox, including a duplicate payment rejected with `DUPLICATE_INTENT` and an agent whose function-call key can only `spend` within its allowance |
-| `pnpm test:e2e` (starts the built API itself; uses Google Chrome if installed, otherwise run `pnpm --filter @near-sentinel/web exec playwright install chromium` once) | 51 browser tests: flows, accessibility, mobile, keyboard, judge tour, command palette, modal focus, reduced motion |
+| `pnpm test:e2e` (starts the built API itself; uses Google Chrome if installed, otherwise run `pnpm --filter @near-sentinel/web exec playwright install chromium` once) | 52 browser tests: flows, accessibility, mobile, keyboard, judge tour, command palette, modal focus, reduced motion |
 | Inspect page → ④ **Agent keys** → *Live demo agent keys*; ③ Vault → *Would this payment be allowed?* | Agent security: a full-access key flagged with the safe setup; a payment to an unlisted receiver BLOCKED before signing |
-| MCP: see [From an AI agent](#from-an-ai-agent-mcp) | `check_retry_safety`, `check_intent`, `check_spend_allowance`, `preflight_spend`, `audit_agent_keys` and 4 more read-only tools |
+| MCP: see [From an AI agent](#from-an-ai-agent-mcp) | `check_retry_safety`, `check_intent`, `check_spend_allowance`, `preflight_spend`, `check_receiver`, `audit_agent_keys` and 4 more read-only tools |
 
 ## The demo in one picture
 
@@ -188,7 +188,7 @@ docker compose up -d --build     # http://127.0.0.1:8080, data in the `sentinel-
 ```mermaid
 flowchart LR
     subgraph Agent["Your AI agent"]
-        MCP["MCP server<br/>(9 read-only tools)"]
+        MCP["MCP server<br/>(10 read-only tools)"]
         SDK["TypeScript SDK"]
         REST["REST API"]
     end
@@ -223,6 +223,7 @@ Tools (all read-only):
 | `check_intent` | What a deployed Sentinel Guard contract recorded for (payer, intent): `PAID / PENDING / NOT_RECORDED`. |
 | `check_spend_allowance` | How much an agent may spend now from a Sentinel Vault allowance: `ACTIVE / EXHAUSTED / FROZEN / NO_POLICY`, the limits, the smallest amount any provider reports, and a safety score for the limits. |
 | `preflight_spend` | Would THIS payment be allowed? Runs the Vault's own rules (frozen, allowlist, per-payment and 24 h limits, balance + fee, used payment id) before signing: `ALLOWED / BLOCKED (code) / UNKNOWN`. Advisory: the contract stays the final judge. |
+| `check_receiver` | Is this receiver a scam? Lookalike of a known payee (homoglyph `0`/`o`, swapped or missing letters, extra words), address poisoning of raw addresses, or an account that does not exist: `OK / WARNING / DANGER / NOT_FOUND / UNKNOWN`. |
 | `audit_agent_keys` | Can this agent's keys drain its account? Lists every access key: full-access keys are flagged, a function-call key limited to the Vault's `spend` is least privilege. |
 
 **Agent Skill and NEAR MCP Server.** [skills/near-sentinel/SKILL.md](skills/near-sentinel/SKILL.md) is an Agent Skill that tells an agent exactly when to call these tools and what to do with each verdict. [docs/integrations/near-mcp.md](docs/integrations/near-mcp.md) shows Sentinel running next to the official NEAR MCP Server: NEAR's server acts on chain, Sentinel is the read-only check the agent calls before any resend. NEAR's official MCP server ([`@nearai/near-mcp`](https://github.com/nearai/near-mcp)) can send transactions but has no tool to check one's status after a timeout; Sentinel is the read-only layer that answers that question before the agent sends again.
@@ -361,11 +362,14 @@ Give an agent money, not your keys, and keep its limits outside the AI. A prompt
 |---|---|---|
 | **Limited key** | A leaked or tricked agent emptying its account. `audit_agent_keys` / `GET /api/v1/agent-keys` flags full-access keys and prints the near-cli-rs commands for a key that can only call the Vault's `spend`. | [Inspect → ④ Agent keys](https://64-177-60-105.sslip.io/#/inspect?tool=keys) |
 | **Vault limits on-chain** | Overspending: per-payment and 24 h limits, receiver allowlist, freeze. The contract checks the direct caller (`predecessor_account_id`), not the signer. | `contracts/guard/vault` |
+| **Receiver scam check** | Paying a lookalike of a real payee (`kari0s.testnet` for `karios.testnet`), a poisoned raw address that matches a known one only at the start and end, or an account that does not exist. Techniques follow typosquatting tooling (homoglyph, omission, insertion, replacement, transposition, vowel swap, hyphenation, extra words); the UI compares both names side by side, as wallets do for address poisoning. `check_receiver` / `GET /api/v1/receiver-check`, and inside every payment check. | Inspect → ③ Vault → *Try a scam lookalike* |
 | **Check before signing** | Doomed or unwanted payments: `preflight_spend` / `GET /api/v1/spend-preflight` runs the Vault's rules in the contract's order. | Inspect → ③ Vault |
 | **Safety score** | Risky limits: "any receiver", agent can pay itself, one payment can use the whole day, one day can empty the vault. | Inspect → ③ Vault |
 | **Pay once** | Double payment after a timeout (Guard and Vault). | both contracts |
 | **Private payment ids** | Personal data on a public chain: `privateIntentId(secret, orderRef)` gives a stable, non-reversible id; the UI warns when an id looks like an email, phone or long number. | SDK, Guard and Vault panels |
 | **Server privacy** | IPs in the audit log are stored only as a salted hash and deleted after 30 days; no cookies, no analytics, no keys. | [docs/PRIVACY.md](docs/PRIVACY.md) |
+
+**Proven with real transactions:** 10 real `spend` transactions on testnet, and Sentinel's payment check predicted every outcome: 3 paid, and 7 refused with the exact contract code, including a prompt-injected lookalike payee flagged DANGER. The list is in [JUDGING.md](JUDGING.md#proven-with-real-testnet-transactions-2026-11-12).
 
 Mapped to the [OWASP Top 10 for Agentic Applications (2026)](https://genai.owasp.org/resource/owasp-top-10-for-agentic-applications-for-2026/) in [SECURITY.md](SECURITY.md#agent-security-owasp-top-10-for-agentic-applications-2026), including what is honestly not covered.
 
@@ -396,7 +400,7 @@ Both testnet scripts refuse to run unless the RPC reports `chain_id=testnet`, an
 
 ```
 packages/sdk          @near-sentinel/sdk     engine: transport, receipt tree, diagnostics, retry proof, intent check, SSRF guard, fault tools
-packages/mcp          @near-sentinel/mcp     MCP stdio server (9 read-only tools)
+packages/mcp          @near-sentinel/mcp     MCP stdio server (10 read-only tools)
 contracts/guard       sentinel-guard (Rust)  on-chain idempotency guard + deploy / sandbox / testnet scripts
 contracts/guard/vault sentinel-vault (Rust)  on-chain agent allowance: limits, allowlist, pay-once, function-call keys
 apps/api              @near-sentinel/api     Fastify REST API, SQLite history, prober, incidents, benchmarks, OpenAPI
@@ -428,7 +432,7 @@ docs/                                        architecture, API, security, deploy
 
 | Way | For | Start here |
 |---|---|---|
-| MCP server (9 read-only tools) | AI agents (Claude, NEAR AI Cloud agents, any MCP client) | [From an AI agent](#from-an-ai-agent-mcp) |
+| MCP server (10 read-only tools) | AI agents (Claude, NEAR AI Cloud agents, any MCP client) | [From an AI agent](#from-an-ai-agent-mcp) |
 | Agent Skill | Agent frameworks; runs next to NEAR's official MCP Server | [skills/near-sentinel](skills/near-sentinel/SKILL.md) |
 | TypeScript SDK | Wallets, payment apps, bots | [From TypeScript](#from-typescript-sdk) |
 | REST API (Docker image) | Any language or backend; self-host or use a hosted instance | [Over HTTP](#over-http-rest) |

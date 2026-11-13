@@ -40,12 +40,12 @@ console.log(check.recommendation.reason, check.diagnostics);`}</Code>
       </Card>
 
       <div id="int-mcp" className="scroll-mt-24" />
-      <Card title="AI agents — MCP server (stdio)" icon="bot" subtitle="Nine read-only tools. The agent asks before it ever re-signs or spends.">
+      <Card title="AI agents — MCP server (stdio)" icon="bot" subtitle="Ten read-only tools. The agent asks before it ever re-signs or spends.">
         <Code title="shell">{`# Claude Code (after \`pnpm build\`; use the ABSOLUTE path to your clone)
 claude mcp add near-sentinel -e NEAR_SENTINEL_NETWORK=testnet -- node /abs/path/to/near-sentinel/packages/mcp/dist/server.js
 
 # Any MCP client: command = "node", args = ["/abs/path/to/near-sentinel/packages/mcp/dist/server.js"]
-# Tools: check_retry_safety · inspect_transaction · trace_receipts · diagnose_submission_error · provider_health · check_intent · check_spend_allowance · preflight_spend · audit_agent_keys`}</Code>
+# Tools: check_retry_safety · inspect_transaction · trace_receipts · diagnose_submission_error · provider_health · check_intent · check_spend_allowance · preflight_spend · audit_agent_keys · check_receiver`}</Code>
       </Card>
 
       <div id="int-rest" className="scroll-mt-24" />
@@ -98,6 +98,9 @@ curl -s '${origin}/api/v1/allowance?contract=vault.karios.testnet&owner=karios.t
 
 # Agent: would THIS payment be allowed? (the Vault's own rules, before signing; amount in yoctoNEAR)
 curl -s '${origin}/api/v1/spend-preflight?contract=vault.karios.testnet&owner=karios.testnet&agent=kariosr.testnet&receiver=karios.testnet&amount=1000000000000000000000'
+
+# Agent: is this receiver a scam lookalike of a known payee? (before paying anyone new)
+curl -s '${origin}/api/v1/receiver-check?receiver=kari0s.testnet&known=karios.testnet'
 
 # Owner: can this agent's keys drain its account?
 curl -s '${origin}/api/v1/agent-keys?account=kariosr.testnet&vault=vault.karios.testnet'`}</Code>

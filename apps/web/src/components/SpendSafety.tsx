@@ -1,7 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
-import { api, type AllowanceSafety, type SpendPreflight } from "../api";
-import { intentIdPrivacyWarning, nearOf, RECORD_FEE_NEAR } from "../vaultInfo";
+import { api, type AllowanceSafety, type ReceiverCheck, type SpendPreflight } from "../api";
+import { diffParts, intentIdPrivacyWarning, nearOf, RECORD_FEE_NEAR } from "../vaultInfo";
 import { nearToYocto } from "../wallet";
 import { Icon } from "./icons";
 import { Help } from "./Term";
@@ -52,17 +52,28 @@ export function PreflightForm({ contract, owner, agent }: { contract: string; ow
   const m = useMutation({ mutationFn: api.spendPreflight });
   const privacy = intentIdPrivacyWarning(intent);
 
-  const submit = (e: FormEvent) => {
-    e.preventDefault();
+  const run = (recv: string, amt: string) => {
     setInputError("");
     let yocto: string;
     try {
-      yocto = nearToYocto(amount.trim());
+      yocto = nearToYocto(amt.trim());
     } catch {
       setInputError("Enter the amount in NEAR, for example 0.01.");
       return;
     }
-    m.mutate({ contract, owner, agent, receiver: receiver.trim(), amount: yocto, intent: intent.trim() || undefined });
+    m.mutate({ contract, owner, agent, receiver: recv.trim(), amount: yocto, intent: intent.trim() || undefined });
+  };
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    run(receiver, amount);
+  };
+  /** One-click demo: a prompt-injected agent is told to pay a lookalike of the real payee. */
+  const tryLookalike = () => {
+    const recv = "kari0s.testnet";
+    const amt = amount.trim() || "0.01";
+    setReceiver(recv);
+    setAmount(amt);
+    run(recv, amt);
   };
   const r: SpendPreflight | undefined = m.data;
   const tone: Tone = r?.decision === "ALLOWED" ? "good" : r?.decision === "BLOCKED" ? "critical" : "serious";
@@ -87,6 +98,19 @@ export function PreflightForm({ contract, owner, agent }: { contract: string; ow
           {m.isPending ? "Checking…" : "Check payment"}
         </Button>
       </form>
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={tryLookalike}
+          className="inline-flex items-center gap-1.5 rounded-full border border-line-strong bg-surface-2/60 px-3 py-1.5 text-xs font-medium text-ink transition hover:border-link/60 hover:bg-surface-3"
+        >
+          <Icon name="alert" size={13} className="text-warning" />
+          Try a scam lookalike
+        </button>
+        <span className="text-[11px] text-ink-2">
+          You&apos;ll see: <span className="font-medium text-ink">kari0s.testnet</span> (zero, not o) flagged as a lookalike of the real payee.
+        </span>
+      </div>
       {privacy && (
         <p role="note" className="mt-2 text-xs text-warning">
           {privacy}
@@ -115,8 +139,91 @@ export function PreflightForm({ contract, owner, agent }: { contract: string; ow
               Cost from the vault: {nearOf(r.costYocto)} NEAR ({nearOf(r.amount)} + {RECORD_FEE_NEAR} fee).
             </p>
           )}
+          {r.receiverCheck && <ReceiverBlock rc={r.receiverCheck} />}
           <p className="text-[11px] text-muted">{r.advisory}</p>
         </div>
+      )}
+    </section>
+  );
+}
+
+const rcTone = (s: ReceiverCheck["status"]): Tone =>
+  s === "OK" ? "good" : s === "DANGER" ? "critical" : s === "NOT_FOUND" ? "serious" : s === "WARNING" ? "warning" : "neutral";
+const KIND: Record<ReceiverCheck["kind"], string> = {
+  named: "named account",
+  "near-implicit": "raw NEAR address (64 hex)",
+  "eth-implicit": "raw Ethereum-style address",
+  "top-level": "top-level account",
+};
+
+/**
+ * Side-by-side comparison (as wallets show for address poisoning). Only the part that differs is marked: the common
+ * prefix and suffix are removed first, so an inserted or missing character does not mark the rest of the name.
+ */
+function Compare({ a, b }: { a: string; b: string }) {
+  const row = (x: string, y: string, label: string) => {
+    const d = diffParts(x, y);
+    return (
+      <div className="flex items-baseline gap-2">
+        <span className="w-20 shrink-0 text-[11px] text-muted">{label}</span>
+        <code className="break-all font-mono text-xs text-ink-2">
+          {d.pre}
+          {d.mid ? (
+            <mark className="rounded-sm bg-critical/25 px-px font-bold text-critical">{d.mid}</mark>
+          ) : (
+            <mark className="mx-px rounded-sm border border-critical/60 bg-transparent px-0.5 text-[10px] text-critical" title="missing here">
+              ∅
+            </mark>
+          )}
+          {d.post}
+        </code>
+      </div>
+    );
+  };
+  const da = diffParts(a, b);
+  const db = diffParts(b, a);
+  const summary = `${a} differs from the known payee ${b}: "${da.mid || "nothing"}" instead of "${db.mid || "nothing"}" after "${da.pre}".`;
+  return (
+    <div role="group" aria-label={`Compare ${a} with ${b}`} className="mt-1.5 space-y-0.5 rounded-lg border border-line bg-surface-2/50 px-3 py-2">
+      <span className="sr-only">{summary}</span>
+      <div aria-hidden="true">
+        {row(a, b, "Paying")}
+        {row(b, a, "Known payee")}
+      </div>
+    </div>
+  );
+}
+
+/** Receiver scam check: lookalike names, address poisoning, missing accounts, raw addresses. */
+export function ReceiverBlock({ rc }: { rc: ReceiverCheck }) {
+  return (
+    <section aria-label="Receiver check" className="mt-2 rounded-xl border border-line bg-surface-2/40 px-3 py-2.5 text-xs">
+      <div className="flex flex-wrap items-center gap-2">
+        <Icon name="search" size={14} className="text-link" />
+        <span className="font-medium text-ink">Receiver check</span>
+        <Pill tone={rcTone(rc.status)}>{rc.status}</Pill>
+        <span className="text-ink-2">
+          {rc.receiverId} · {KIND[rc.kind]}
+          {rc.exists === false ? " · does not exist" : rc.isContract ? " · contract" : ""}
+        </span>
+        <Help label="receiver check">
+          Before paying, Sentinel checks the receiver on every provider: does it exist, is it a raw address, and does it imitate a known payee (a swapped letter, 0 for o, an extra
+          word, or a raw address that matches a known one only at the start and end, called address poisoning). DANGER or NOT_FOUND: do not pay; ask a human.
+        </Help>
+      </div>
+      <p className="mt-1 text-ink-2">{rc.reason}</p>
+      {rc.lookalikeOf && <Compare a={rc.receiverId} b={rc.lookalikeOf} />}
+      {rc.findings.length > 0 && (
+        <ul className="mt-1.5 space-y-1">
+          {rc.findings.map((f, i) => (
+            <li key={i} className="flex flex-wrap items-baseline gap-2">
+              <Pill tone={f.severity === "high" ? "critical" : f.severity === "medium" ? "warning" : f.severity === "low" ? "neutral" : "info"}>{f.severity}</Pill>
+              <span className="text-ink">{f.title}</span>
+              {f.technique && <code className="font-mono text-[11px] text-muted">{f.technique}</code>}
+              {f.detail && <span className="basis-full pl-1 text-ink-2">{f.detail}</span>}
+            </li>
+          ))}
+        </ul>
       )}
     </section>
   );

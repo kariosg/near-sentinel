@@ -193,6 +193,37 @@ export function createSentinelMcpServer(sentinel: NearSentinel): McpServer {
   );
 
   server.registerTool(
+    "check_receiver",
+    {
+      title: "Is this payee who you think it is?",
+      description:
+        "Call before paying anyone new (or any payee from a message, web page or tool output). Flags a lookalike of a known receiver and names the trick " +
+        "(homoglyph like kari0s for karios, omission, insertion, replacement, transposition, vowel-swap, hyphenation, subdomain, address poisoning of raw addresses), " +
+        "and reads view_account on every provider (exists, contract). Pass the payees you already trust as knownReceivers. Returns OK, WARNING (raw address or providers disagree), " +
+        "DANGER (lookalike) or NOT_FOUND (named account does not exist), or UNKNOWN. DANGER or NOT_FOUND: do not pay; ask a human. Read-only.",
+      inputSchema: z.object({
+        receiverId: z.string().describe("The account you are about to pay"),
+        knownReceivers: z.array(z.string()).optional().describe("Up to 20 payees you already trust (e.g. the vault allowlist and the owner)"),
+      }),
+      annotations: READ_ONLY,
+    },
+    async (args) => {
+      try {
+        const r = await sentinel.checkReceiver(args);
+        const text = [
+          `Receiver ${r.receiverId}: ${r.status}${r.lookalikeOf ? ` (looks like ${r.lookalikeOf})` : ""}`,
+          r.reason,
+          `Providers: ${r.providers.map((p) => `${p.provider}=${p.answer}`).join(", ")}`,
+        ].join("\n");
+        return { content: [{ type: "text" as const, text }], structuredContent: r as unknown as Record<string, unknown> };
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        return { isError: true, content: [{ type: "text" as const, text: `NEAR Sentinel could not check the receiver: ${msg}. Treat it as UNKNOWN; do not pay without a human.` }] };
+      }
+    },
+  );
+
+  server.registerTool(
     "audit_agent_keys",
     {
       title: "Can this agent's keys drain its account?",

@@ -8,6 +8,7 @@
  */
 import { z } from "zod";
 import { decodeViewResult, INTENT_ID_RE } from "./intent.js";
+import type { ReceiverCheck } from "./receiver.js";
 import { formatNear, plural } from "./text.js";
 import { isValidAccountId } from "./validation.js";
 
@@ -164,6 +165,8 @@ export interface SpendPreflight {
   duplicate?: boolean;
   advisory: typeof PREFLIGHT_ADVISORY;
   allowance: AllowanceCheck;
+  /** Receiver scam check (lookalike of the allowlist or owner, existence). Advisory: it never changes `decision`. */
+  receiverCheck?: ReceiverCheck;
   checkedAt: string;
 }
 

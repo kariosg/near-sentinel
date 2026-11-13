@@ -31,6 +31,8 @@ Honest list. Nothing here is claimed as working elsewhere.
 - **The key check sees keys, not where they are stored.** It cannot tell a full-access key kept offline by the owner from one on the agent's machine, so any full-access key is flagged.
 - **Function-call keys for other contracts are graded "review", not proven safe.** A function-call key cannot transfer NEAR itself, but Sentinel does not analyse what the target contract's methods can do.
 - **Our demo agent `kariosr.testnet` keeps a full-access key** for simplicity, so the live key check shows FULL_ACCESS_PRESENT on purpose. The spend-only key flow is proven on the sandbox (see the Vault section).
+- **The receiver scam check works on names, not reputation.** It compares a receiver with the known payees it is given (the Vault allowlist and owner in the payment check). It cannot know account age or history (that needs an indexer), and it cannot recognise a brand-new scam name that resembles nothing on the list.
+- **One-letter differences can be real accounts.** With `bob1.near` known, `bob.near` is flagged (and `mike`/`mile`, `modem`/`modern`). That is deliberate: the check errs on the side of asking a human, and an exact match with a known payee is never flagged.
 - **The safety score is a heuristic** over the policy's limits (any receiver, agent can pay itself, per-payment = daily, daily ≥ balance); it does not know what the receivers are.
 - **Privacy is pseudonymisation.** Audit-log IPs are salted hashes, not anonymous data; whoever holds the salt can test a known IP. A rare low-level proxy error line (e.g. a failed TLS handshake) can still name the peer address.
 

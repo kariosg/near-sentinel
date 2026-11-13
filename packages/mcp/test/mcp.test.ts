@@ -43,6 +43,11 @@ const handler = (method: string, params: any) => {
   if (method === "block") return { error: { name: "HANDLER_ERROR", code: -32000, message: "x", cause: { name: "UNKNOWN_BLOCK" } } };
   if (method === "query" && params?.request_type === "view_access_key_list")
     return { result: { keys: [{ public_key: "ed25519:11111111111111111111111111111111", access_key: { nonce: 1, permission: "FullAccess" } }], block_height: 10, block_hash: "x" } };
+  if (method === "query" && params?.request_type === "view_account") {
+    if (params.account_id === "karios.testnet" || params.account_id === "kari0s.testnet")
+      return { result: { amount: "1", locked: "0", code_hash: "11111111111111111111111111111111", storage_usage: 1, block_height: 10, block_hash: "x" } };
+    return { result: { error: `account ${params.account_id} does not exist while viewing`, logs: [], block_height: 10, block_hash: "x" } };
+  }
   if (method === "query" && params?.method_name === "get_policy") return view(POLICY);
   if (method === "query" && params?.method_name === "get_spend") return view(null);
   return UNKNOWN_TX;
@@ -75,12 +80,13 @@ afterAll(async () => {
 const text = (r: any) => r.content.map((c: any) => c.text).join("\n");
 
 describe("near-sentinel MCP server (stdio, built)", () => {
-  it("lists exactly the 9 read-only tools", async () => {
+  it("lists exactly the 10 read-only tools", async () => {
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual(
       [
         "audit_agent_keys",
         "check_intent",
+        "check_receiver",
         "check_retry_safety",
         "check_spend_allowance",
         "diagnose_submission_error",
@@ -199,6 +205,25 @@ describe("near-sentinel MCP server (stdio, built)", () => {
     expect(text(no)).toMatch(/BLOCKED \(OVER_PER_PAYMENT_LIMIT\)/);
     const bad: any = await client.callTool({ name: "preflight_spend", arguments: { ...base, amountYocto: "0.1" } });
     expect(bad.isError).toBe(true);
+  });
+
+  it("check_receiver: DANGER for a lookalike, NOT_FOUND for a missing account, OK for a known one; bad input is a tool error", async () => {
+    const tools = (await client.listTools()).tools;
+    expect(tools.find((t) => t.name === "check_receiver")!.description).toMatch(/Call before paying anyone new.*DANGER or NOT_FOUND: do not pay; ask a human\. Read-only\./s);
+    const r: any = await client.callTool({ name: "check_receiver", arguments: { receiverId: "kari0s.testnet", knownReceivers: ["karios.testnet"] } });
+    expect(r.isError).toBeFalsy();
+    expect(r.structuredContent).toMatchObject({ status: "DANGER", lookalikeOf: "karios.testnet", exists: true });
+    expect(r.structuredContent.findings[0].technique).toBe("homoglyph");
+    expect(text(r).split("\n")).toHaveLength(3);
+    expect(text(r)).toMatch(/^Receiver kari0s\.testnet: DANGER \(looks like karios\.testnet\)/);
+    expect(text(r)).toMatch(/Providers: alpha=EXISTS, beta=EXISTS/);
+    const missing: any = await client.callTool({ name: "check_receiver", arguments: { receiverId: "nobody-here.testnet" } });
+    expect(missing.structuredContent.status).toBe("NOT_FOUND");
+    const ok: any = await client.callTool({ name: "check_receiver", arguments: { receiverId: "karios.testnet", knownReceivers: ["karios.testnet"] } });
+    expect(ok.structuredContent).toMatchObject({ status: "OK", knownReceiver: true });
+    const bad: any = await client.callTool({ name: "check_receiver", arguments: { receiverId: "Not Valid" } });
+    expect(bad.isError).toBe(true);
+    expect(text(bad)).toMatch(/Treat it as UNKNOWN/);
   });
 
   it("audit_agent_keys reports a full-access key as critical", async () => {

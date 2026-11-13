@@ -404,6 +404,23 @@ export async function buildApp(env: Env, opts: { db?: Db } = {}): Promise<AppDep
     },
   );
 
+  const ReceiverQuery = z
+    .object({
+      receiver: z.string(),
+      known: z.string().max(2000, "known: too long").optional(),
+    })
+    .strict();
+  app.get(
+    "/api/v1/receiver-check",
+    { ...inspectLimit, schema: { tags: ["vault"], summary: "Is this payee who the agent thinks it is? Flags lookalikes of known receivers (named technique) and address poisoning, and reads view_account on every provider (exists, contract). Call before paying anyone new. ?receiver=&known=a,b (comma-separated, at most 20)" } },
+    async (req) => {
+      const q = parse(ReceiverQuery, req.query);
+      // Deduped; an empty list (?known= or known=,,) behaves as if `known` were absent.
+      const known = [...new Set((q.known ?? "").split(",").map((s) => s.trim()).filter(Boolean))];
+      return jsonSafe(await runtime.sentinel.checkReceiver({ receiverId: q.receiver, ...(known.length ? { knownReceivers: known } : {}) }));
+    },
+  );
+
   const PreflightQuery = z
     .object({
       contract: z.string().optional(),

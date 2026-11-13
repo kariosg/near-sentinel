@@ -514,7 +514,7 @@ test.describe("agent security and privacy", () => {
     await expect(panel).toContainText("ACTIVE", { timeout: 30_000 });
     await expect(panel.getByRole("region", { name: "Safety check" }).or(panel.locator("section[aria-label='Safety check']"))).toContainText("/100");
     const pre = panel.locator("section", { hasText: "Would this payment be allowed?" });
-    await pre.getByLabel("Receiver").fill("karios.testnet");
+    await pre.getByLabel("Receiver", { exact: true }).fill("karios.testnet");
     await pre.getByLabel("Amount (NEAR)").fill("0.001");
     await pre.getByRole("button", { name: "Check payment" }).click();
     await expect(pre).toContainText("ALLOWED", { timeout: 30_000 });
@@ -523,11 +523,34 @@ test.describe("agent security and privacy", () => {
     await pre.getByRole("button", { name: "Check payment" }).click();
     await expect(pre).toContainText("BLOCKED", { timeout: 30_000 });
     await expect(pre).toContainText("OVER_PER_PAYMENT_LIMIT");
-    await pre.getByLabel("Receiver").fill("stranger.testnet");
+    await pre.getByLabel("Receiver", { exact: true }).fill("stranger.testnet");
     await pre.getByLabel("Amount (NEAR)").fill("0.001");
     await pre.getByRole("button", { name: "Check payment" }).click();
     await expect(pre).toContainText("NOT_ALLOWED_RECEIVER", { timeout: 30_000 });
     expect(errors).toEqual([]);
+  });
+
+  test("receiver scam check: a lookalike of the real payee is DANGER, shown side by side", async ({ page }) => {
+    const errors = trackErrors(page);
+    await skipIdentity(page);
+    await page.goto("/#/inspect?tool=vault");
+    const panel = page.locator("section", { hasText: "Agent allowance —" });
+    await page.getByRole("button", { name: "Live agent allowance" }).click();
+    await expect(panel).toContainText("ACTIVE", { timeout: 30_000 });
+    const pre = panel.locator("section", { hasText: "Would this payment be allowed?" });
+    await pre.getByRole("button", { name: "Try a scam lookalike" }).click();
+    await expect(pre).toContainText("NOT_ALLOWED_RECEIVER", { timeout: 30_000 });
+    const rc = pre.getByRole("region", { name: "Receiver check" });
+    await expect(rc).toContainText("DANGER");
+    await expect(rc).toContainText("homoglyph");
+    await expect(rc.getByRole("group", { name: "Compare kari0s.testnet with karios.testnet" })).toBeVisible();
+    await expect(rc.locator("mark").first()).toHaveText("0");
+    expect(errors).toEqual([]);
+    const { diffParts } = await import("../src/vaultInfo");
+    expect(diffParts("kari0s.testnet", "karios.testnet")).toEqual({ pre: "kari", mid: "0", post: "s.testnet" });
+    expect(diffParts("xkarios.testnet", "karios.testnet")).toEqual({ pre: "", mid: "x", post: "karios.testnet" });
+    expect(diffParts("kaios.testnet", "karios.testnet").mid).toBe("");
+    expect(diffParts("pay-karios.testnet", "karios.testnet").mid).toBe("pay-");
   });
 
   test("payment ids that look like personal data get a privacy warning", async ({ page }) => {

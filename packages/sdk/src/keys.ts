@@ -107,7 +107,8 @@ export function keyListAnswer(base: Omit<KeyProviderAnswer, "answer">, obs: RpcO
   return { ...b, answer: "KEYS", keyCount: keys.length, rawKeys: keys };
 }
 
-function isUnknownAccount(o: RpcObservation<any>): boolean {
+/** nearcore reports a missing account as a structured UNKNOWN_ACCOUNT error or a result `error` string. */
+export function isUnknownAccount(o: RpcObservation<any>): boolean {
   if (o.ok) return typeof o.result?.error === "string" && /does not exist|UNKNOWN_ACCOUNT/i.test(o.result.error);
   return o.error?.causeName === "UNKNOWN_ACCOUNT" || /UNKNOWN_ACCOUNT|account \S+ does not exist/i.test(o.error?.message ?? "");
 }

@@ -40,3 +40,21 @@ export {
   type RawAccessKey,
 } from "./keys.js";
 export { decideAllowance, isVaultPolicy, vaultInputSchema, type AllowanceCheck, type AllowanceStatus, type VaultInput, type VaultPolicy, type VaultProviderAnswer } from "./vault.js";
+export {
+  accountKind,
+  decideReceiver,
+  lookalikeOf,
+  MAX_KNOWN_RECEIVERS,
+  NO_CONTRACT_CODE_HASH,
+  PROVIDERS_DISAGREE_TITLE,
+  receiverAnswer,
+  receiverCheckInputSchema,
+  type LookalikeTechnique,
+  type ReceiverCheck,
+  type ReceiverCheckInput,
+  type ReceiverFinding,
+  type ReceiverKind,
+  type ReceiverProviderAnswer,
+  type ReceiverProviderObservation,
+  type ReceiverStatus,
+} from "./receiver.js";

@@ -26,6 +26,15 @@ import {
   type VaultInput,
 } from "./vault.js";
 import { decideKeyAudit, keyAuditInputSchema, keyListAnswer, type KeyAudit, type KeyAuditInput } from "./keys.js";
+import {
+  decideReceiver,
+  PROVIDERS_DISAGREE_TITLE,
+  receiverAnswer,
+  receiverCheckInputSchema,
+  type ReceiverCheck,
+  type ReceiverCheckInput,
+  type ReceiverProviderObservation,
+} from "./receiver.js";
 import { decideRetry, type PerProviderRetryEvidence } from "./retry.js";
 import { isMethodNotFound, isUnknownBlock, isUnknownTx, operatorOf, rpcCall, type FetchLike } from "./rpc.js";
 import { decodeSignedTx } from "./signedtx.js";
@@ -594,6 +603,21 @@ export class NearSentinel {
     return { ...decideKeyAudit({ ...v, network: this.network }, answers), checkedAt: new Date().toISOString() };
   }
 
+  /** `view_account` for the receiver on every provider, decoded. */
+  private async receiverObservations(receiverId: string, o?: CallOptions): Promise<ReceiverProviderObservation[]> {
+    const obs = await this.fanOut<any>("query", { request_type: "view_account", finality: "final", account_id: receiverId }, o);
+    return this.providers.map((p, i) => receiverAnswer({ provider: p.name, operator: p.operator!, latencyMs: obs[i]!.latencyMs }, obs[i]!));
+  }
+
+  /**
+   * Is this payee who the agent thinks it is? Flags lookalikes of the known receivers (named technique) and address
+   * poisoning, and reads `view_account` on every provider (exists, contract). Call before paying anyone new. Read-only.
+   */
+  async checkReceiver(input: ReceiverCheckInput, o?: CallOptions): Promise<ReceiverCheck> {
+    const v = parseOrThrow(receiverCheckInputSchema, input);
+    return { ...decideReceiver(v, await this.receiverObservations(v.receiverId, o)), checkedAt: new Date().toISOString() };
+  }
+
   /**
    * Would the Vault accept this spend right now? Reads the allowance (get_policy) and, with an intentId,
    * `get_spend` on every provider, then mirrors the contract's checks in order. Advisory: the contract is the
@@ -615,7 +639,9 @@ export class NearSentinel {
           o,
         )
       : Promise.resolve(undefined);
-    const [allowance, spends] = await Promise.all([this.checkSpendAllowance(vault, o), spendObs]);
+    // The receiver's view_account runs in parallel; the known list (allowlist + owner) is applied once the policy is in.
+    const receiverObs = this.receiverObservations(v.receiverId, o).catch(() => undefined);
+    const [allowance, spends, rObs] = await Promise.all([this.checkSpendAllowance(vault, o), spendObs, receiverObs]);
     let duplicate: boolean | undefined;
     if (spends) {
       const decoded = spends.map((x) => decodeViewResult(x));
@@ -624,10 +650,22 @@ export class NearSentinel {
       // "Not used" needs more than one possibly stale answer: every provider, or at least two, must say so.
       else if (answered.length >= 2 || (answered.length > 0 && answered.length === decoded.length)) duplicate = false;
     }
-    return {
-      ...decideSpendPreflight(allowance, { receiverId: v.receiverId, amount: v.amountYocto, intentId: v.intentId, duplicate }),
-      checkedAt: new Date().toISOString(),
-    };
+    const decided = decideSpendPreflight(allowance, { receiverId: v.receiverId, amount: v.amountYocto, intentId: v.intentId, duplicate });
+    let receiverCheck: ReceiverCheck | undefined;
+    if (rObs) {
+      // Every allowlist entry plus the owner (the contract bounds the allowlist at 20, so at most 21): the public
+      // input cap of 20 does not apply here, so a lookalike of the last entry is still caught.
+      const known = [...new Set([...(allowance.policy?.allowed_receivers ?? []), v.ownerId])].filter(isValidAccountId);
+      receiverCheck = { ...decideReceiver({ receiverId: v.receiverId, knownReceivers: known }, rObs), checkedAt: new Date().toISOString() };
+    }
+    const rc = receiverCheck;
+    const warn =
+      decided.decision === "ALLOWED" &&
+      rc &&
+      (rc.status === "DANGER" || rc.status === "NOT_FOUND" || (rc.status === "WARNING" && rc.findings.some((f) => f.title === PROVIDERS_DISAGREE_TITLE)))
+        ? ` Warning: receiver check says ${rc.status}: ${rc.reason}`
+        : "";
+    return { ...decided, reason: decided.reason + warn, ...(receiverCheck ? { receiverCheck } : {}), checkedAt: new Date().toISOString() };
   }
 
   /** Receipt execution graph for a transaction (undefined when no provider has it). */

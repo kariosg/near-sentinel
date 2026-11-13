@@ -119,7 +119,7 @@ await clip("agent-security", async (page, caption, wait) => {
   await pre.scrollIntoViewIfNeeded();
   await page.evaluate(() => window.scrollBy({ top: 120 }));
   await caption("A prompt-injected payment, checked BEFORE signing…", 1400);
-  await pre.getByLabel("Receiver").fill("attacker.testnet");
+  await pre.getByLabel("Receiver", { exact: true }).fill("attacker.testnet");
   await pre.getByLabel("Amount (NEAR)").fill("0.05");
   await pre.getByRole("button", { name: "Check payment" }).click();
   await pre.getByText("NOT_ALLOWED_RECEIVER").first().waitFor({ timeout: 30000 });

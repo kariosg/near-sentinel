@@ -96,3 +96,12 @@ export const KEY_STATUS_HELP: Record<string, string> = {
   ACCOUNT_NOT_FOUND: "This account does not exist on this network. Check the spelling and the network (testnet vs mainnet).",
   UNKNOWN: "No provider answered, so Sentinel will not guess. Try again in a moment.",
 };
+
+/** The part of `a` that differs from `b`, after removing their common prefix and suffix (for side-by-side name comparison). */
+export function diffParts(a: string, b: string): { pre: string; mid: string; post: string } {
+  let p = 0;
+  while (p < a.length && p < b.length && a[p] === b[p]) p++;
+  let q = 0;
+  while (q < a.length - p && q < b.length - p && a[a.length - 1 - q] === b[b.length - 1 - q]) q++;
+  return { pre: a.slice(0, p), mid: a.slice(p, a.length - q), post: a.slice(a.length - q) };
+}

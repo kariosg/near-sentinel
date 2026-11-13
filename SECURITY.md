@@ -61,6 +61,7 @@ How Sentinel maps to the [OWASP Top 10 for Agentic Applications (2026)](https://
 | **ASI06 Memory & Context Poisoning** | **Not covered.** Sentinel keeps no agent memory; it cannot see or clean an agent's context. |
 | **ASI07 Insecure Inter-Agent Communication** | **Not covered.** Sentinel is not a messaging layer between agents. |
 | **ASI08 Cascading Failures** | Multi-provider consensus: `SAFE_TO_RETRY` needs proof from at least 2 independent operators, and "unknown" is never turned into "safe". When providers disagree or are missing, Sentinel says so instead of guessing. |
+| **Receiver scam check** (part of ASI01/ASI09) | `check_receiver` / `GET /api/v1/receiver-check`, also inside every payment check: a lookalike of a known payee or a poisoned raw address is DANGER, a missing named account is NOT_FOUND. Name-based heuristics, not a reputation database. |
 | **ASI09 Human-Agent Trust Exploitation** | Verdicts are plain-language with the evidence behind them (per-provider answers, block heights). Allowance safety score shows how much an agent could still spend. |
 | **ASI10 Rogue Agents** | Vault freeze stops a misbehaving agent immediately, on-chain. The 24-hour cap bounds the worst case before anyone notices. |
 

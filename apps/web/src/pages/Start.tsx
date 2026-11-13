@@ -68,7 +68,7 @@ const STEPS: Step[] = [
     time: "30 s",
     icon: "lock",
     what: "Agent security: the key check flags keys that could drain an agent's account, and the Vault's payment check runs the contract's own rules before anything is signed.",
-    expect: "FULL_ACCESS_PRESENT for the demo agent, with the commands for a safe spend-only key. In the Vault panel above it, a payment to an unlisted receiver is BLOCKED.",
+    expect: "FULL_ACCESS_PRESENT for the demo agent, with the commands for a safe spend-only key. In the Vault panel above it, 'Try a scam lookalike' is BLOCKED and flagged DANGER.",
     cta: "Check it",
   },
   {
@@ -77,7 +77,7 @@ const STEPS: Step[] = [
     href: "#/integrate",
     time: "1 min",
     icon: "bot",
-    what: "Nine read-only MCP tools, including check_retry_safety, check_intent, check_spend_allowance, preflight_spend and audit_agent_keys.",
+    what: "Ten read-only MCP tools, including check_retry_safety, check_intent, check_spend_allowance, preflight_spend, check_receiver and audit_agent_keys.",
     expect: "A copy-paste command for Claude Code or any MCP client.",
     cta: "Open",
   },
@@ -383,9 +383,9 @@ export function StartPage() {
           <SectionTitle id="verify-title" eyebrow="Reproduce it" title="Verify from your terminal" sub="Node ≥ 22.16 and pnpm 8. Docker only for the contract suite." />
           <ul className="space-y-3 text-sm text-ink-2">
             {[
-              ["310 unit and integration tests", "SDK, MCP server (real stdio), API, demo, NEAR AI agent"],
+              ["440 unit and integration tests", "SDK, MCP server (real stdio), API, demo, NEAR AI agent"],
               ["10 live tests", "read-only, against public testnet and mainnet RPCs"],
-              ["51 browser tests", "flows, accessibility, phone/tablet/desktop, keyboard, this tour, the demo data, agent security"],
+              ["52 browser tests", "flows, accessibility, phone/tablet/desktop, keyboard, this tour, the demo data, agent security"],
               ["33 + 27 + 21 contract checks", "Guard and Vault: Rust unit tests, a local NEAR node, then live on testnet"],
             ].map(([a, b]) => (
               <li key={a} className="flex gap-3">
@@ -400,7 +400,7 @@ export function StartPage() {
           </ul>
         </div>
         <CodeBlock title="bash">{`pnpm install && pnpm build
-pnpm test            # secrets check + 310 tests
+pnpm test            # secrets check + 440 tests
 pnpm demo            # naive agent pays 2 NEAR, guarded pays 1
 pnpm start           # this dashboard on http://127.0.0.1:8080
 pnpm test:contract   # Docker: 33 Rust tests + 27 on-chain checks`}</CodeBlock>
@@ -412,13 +412,13 @@ pnpm test:contract   # Docker: 33 Rust tests + 27 on-chain checks`}</CodeBlock>
         <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {(
             [
-              ["bot", "MCP server", "Nine read-only tools for AI agents: check_retry_safety, inspect_transaction, trace_receipts, diagnose_submission_error, provider_health, check_intent, check_spend_allowance, preflight_spend, audit_agent_keys.", "#/integrate"],
+              ["bot", "MCP server", "Ten read-only tools for AI agents: check_retry_safety, inspect_transaction, trace_receipts, diagnose_submission_error, provider_health, check_intent, check_spend_allowance, preflight_spend, check_receiver, audit_agent_keys.", "#/integrate"],
               ["layers", "TypeScript SDK", "checkRetrySafety, inspectTransaction, checkIntent, checkSpendAllowance, preflightSpend, auditAgentKeys and more. Validates every RPC answer.", "#/integrate"],
               ["terminal", "REST API", "Fastify API with OpenAPI docs, rate limits, live updates over SSE.", "/docs"],
               ["shieldCheck", "Sentinel Guard contract", "Rust, no owner, no admin, live on testnet. A repeated intent is rejected on-chain and refunded.", "#/integrate"],
               ["wallet", "Sentinel Vault contract", "Give an agent money, not keys: per-payment and daily limits, receiver allowlist, freeze. The agent spends with a function-call key. Live on testnet.", "#/integrate"],
               ["activity", "This dashboard", "Provider health, incidents, benchmarks, receipt graphs. Works on phones.", "#/overview"],
-              ["shieldCheck", "Agent security & privacy", "Key check (no full-access keys on agents), payment check before signing, safety score for limits, private payment ids. Mapped to the OWASP agentic top 10.", "#/inspect?tool=keys"],
+              ["shieldCheck", "Agent security & privacy", "Key check (no full-access keys on agents), payment check before signing, receiver scam check (lookalikes, address poisoning), safety score, private payment ids. Mapped to the OWASP agentic top 10.", "#/inspect?tool=keys"],
               ["lock", "Safe by design", "Never signs, never holds keys. Testnet by default. No cookies or tracking; IPs only hashed, kept 30 days.", "#/settings"],
             ] as Array<[IconName, string, string, string]>
           ).map(([icon, title, text, href]) => (

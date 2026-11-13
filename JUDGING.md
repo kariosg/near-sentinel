@@ -9,7 +9,7 @@ For human judges and AI reviewers. Each claim below links to the command, transa
 | Time | Do | Expect |
 |---|---|---|
 | 1 min | Open **https://64-177-60-105.sslip.io** | The live dashboard on NEAR testnet. Start page → "Start the 3-minute tour". |
-| 10 min | `npm install -g pnpm@8` (if needed), `pnpm install`, then **`pnpm verify`** | One summary table: build, 310 tests, demo, live testnet, 51 browser tests, contracts (if Docker). Exit code 0. |
+| 10 min | `npm install -g pnpm@8` (if needed), `pnpm install`, then **`pnpm verify`** | One summary table: build, 440 tests, demo, live testnet, 52 browser tests, contracts (if Docker). Exit code 0. |
 | 3 min | `pnpm install && pnpm verify --quick` | Same, without network, browser or Docker. |
 | 1 min | Agent security: [Inspect → ④ Agent keys](https://64-177-60-105.sslip.io/#/inspect?tool=keys) → *Live demo agent keys*, then ③ Vault → *Live agent allowance* → *Would this payment be allowed?* to `attacker.testnet` | `FULL_ACCESS_PRESENT` with the safe spend-only setup; the payment is `BLOCKED · NOT_ALLOWED_RECEIVER` before anything is signed. Mapping to the OWASP agentic top 10: Integrate → *Security & privacy for AI agents*. |
 
@@ -36,6 +36,7 @@ Every item is real on NEAR testnet (nothing mocked). Each link opens the live da
 | Guard contract, paid intent `tmwbtoqi6-a` | Inspect → Guard → *Paid intent* | `PAID` on every provider |
 | Vault allowance for agent `kariosr.testnet` | Inspect → Vault → *Live agent allowance* | `ACTIVE`, the limits and the amount available now |
 | Agent key check for `kariosr.testnet` | [Inspect → ④ Agent keys](https://64-177-60-105.sslip.io/#/inspect?tool=keys) → *Live demo agent keys* | `FULL_ACCESS_PRESENT`: our demo agent keeps a full-access key for simplicity; the result explains the risk and prints the commands for a `spend`-only key |
+| Receiver scam check | Inspect → Vault → *Live agent allowance* → *Try a scam lookalike* | `kari0s.testnet` (zero, not o): `BLOCKED · NOT_ALLOWED_RECEIVER` and Receiver check `DANGER`, shown side by side with `karios.testnet` |
 | Would this payment be allowed? | Inspect → Vault → *Live agent allowance*, then 0.001 NEAR to `karios.testnet` / 5 NEAR / any other receiver | `ALLOWED` / `BLOCKED OVER_PER_PAYMENT_LIMIT` / `BLOCKED NOT_ALLOWED_RECEIVER`, before anything is signed |
 
 Demo accounts: `karios.testnet` (payer, Vault owner), `kariosr.testnet` (receiver, Vault agent), `guard.karios.testnet` (Guard contract), `vault.karios.testnet` (Vault contract). The Start page also has a glossary of the NEAR terms used (nonce, validity window, receipts, function-call key…).
@@ -85,7 +86,7 @@ Demo accounts: `karios.testnet` (payer, Vault owner), `kariosr.testnet` (receive
 | Claim | Check |
 |---|---|
 | An AI agent on **NEAR AI Cloud** (TEE-hosted model) decides real payment situations with Sentinel as its tools; Sentinel's verdict is binding (a model that proposes paying again is overruled) | `examples/near-ai-agent` (`src/agent.ts` guard, `test/agent.test.ts` 7 offline tests incl. the overrule case); live run `pnpm demo:near-ai` (needs a NEAR AI key) wrote [docs/near-ai-run.md](docs/near-ai-run.md) on 2026-11-12: **4/4 decisions as expected**, each answer signed by NEAR AI, and the model's TEE attestation report contains the same signing address |
-| MCP server with 9 read-only tools (`check_retry_safety`, `check_intent`, `check_spend_allowance`, `preflight_spend`, `audit_agent_keys`, …) | `packages/mcp`; `packages/mcp/test/mcp.test.ts` starts the built server over real stdio with the official client |
+| MCP server with 10 read-only tools (`check_retry_safety`, `check_intent`, `check_spend_allowance`, `preflight_spend`, `check_receiver`, `audit_agent_keys`, …) | `packages/mcp`; `packages/mcp/test/mcp.test.ts` starts the built server over real stdio with the official client |
 | SDK and REST API | `packages/sdk/README.md`; OpenAPI at https://64-177-60-105.sslip.io/docs |
 
 ### Agent security and privacy
@@ -94,9 +95,29 @@ Demo accounts: `karios.testnet` (payer, Vault owner), `kariosr.testnet` (receive
 | Agent key check: flags full-access keys and recommends a function-call key limited to the Vault's `spend` (cross-checked on every provider) | SDK `auditAgentKeys` (`packages/sdk/src/keys.ts`, `packages/sdk/test/keys.test.ts`), `GET /api/v1/agent-keys`, MCP `audit_agent_keys`; live: Inspect → ④ Agent keys |
 | Payment check before signing mirrors the Vault contract's own checks, in the same order, and never says ALLOWED above the smallest amount any provider reports | SDK `preflightSpend` / `decideSpendPreflight` (`packages/sdk/src/vault.ts`, `packages/sdk/test/preflight.test.ts`; order from `contracts/guard/vault/src/lib.rs` `spend`), `GET /api/v1/spend-preflight`, MCP `preflight_spend` |
 | Allowance safety score (any receiver, agent can pay itself, per-payment = daily, daily ≥ balance) | SDK `assessAllowanceSafety`; shown in the Vault panel and in `check_spend_allowance` |
+| Receiver scam check: lookalike payees (homoglyph, omission, insertion, replacement, transposition, vowel swap, hyphenation, extra words) and address poisoning of raw addresses are DANGER; named accounts that do not exist are NOT_FOUND (worst case across providers for named accounts) | SDK `checkReceiver` (`packages/sdk/src/receiver.ts`, `packages/sdk/test/receiver.test.ts`), `GET /api/v1/receiver-check`, MCP `check_receiver`, and inside every payment check; live: Vault → *Try a scam lookalike* |
 | No personal data on-chain by accident | SDK `privateIntentId` (HMAC) and `intentIdPrivacyWarning`; warnings in the Guard and Vault panels |
 | Server privacy: audit-log IPs stored only as a salted hash, deleted after 30 days; no cookies or analytics | `apps/api/src/db.ts`, `apps/api/test/privacy.test.ts`, [docs/PRIVACY.md](docs/PRIVACY.md) |
 | Mapped to the OWASP Top 10 for Agentic Applications (2026), including what is not covered | [SECURITY.md](SECURITY.md), Integrate page → *Security & privacy for AI agents* |
+
+### Proven with real testnet transactions (2026-11-12)
+
+Before every transaction, Sentinel's payment check (`preflightSpend`, with the receiver check) predicted the outcome. Then the real `spend` was sent to `vault.karios.testnet`. **10/10 predictions matched the contract.** The real 0.005 NEAR payment then got `DO_NOT_RETRY` from the "did it land?" check, and its on-chain record says `Paid`.
+
+| Case | Sentinel predicted | Contract did | Receiver check | Transaction |
+|---|---|---|---|---|
+| pay 0.005 to the real payee | `ALLOWED` | `PAID` | OK | [`2Bni9jM1…`](https://testnet.nearblocks.io/txns/2Bni9jM1euEew2sDncpj1Dmfmv6EULkukuL8s7rbXBYF) |
+| same payment id again (retry) | `DUPLICATE_INTENT` | `DUPLICATE_INTENT` | OK | [`D1omxVt5…`](https://testnet.nearblocks.io/txns/D1omxVt5kkmBFy9WNi2wtM6cj6SyVe4SFAuy7cNiYn7J) |
+| prompt-injected lookalike kari0s | `NOT_ALLOWED_RECEIVER` | `NOT_ALLOWED_RECEIVER` | DANGER | [`8ZcwNGSH…`](https://testnet.nearblocks.io/txns/8ZcwNGSHnjrBchEkoG5whRp4DARRfcUZQYeqGjAocTnp) |
+| 0.02, over the per-payment limit | `OVER_PER_PAYMENT_LIMIT` | `OVER_PER_PAYMENT_LIMIT` | OK | [`6XMGgd73…`](https://testnet.nearblocks.io/txns/6XMGgd73X7qbrKwHCJvNiMUf3iWDNGF97doHD4YByyNg) |
+| pay the vault itself | `INVALID_RECEIVER` | `INVALID_RECEIVER` | OK | [`E3hqTmxb…`](https://testnet.nearblocks.io/txns/E3hqTmxbujvVLSsGNyJ2yLDSi3fijVkpKNFwCpZfcamz) |
+| amount 0 | `INVALID_AMOUNT` | `INVALID_AMOUNT` | OK | [`8T5g4jdi…`](https://testnet.nearblocks.io/txns/8T5g4jdiwJD3qpXPUNZabAbwc92HFVia8pg3wmnenwSY) |
+| pay 0.01 (2nd) | `ALLOWED` | `PAID` | OK | [`9uoYaaWz…`](https://testnet.nearblocks.io/txns/9uoYaaWzTeN59gnWqogte8Xhxhhbdnw3CG2fvDxDccJb) |
+| pay 0.01 (3rd, day total 0.025) | `ALLOWED` | `PAID` | OK | [`3qfaLP6Y…`](https://testnet.nearblocks.io/txns/3qfaLP6YhdybSHB1ZdPvpLFAwo9Msyf3TpAzwKsE7ksc) |
+| pay 0.01 more (day total 0.035) | `OVER_DAILY_LIMIT` | `OVER_DAILY_LIMIT` | OK | [`EyXk3Qva…`](https://testnet.nearblocks.io/txns/EyXk3QvahPXM36Dzj8L8ogbHKgTqHxDWJ938bLNgnsL) |
+| pay 0.001 while frozen | `FROZEN` | `FROZEN` | OK | [`65a5jPyR…`](https://testnet.nearblocks.io/txns/65a5jPyRYQZBqPvi3NuV14PDmnYhj51zLrVcEHkbVnXB) |
+
+Test allowance: owner = agent = `karios.testnet`, at most 0.01 NEAR per payment and 0.03 NEAR per 24 h, paying only `kariosr.testnet`. The owner withdrew the rest afterwards ([`XZqkCji9…`](https://testnet.nearblocks.io/txns/XZqkCji9Cwdgqtu5RUJZJh9XgtxqwsAgGLfhtqp7Wez)).
 
 ### Safety and security of the service itself
 | Claim | Check |
