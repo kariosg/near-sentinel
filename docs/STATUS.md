@@ -109,12 +109,12 @@ docker compose up -d --build
 - `pnpm contract:deploy` runs `pnpm --filter … run deploy` (plain `deploy` would hit pnpm's built-in command). `-- --i-confirm` forwarding verified.
 
 ## Uncommitted work
-- None after this commit. Full audit and fixes (2026-11-13):
-  - **Fixes:** UI/UX fixes, layout shift 0.368 → 0, immutable asset caching, security headers (enforced CSP + strict Report-Only CSP, COOP/CORP; ZAP 10055 fixed, COEP accepted with a reason), cosmetic fixes.
-  - **Docs:** `docs/AUDIT.md`.
-  - **Gates:** `pnpm verify` all PASS (444 unit/integration, live 10, e2e 59/59, contracts); `pnpm audit` clean.
-  - **Real testnet:** Vault 10/10 predictions matched; Guard pay-once 6/6.
-- Last deploy: `1d0cd80` (receiver scam check), verified live; rollback image `near-sentinel:previous` = `62997e0`.
+- None. `master` = the audit commit `582bec3` plus this docs-only note; both are pushed.
+- **Deployed and verified live** (2026-11-13; app image and Caddyfile):
+  - tests: e2e 58/59 on the full run, and the 1 transient passed on re-run; receiver 15/15; API 36/36; walkthrough 15/15;
+  - Lighthouse: mobile 89, desktop 95, a11y/BP/SEO 100, CLS 0;
+  - ZAP: 0 failures.
+- **Rollback:** image `near-sentinel:previous` = `da0e6e6`, `Caddyfile.previous`, data backup `~/backups/sentinel-data-20261113T031233Z.tgz`.
 - Real testnet proof (2026-11-12): 10/10 Sentinel predictions matched the Vault contract; tx list in JUDGING.md.
 - `packages/sdk/t.cjs` is a local scratch file, deliberately untracked. `media/` is git-ignored.
 - The tag `hackathon-submission` still points to `cc2aa40`; moving it needs a force tag push (owner's action).
